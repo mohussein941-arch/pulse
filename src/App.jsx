@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -1284,18 +1284,16 @@ const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
                     </div>
                     <div style={{display:"flex",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
                       <button onClick={()=>startEdit(s)}
-                        style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.3)",cursor:"pointer",
-                          padding:"3px 8px",borderRadius:"var(--r-xs)",fontSize:11,fontWeight:600,
-                          color:"var(--indigo)",fontFamily:"var(--font-display)"}}>
+                        style={{background:"var(--indigo)",border:"none",cursor:"pointer",
+                          padding:"4px 10px",borderRadius:"var(--r-xs)",fontSize:11,fontWeight:700,
+                          color:"white",fontFamily:"var(--font-display)"}}>
                         Edit
                       </button>
                       <button onClick={()=>remove(s.id)}
-                        style={{background:"var(--rose-dim)",border:"none",cursor:"pointer",
-                          padding:"3px 8px",borderRadius:"var(--r-xs)",fontSize:11,fontWeight:600,
-                          color:"var(--rose)",fontFamily:"var(--font-display)"}}>
-                        Ã—
-                      </button>
-                      <button style={{display:"none"}}><Ic n="close" size={13} color="var(--rose)"/>
+                        style={{background:"var(--rose)",border:"none",cursor:"pointer",
+                          padding:"4px 10px",borderRadius:"var(--r-xs)",fontSize:11,fontWeight:700,
+                          color:"white",fontFamily:"var(--font-display)"}}>
+                        Del
                       </button>
                     </div>
                   </div>
