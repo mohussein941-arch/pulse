@@ -1239,6 +1239,7 @@ const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
                 <Fld label="Full Name"><Inp value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Sara Al-Mansoori"/></Fld>
                 <Fld label="Title"><Inp value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="VP Operations"/></Fld>
+                <Fld label="Email"><Inp type="email" value={form.email||""} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="sara@company.com"/></Fld>
                 <Fld label="Role"><Slct value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))}>{["Champion","Neutral","Detractor","Blocker"].map(r=><option key={r}>{r}</option>)}</Slct></Fld>
                 <Fld label="Sentiment"><Slct value={form.sentiment} onChange={e=>setForm(f=>({...f,sentiment:e.target.value}))}>{["Positive","Neutral","Negative"].map(s=><option key={s}>{s}</option>)}</Slct></Fld>
               </div>
@@ -4426,17 +4427,41 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
 };
 
 // ── Send survey email modal ───────────────────────────────────────────────────
-const SurveySendModal = ({ survey, onClose, onSend, toast }) => {
-  const [email,   setEmail]   = useState("");
-  const [name,    setName]    = useState("");
-  const [msg,     setMsg]     = useState("");
-  const [sending, setSending] = useState(false);
-  const [copied,  setCopied]  = useState(false);
+const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
+  const [copied,       setCopied]       = useState(false);
+  const [selectedStk,  setSelectedStk]  = useState("");
+  const [manualEmail,  setManualEmail]  = useState("");
+  const [manualName,   setManualName]   = useState("");
+  const [customMsg,    setCustomMsg]    = useState("");
 
   useEffect(()=>{
     const h=e=>e.key==="Escape"&&onClose();
     window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
   },[onClose]);
+
+  // Find the account linked to this survey and get its stakeholders
+  const linkedAccount = accounts.find(a=>a.id===survey.accountId);
+  const stakeholders  = linkedAccount?.stakeholders||[];
+
+  // When a stakeholder is selected, auto-fill their name
+  // (email would come from stakeholder.email if we add it — for now use manual)
+  const selectedStkObj = stakeholders.find(s=>s.id===selectedStk);
+
+  useEffect(()=>{
+    if (selectedStkObj) {
+      setManualName(selectedStkObj.name);
+      setManualEmail(selectedStkObj.email||"");
+    }
+  },[selectedStk]);
+
+  const recipientEmail = manualEmail.trim();
+  const recipientName  = manualName.trim() || (selectedStkObj?.name||"");
+
+  const typeLabels = {
+    NPS:  "Net Promoter Score survey",
+    CES:  "Customer Effort Score survey",
+    CSAT: "Customer Satisfaction survey",
+  };
 
   const copyLink = () => {
     navigator.clipboard.writeText(survey.link).then(()=>{
@@ -4444,16 +4469,17 @@ const SurveySendModal = ({ survey, onClose, onSend, toast }) => {
     });
   };
 
-  const sendEmail = async () => {
-    if (!email.trim()) { toast("Enter a recipient email","error"); return; }
-    setSending(true);
-    try {
-      await onSend(survey.id, { recipientEmail: email, recipientName: name, customMessage: msg });
-      toast("Survey sent successfully","success");
-      onClose();
-    } catch (err) {
-      toast(err.message || "Failed to send email","error");
-    } finally { setSending(false); }
+  // Opens the user's own email client with everything pre-filled
+  const openInMailClient = () => {
+    if (!recipientEmail) { toast("Enter or select a recipient email","error"); return; }
+    const greeting   = recipientName ? `Hi ${recipientName},` : "Hi,";
+    const defaultMsg = customMsg.trim() ||
+      `We'd love to hear your feedback on our work together. This quick survey takes less than 60 seconds.`;
+    const body = `${greeting}\n\n${defaultMsg}\n\nClick here to take the survey:\n${survey.link}\n\nThank you for your time.\n`;
+    const subject = encodeURIComponent(`Quick ${typeLabels[survey.type]} — ${survey.accountName}`);
+    const bodyEnc = encodeURIComponent(body);
+    window.open(`mailto:${recipientEmail}?subject=${subject}&body=${bodyEnc}`);
+    toast("Email client opened — review and send","success");
   };
 
   return (
@@ -4463,11 +4489,14 @@ const SurveySendModal = ({ survey, onClose, onSend, toast }) => {
       <div style={{background:"var(--bg2)",borderRadius:"var(--r-2xl)",width:"100%",maxWidth:520,
         boxShadow:"var(--shadow-lg)",animation:"scaleIn .2s ease",overflow:"hidden"}}>
 
+        {/* Header */}
         <div style={{padding:"20px 24px",borderBottom:"1px solid var(--border)",
           display:"flex",justifyContent:"space-between",alignItems:"center"}}>
           <div>
             <div style={{fontWeight:700,fontSize:16}}>Send Survey</div>
-            <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>{survey.accountName} · {survey.type}</div>
+            <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>
+              {survey.accountName} · {survey.type}
+            </div>
           </div>
           <button onClick={onClose} className="icon-btn"
             style={{background:"var(--bg3)",border:"none",width:32,height:32,
@@ -4478,7 +4507,8 @@ const SurveySendModal = ({ survey, onClose, onSend, toast }) => {
         </div>
 
         <div style={{padding:24}}>
-          {/* Copy link section */}
+
+          {/* Copy link */}
           <div style={{marginBottom:20}}>
             <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
               textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>
@@ -4504,45 +4534,78 @@ const SurveySendModal = ({ survey, onClose, onSend, toast }) => {
               </button>
             </div>
             <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>
-              Paste this link into WhatsApp, email, or any message.
+              Paste into WhatsApp, LinkedIn, or any message.
             </div>
           </div>
 
           {/* Divider */}
           <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
             <div style={{flex:1,height:1,background:"var(--border)"}}/>
-            <span style={{fontSize:11,color:"var(--text3)",fontWeight:500}}>or send by email</span>
+            <span style={{fontSize:11,color:"var(--text3)",fontWeight:500}}>or send from your email</span>
             <div style={{flex:1,height:1,background:"var(--border)"}}/>
           </div>
 
+          {/* Stakeholder picker — only shown if account has stakeholders */}
+          {stakeholders.length>0&&(
+            <Fld label="Pick a contact from this account">
+              <Slct value={selectedStk} onChange={e=>setSelectedStk(e.target.value)}>
+                <option value="">— Select a stakeholder —</option>
+                {stakeholders.map(s=>(
+                  <option key={s.id} value={s.id}>
+                    {s.name}{s.title?` · ${s.title}`:""}
+                  </option>
+                ))}
+              </Slct>
+              {selectedStkObj&&!selectedStkObj.email&&(
+                <div style={{fontSize:11,color:"var(--amber)",marginTop:5,
+                  display:"flex",alignItems:"center",gap:5}}>
+                  <Ic n="alert" size={11} color="var(--amber)"/>
+                  No email saved for this contact — enter it below
+                </div>
+              )}
+            </Fld>
+          )}
+
           <Fld label="Recipient email">
-            <Inp type="email" value={email} onChange={e=>setEmail(e.target.value)}
+            <Inp type="email" value={manualEmail}
+              onChange={e=>setManualEmail(e.target.value)}
               placeholder="customer@company.com"/>
           </Fld>
+
           <Fld label="Recipient name (optional)">
-            <Inp value={name} onChange={e=>setName(e.target.value)} placeholder="Ahmed"/>
+            <Inp value={manualName}
+              onChange={e=>setManualName(e.target.value)}
+              placeholder="Ahmed Al-Mansouri"/>
           </Fld>
+
           <Fld label="Custom message (optional)">
-            <textarea value={msg} onChange={e=>setMsg(e.target.value)}
-              placeholder="Hi Ahmed, we'd love to hear your feedback on our recent work together…"
+            <textarea value={customMsg} onChange={e=>setCustomMsg(e.target.value)}
+              placeholder="We'd love to hear your feedback on our recent work together…"
               style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
                 borderRadius:"var(--r)",padding:"9px 12px",color:"var(--text)",
                 fontFamily:"var(--font-display)",fontSize:13,outline:"none",
-                resize:"vertical",minHeight:80,lineHeight:1.6}}/>
+                resize:"vertical",minHeight:72,lineHeight:1.6}}/>
           </Fld>
 
-          <Btn onClick={sendEmail} disabled={sending} style={{width:"100%"}}>
-            {sending
-              ? <span style={{display:"flex",alignItems:"center",gap:7,justifyContent:"center"}}>
-                  <span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",
-                    borderTopColor:"white",borderRadius:"50%",display:"inline-block",
-                    animation:"spin .7s linear infinite"}}/>Sending…
-                </span>
-              : <span style={{display:"flex",alignItems:"center",gap:7,justifyContent:"center"}}>
-                  <Ic n="note" size={13} color="white"/>Send email
-                </span>
-            }
-          </Btn>
+          {/* Info note */}
+          <div style={{display:"flex",gap:8,alignItems:"flex-start",padding:"10px 12px",
+            background:"var(--indigo-dim)",borderRadius:"var(--r)",marginBottom:16,
+            border:"1.5px solid rgba(67,97,238,0.15)"}}>
+            <Ic n="info" size={14} color="var(--indigo)" style={{flexShrink:0,marginTop:1}}/>
+            <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>
+              Clicking <strong>Open in email</strong> will open your Gmail, Outlook, or default 
+              mail app with everything pre-filled. The email sends from <strong>your own address</strong>.
+            </div>
+          </div>
+
+          <div style={{display:"flex",gap:10}}>
+            <Btn variant="ghost" onClick={onClose} style={{flex:1}}>Cancel</Btn>
+            <Btn onClick={openInMailClient} style={{flex:2}}>
+              <span style={{display:"flex",alignItems:"center",gap:7,justifyContent:"center"}}>
+                <Ic n="note" size={13} color="white"/>Open in email
+              </span>
+            </Btn>
+          </div>
         </div>
       </div>
     </div>
@@ -4847,8 +4910,7 @@ const SurveysPage = ({ accounts, session, toast }) => {
 
       {showCreate&&<SurveyCreateModal accounts={accounts} onClose={()=>setShowCreate(false)}
         onCreate={createSurvey} toast={toast}/>}
-      {showSend&&<SurveySendModal survey={showSend} onClose={()=>setShowSend(null)}
-        onSend={sendSurvey} toast={toast}/>}
+      {showSend&&<SurveySendModal survey={showSend} accounts={accounts} onClose={()=>setShowSend(null)} toast={toast}/>}
     </div>
   );
 };
