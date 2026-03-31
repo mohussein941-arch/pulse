@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 
 // â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STYLES = `
@@ -1284,14 +1284,12 @@ const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
                     </div>
                     <div style={{display:"flex",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
                       <button onClick={()=>startEdit(s)} className="icon-btn"
-                        style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",
+                        style={{background:"none",border:"none",cursor:"pointer",
                           padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}>
                         <Ic n="edit" size={13} color="var(--indigo)"/>
                       </button>
-                      <button onClick={()=>startEdit(s)} className="icon-btn" style={{background:"none",border:"none",cursor:"pointer",padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}><Ic n="edit" size={13} color="var(--indigo)"/></button>
-              <button onClick={()=>startEdit(s)} className="icon-btn" style={{background:"none",border:"none",cursor:"pointer",padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}><Ic n="edit" size={13} color="var(--indigo)"/></button>
-              <button onClick={()=>remove(s.id)} className="icon-btn"
-                        style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",
+                      <button onClick={()=>remove(s.id)} className="icon-btn"
+                        style={{background:"none",border:"none",cursor:"pointer",
                           padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}>
                         <Ic n="close" size={13} color="var(--rose)"/>
                       </button>
