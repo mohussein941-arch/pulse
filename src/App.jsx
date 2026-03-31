@@ -1288,7 +1288,9 @@ const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
                           padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}>
                         <Ic n="edit" size={13} color="var(--indigo)"/>
                       </button>
-                      <button onClick={()=>remove(s.id)} className="icon-btn"
+                      <button onClick={()=>startEdit(s)} className="icon-btn" style={{background:"none",border:"none",cursor:"pointer",padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}><Ic n="edit" size={13} color="var(--indigo)"/></button>
+              <button onClick={()=>startEdit(s)} className="icon-btn" style={{background:"none",border:"none",cursor:"pointer",padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}><Ic n="edit" size={13} color="var(--indigo)"/></button>
+              <button onClick={()=>remove(s.id)} className="icon-btn"
                         style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",
                           padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}>
                         <Ic n="close" size={13} color="var(--rose)"/>
