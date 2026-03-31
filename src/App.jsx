@@ -480,6 +480,7 @@ const Ic = ({ n, size=16, color="currentColor", style={} }) => {
     success:    <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></>,
     dismiss:    <><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>,
     eye:        <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
+    survey:     <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/><circle cx="18" cy="4" r="3"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -4300,6 +4301,779 @@ const IntegrationsPage = ({ onImport, toast }) => {
   );
 };
 
+// ─── Surveys ──────────────────────────────────────────────────────────────────
+
+const SURVEY_CFG = {
+  NPS:  { color:"var(--indigo)", bg:"var(--indigo-dim)", label:"NPS",  full:"Net Promoter Score",    scale:"0 – 10", min:0, max:10 },
+  CES:  { color:"var(--teal)",   bg:"var(--teal-dim)",   label:"CES",  full:"Customer Effort Score",  scale:"1 – 5",  min:1, max:5  },
+  CSAT: { color:"var(--amber)",  bg:"var(--amber-dim)",  label:"CSAT", full:"Customer Satisfaction",  scale:"1 – 5",  min:1, max:5  },
+};
+
+const npsColor = s => s >= 9 ? "var(--emerald)" : s >= 7 ? "var(--amber)" : "var(--rose)";
+const npsLabel = s => s >= 9 ? "Promoter" : s >= 7 ? "Passive" : "Detractor";
+
+// ── Survey creation modal ─────────────────────────────────────────────────────
+const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
+  const [accountId,       setAccountId]       = useState("");
+  const [type,            setType]            = useState("NPS");
+  const [customQuestion,  setCustomQuestion]  = useState("");
+  const [deadline,        setDeadline]        = useState("");
+  const [loading,         setLoading]         = useState(false);
+
+  useEffect(()=>{
+    const h=e=>e.key==="Escape"&&onClose();
+    window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
+  },[onClose]);
+
+  const selectedAccount = accounts.find(a=>a.id===accountId);
+
+  const submit = async () => {
+    if (!accountId) { toast("Please select an account","error"); return; }
+    setLoading(true);
+    try {
+      await onCreate({
+        accountId,
+        accountName: selectedAccount?.name || "",
+        type,
+        customQuestion: customQuestion.trim() || null,
+        deadline: deadline || null,
+      });
+      onClose();
+    } catch { toast("Failed to create survey","error"); }
+    finally { setLoading(false); }
+  };
+
+  const sc = SURVEY_CFG[type];
+
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()}
+      style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",backdropFilter:"blur(6px)",
+        display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
+      <div style={{background:"var(--bg2)",borderRadius:"var(--r-2xl)",width:"100%",maxWidth:520,
+        boxShadow:"var(--shadow-lg)",animation:"scaleIn .2s ease",overflow:"hidden"}}>
+
+        <div style={{padding:"20px 24px",borderBottom:"1px solid var(--border)",
+          display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div style={{fontWeight:700,fontSize:16}}>New Survey</div>
+          <button onClick={onClose} className="icon-btn"
+            style={{background:"var(--bg3)",border:"none",width:32,height:32,
+              borderRadius:"var(--r-sm)",display:"flex",alignItems:"center",
+              justifyContent:"center",cursor:"pointer"}}>
+            <Ic n="close" size={14} color="var(--text2)"/>
+          </button>
+        </div>
+
+        <div style={{padding:24}}>
+          <Fld label="Account">
+            <Slct value={accountId} onChange={e=>setAccountId(e.target.value)}>
+              <option value="">— Select an account —</option>
+              {accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+            </Slct>
+          </Fld>
+
+          <Fld label="Survey type">
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:8}}>
+              {Object.entries(SURVEY_CFG).map(([key,cfg])=>(
+                <button key={key} onClick={()=>setType(key)}
+                  style={{padding:"12px 8px",borderRadius:"var(--r)",cursor:"pointer",
+                    border:`2px solid ${type===key?cfg.color:"var(--border)"}`,
+                    background:type===key?cfg.bg:"var(--bg3)",
+                    transition:"all .15s",fontFamily:"var(--font-display)"}}>
+                  <div style={{fontWeight:700,fontSize:13,color:type===key?cfg.color:"var(--text2)"}}>
+                    {cfg.label}
+                  </div>
+                  <div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>{cfg.scale}</div>
+                </button>
+              ))}
+            </div>
+          </Fld>
+
+          <div style={{padding:"10px 14px",background:"var(--bg3)",borderRadius:"var(--r)",
+            marginBottom:14,fontSize:13,color:"var(--text2)",lineHeight:1.6}}>
+            <strong>{sc.full}</strong> — {
+              type==="NPS"  ? "How likely are you to recommend us to a colleague? (0=Not at all, 10=Extremely likely)" :
+              type==="CES"  ? "How easy was it to work with us? (1=Very difficult, 5=Very easy)" :
+                              "How satisfied are you with our service? (1=Very dissatisfied, 5=Very satisfied)"
+            }
+          </div>
+
+          <Fld label="Custom follow-up question (optional)">
+            <Inp value={customQuestion} onChange={e=>setCustomQuestion(e.target.value)}
+              placeholder="e.g. What can we do to improve your experience?"/>
+          </Fld>
+
+          <Fld label="Response deadline (optional)">
+            <Inp type="date" value={deadline} onChange={e=>setDeadline(e.target.value)}
+              style={{fontSize:13}}/>
+          </Fld>
+
+          <div style={{display:"flex",gap:10,marginTop:4}}>
+            <Btn variant="ghost" onClick={onClose} style={{flex:1}}>Cancel</Btn>
+            <Btn onClick={submit} disabled={loading} style={{flex:1}}>
+              {loading
+                ? <span style={{display:"flex",alignItems:"center",gap:7,justifyContent:"center"}}>
+                    <span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",
+                      borderTopColor:"white",borderRadius:"50%",display:"inline-block",
+                      animation:"spin .7s linear infinite"}}/>Creating…
+                  </span>
+                : "Create survey"}
+            </Btn>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Send survey email modal ───────────────────────────────────────────────────
+const SurveySendModal = ({ survey, onClose, onSend, toast }) => {
+  const [email,   setEmail]   = useState("");
+  const [name,    setName]    = useState("");
+  const [msg,     setMsg]     = useState("");
+  const [sending, setSending] = useState(false);
+  const [copied,  setCopied]  = useState(false);
+
+  useEffect(()=>{
+    const h=e=>e.key==="Escape"&&onClose();
+    window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
+  },[onClose]);
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(survey.link).then(()=>{
+      setCopied(true); setTimeout(()=>setCopied(false),2000);
+    });
+  };
+
+  const sendEmail = async () => {
+    if (!email.trim()) { toast("Enter a recipient email","error"); return; }
+    setSending(true);
+    try {
+      await onSend(survey.id, { recipientEmail: email, recipientName: name, customMessage: msg });
+      toast("Survey sent successfully","success");
+      onClose();
+    } catch (err) {
+      toast(err.message || "Failed to send email","error");
+    } finally { setSending(false); }
+  };
+
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()}
+      style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",backdropFilter:"blur(6px)",
+        display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
+      <div style={{background:"var(--bg2)",borderRadius:"var(--r-2xl)",width:"100%",maxWidth:520,
+        boxShadow:"var(--shadow-lg)",animation:"scaleIn .2s ease",overflow:"hidden"}}>
+
+        <div style={{padding:"20px 24px",borderBottom:"1px solid var(--border)",
+          display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          <div>
+            <div style={{fontWeight:700,fontSize:16}}>Send Survey</div>
+            <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>{survey.accountName} · {survey.type}</div>
+          </div>
+          <button onClick={onClose} className="icon-btn"
+            style={{background:"var(--bg3)",border:"none",width:32,height:32,
+              borderRadius:"var(--r-sm)",display:"flex",alignItems:"center",
+              justifyContent:"center",cursor:"pointer"}}>
+            <Ic n="close" size={14} color="var(--text2)"/>
+          </button>
+        </div>
+
+        <div style={{padding:24}}>
+          {/* Copy link section */}
+          <div style={{marginBottom:20}}>
+            <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
+              textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>
+              Survey link
+            </div>
+            <div style={{display:"flex",gap:8}}>
+              <div style={{flex:1,background:"var(--bg3)",border:"1.5px solid var(--border)",
+                borderRadius:"var(--r)",padding:"9px 12px",fontSize:12,
+                color:"var(--text3)",fontFamily:"var(--font-mono)",
+                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                {survey.link}
+              </div>
+              <button onClick={copyLink}
+                style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,
+                  background:copied?"var(--emerald)":"var(--bg3)",
+                  color:copied?"white":"var(--text2)",
+                  border:`1.5px solid ${copied?"var(--emerald)":"var(--border)"}`,
+                  borderRadius:"var(--r)",padding:"9px 14px",fontWeight:600,
+                  fontSize:12,cursor:"pointer",fontFamily:"var(--font-display)",
+                  transition:"all .2s"}}>
+                <Ic n={copied?"check":"copy"} size={13} color={copied?"white":"var(--text2)"}/>
+                {copied?"Copied":"Copy"}
+              </button>
+            </div>
+            <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>
+              Paste this link into WhatsApp, email, or any message.
+            </div>
+          </div>
+
+          {/* Divider */}
+          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+            <div style={{flex:1,height:1,background:"var(--border)"}}/>
+            <span style={{fontSize:11,color:"var(--text3)",fontWeight:500}}>or send by email</span>
+            <div style={{flex:1,height:1,background:"var(--border)"}}/>
+          </div>
+
+          <Fld label="Recipient email">
+            <Inp type="email" value={email} onChange={e=>setEmail(e.target.value)}
+              placeholder="customer@company.com"/>
+          </Fld>
+          <Fld label="Recipient name (optional)">
+            <Inp value={name} onChange={e=>setName(e.target.value)} placeholder="Ahmed"/>
+          </Fld>
+          <Fld label="Custom message (optional)">
+            <textarea value={msg} onChange={e=>setMsg(e.target.value)}
+              placeholder="Hi Ahmed, we'd love to hear your feedback on our recent work together…"
+              style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
+                borderRadius:"var(--r)",padding:"9px 12px",color:"var(--text)",
+                fontFamily:"var(--font-display)",fontSize:13,outline:"none",
+                resize:"vertical",minHeight:80,lineHeight:1.6}}/>
+          </Fld>
+
+          <Btn onClick={sendEmail} disabled={sending} style={{width:"100%"}}>
+            {sending
+              ? <span style={{display:"flex",alignItems:"center",gap:7,justifyContent:"center"}}>
+                  <span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",
+                    borderTopColor:"white",borderRadius:"50%",display:"inline-block",
+                    animation:"spin .7s linear infinite"}}/>Sending…
+                </span>
+              : <span style={{display:"flex",alignItems:"center",gap:7,justifyContent:"center"}}>
+                  <Ic n="note" size={13} color="white"/>Send email
+                </span>
+            }
+          </Btn>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ── Surveys page ──────────────────────────────────────────────────────────────
+const SurveysPage = ({ accounts, session, toast }) => {
+  const [surveys,     setSurveys]     = useState([]);
+  const [loading,     setLoading]     = useState(true);
+  const [showCreate,  setShowCreate]  = useState(false);
+  const [showSend,    setShowSend]    = useState(null); // survey object
+  const [expanded,    setExpanded]    = useState(null); // survey id
+
+  const callSurvey = useCallback(async (method, path, body) => {
+    return api(method, path, body, session?.token);
+  }, [session]);
+
+  const loadSurveys = useCallback(async () => {
+    try {
+      const data = await callSurvey("GET", "/api/surveys");
+      if (data?.surveys) setSurveys(data.surveys);
+    } catch { toast("Could not load surveys","error"); }
+    finally { setLoading(false); }
+  }, [callSurvey, toast]);
+
+  useEffect(()=>{ if (API_URL && session?.token) loadSurveys(); else setLoading(false); },[loadSurveys]);
+
+  const createSurvey = async (payload) => {
+    const data = await callSurvey("POST", "/api/surveys", payload);
+    toast("Survey created — ready to send","success");
+    await loadSurveys();
+    return data;
+  };
+
+  const sendSurvey = async (id, payload) => {
+    await callSurvey("POST", `/api/surveys/${id}/send`, payload);
+  };
+
+  const closeSurvey = async (id) => {
+    await callSurvey("PATCH", `/api/surveys/${id}`, { status: "closed" });
+    toast("Survey closed","success");
+    loadSurveys();
+  };
+
+  const deleteSurvey = async (id) => {
+    await callSurvey("DELETE", `/api/surveys/${id}`);
+    toast("Survey deleted","success");
+    loadSurveys();
+  };
+
+  const active  = surveys.filter(s=>s.status==="active");
+  const closed  = surveys.filter(s=>s.status==="closed");
+  const totalResponses = surveys.reduce((n,s)=>n+s.responseCount,0);
+  const avgResponseRate = surveys.length > 0
+    ? Math.round((surveys.filter(s=>s.responseCount>0).length / surveys.length) * 100)
+    : 0;
+
+  return (
+    <div style={{animation:"fadeUp .2s ease"}}>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+        <div>
+          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Surveys</h1>
+          <div style={{fontSize:13,color:"var(--text3)"}}>
+            Send NPS, CES, and CSAT surveys to your customers directly from Pulse
+          </div>
+        </div>
+        <Btn onClick={()=>setShowCreate(true)} style={{fontSize:13,padding:"10px 20px"}}>
+          <span style={{display:"flex",alignItems:"center",gap:7}}>
+            <Ic n="plus" size={14} color="white"/>New Survey
+          </span>
+        </Btn>
+      </div>
+
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
+        {[
+          {label:"Total sent",      value:surveys.length,   color:"var(--indigo)" },
+          {label:"Active",          value:active.length,    color:active.length>0?"var(--emerald)":"var(--text3)" },
+          {label:"Total responses", value:totalResponses,   color:totalResponses>0?"var(--emerald)":"var(--text3)" },
+          {label:"Response rate",   value:`${avgResponseRate}%`, color:avgResponseRate>=50?"var(--emerald)":avgResponseRate>0?"var(--amber)":"var(--text3)" },
+        ].map(s=>(
+          <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+            borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
+            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:22,
+              color:s.color,marginBottom:4}}>{s.value}</div>
+            <div style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Loading */}
+      {loading&&(
+        <div style={{display:"flex",justifyContent:"center",padding:48}}>
+          <div style={{width:28,height:28,border:"3px solid var(--border2)",
+            borderTopColor:"var(--indigo)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading&&surveys.length===0&&(
+        <div style={{textAlign:"center",padding:"64px 32px",background:"var(--bg2)",
+          borderRadius:"var(--r-lg)",border:"1.5px solid var(--border)"}}>
+          <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
+            <Ic n="activity" size={44} color="var(--text3)"/>
+          </div>
+          <div style={{fontWeight:700,fontSize:18,marginBottom:8}}>No surveys yet</div>
+          <div style={{fontSize:13,color:"var(--text3)",marginBottom:24,lineHeight:1.6,maxWidth:360,margin:"0 auto 24px"}}>
+            Create your first survey and share the link with your customer via email or WhatsApp.
+          </div>
+          <Btn onClick={()=>setShowCreate(true)}>Create your first survey</Btn>
+        </div>
+      )}
+
+      {/* Survey list */}
+      {!loading&&[
+        {title:"Active", items:active, color:"var(--emerald)"},
+        {title:"Closed",  items:closed,  color:"var(--text3)"},
+      ].map(group=>group.items.length===0?null:(
+        <div key={group.title} style={{marginBottom:28}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:group.color}}/>
+            <span style={{fontWeight:700,fontSize:14,color:group.color}}>{group.title}</span>
+            <span style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text3)",
+              background:"var(--bg4)",padding:"1px 8px",borderRadius:"var(--r-xs)"}}>
+              {group.items.length}
+            </span>
+          </div>
+
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {group.items.map(survey=>{
+              const sc  = SURVEY_CFG[survey.type];
+              const exp = expanded===survey.id;
+              return (
+                <div key={survey.id} style={{background:"var(--bg2)",
+                  border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+                  overflow:"hidden",boxShadow:"var(--shadow-sm)"}}>
+
+                  {/* Survey row */}
+                  <div style={{padding:"16px 20px",display:"flex",
+                    alignItems:"center",gap:14,cursor:"pointer"}}
+                    onClick={()=>setExpanded(exp?null:survey.id)}>
+
+                    {/* Type badge */}
+                    <div style={{width:44,height:44,borderRadius:"var(--r)",
+                      background:sc.bg,display:"flex",alignItems:"center",
+                      justifyContent:"center",flexShrink:0,
+                      border:`1.5px solid ${sc.color}33`}}>
+                      <span style={{fontSize:11,fontWeight:800,color:sc.color,
+                        fontFamily:"var(--font-mono)"}}>{sc.label}</span>
+                    </div>
+
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>
+                        {survey.accountName}
+                      </div>
+                      <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                        <span style={{fontSize:11,color:"var(--text3)"}}>
+                          {new Date(survey.createdAt).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"})}
+                        </span>
+                        {survey.deadline&&(
+                          <>
+                            <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
+                            <span style={{fontSize:11,color:new Date(survey.deadline)<new Date()?"var(--rose)":"var(--text3)"}}>
+                              Due {new Date(survey.deadline).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+                            </span>
+                          </>
+                        )}
+                        {survey.customQuestion&&(
+                          <>
+                            <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
+                            <span style={{fontSize:11,color:"var(--text3)"}}>+1 follow-up</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div style={{display:"flex",gap:16,alignItems:"center",flexShrink:0}}>
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:16,
+                          color:"var(--indigo)"}}>{survey.responseCount}</div>
+                        <div style={{fontSize:9,fontWeight:600,color:"var(--text3)",
+                          textTransform:"uppercase",letterSpacing:".07em"}}>Responses</div>
+                      </div>
+                      {survey.avgScore!==null&&(
+                        <div style={{textAlign:"center"}}>
+                          <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:16,
+                            color:survey.type==="NPS"?npsColor(survey.avgScore):"var(--emerald)"}}>
+                            {survey.avgScore}
+                          </div>
+                          <div style={{fontSize:9,fontWeight:600,color:"var(--text3)",
+                            textTransform:"uppercase",letterSpacing:".07em"}}>Avg</div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Actions */}
+                    <div style={{display:"flex",gap:6,flexShrink:0}}
+                      onClick={e=>e.stopPropagation()}>
+                      {survey.status==="active"&&(
+                        <button onClick={()=>setShowSend(survey)}
+                          style={{display:"flex",alignItems:"center",gap:5,
+                            background:"var(--indigo)",color:"white",border:"none",
+                            borderRadius:"var(--r)",padding:"7px 12px",fontWeight:600,
+                            fontSize:11,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                          <Ic n="note" size={12} color="white"/>Send
+                        </button>
+                      )}
+                      {survey.status==="active"&&(
+                        <button onClick={()=>closeSurvey(survey.id)}
+                          style={{background:"var(--bg3)",color:"var(--text2)",
+                            border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+                            padding:"7px 10px",fontSize:11,fontWeight:600,
+                            cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                          Close
+                        </button>
+                      )}
+                      <button onClick={()=>deleteSurvey(survey.id)}
+                        style={{background:"var(--rose-dim)",color:"var(--rose)",
+                          border:"none",borderRadius:"var(--r)",
+                          padding:"7px 10px",cursor:"pointer",display:"flex",
+                          alignItems:"center"}}>
+                        <Ic n="trash" size={13} color="var(--rose)"/>
+                      </button>
+                    </div>
+
+                    <Ic n={exp?"chevron_up":"chevron_down"} size={16} color="var(--text3)"/>
+                  </div>
+
+                  {/* Responses expanded */}
+                  {exp&&(
+                    <div style={{borderTop:"1px solid var(--border)",padding:"16px 20px",
+                      background:"var(--bg3)"}}>
+                      {survey.responses.length===0 ? (
+                        <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"12px 0"}}>
+                          No responses yet — share the survey link to start collecting feedback.
+                        </div>
+                      ) : (
+                        <>
+                          <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
+                            textTransform:"uppercase",letterSpacing:".07em",marginBottom:12}}>
+                            {survey.responseCount} response{survey.responseCount!==1?"s":""}
+                          </div>
+                          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                            {survey.responses.map(r=>(
+                              <div key={r.id} style={{background:"var(--bg2)",borderRadius:"var(--r)",
+                                padding:"12px 16px",border:"1.5px solid var(--border)",
+                                display:"flex",gap:12,alignItems:"flex-start"}}>
+                                {/* Score badge */}
+                                <div style={{width:40,height:40,borderRadius:"var(--r)",
+                                  flexShrink:0,display:"flex",alignItems:"center",
+                                  justifyContent:"center",fontFamily:"var(--font-mono)",
+                                  fontWeight:800,fontSize:16,
+                                  background:survey.type==="NPS"
+                                    ? r.score>=9?"var(--emerald-dim)":r.score>=7?"var(--amber-dim)":"var(--rose-dim)"
+                                    : r.score>=4?"var(--emerald-dim)":r.score>=3?"var(--amber-dim)":"var(--rose-dim)",
+                                  color:survey.type==="NPS"
+                                    ? r.score>=9?"var(--emerald)":r.score>=7?"var(--amber)":"var(--rose)"
+                                    : r.score>=4?"var(--emerald)":r.score>=3?"var(--amber)":"var(--rose)"}}>
+                                  {r.score}
+                                </div>
+                                <div style={{flex:1}}>
+                                  <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:r.customAnswer?6:0}}>
+                                    {r.respondentName&&(
+                                      <span style={{fontSize:13,fontWeight:600}}>{r.respondentName}</span>
+                                    )}
+                                    {survey.type==="NPS"&&(
+                                      <span style={{fontSize:11,fontWeight:600,
+                                        color:r.score>=9?"var(--emerald)":r.score>=7?"var(--amber)":"var(--rose)",
+                                        background:r.score>=9?"var(--emerald-dim)":r.score>=7?"var(--amber-dim)":"var(--rose-dim)",
+                                        padding:"1px 8px",borderRadius:"var(--r-xs)"}}>
+                                        {npsLabel(r.score)}
+                                      </span>
+                                    )}
+                                    <span style={{fontSize:11,color:"var(--text3)",marginLeft:"auto",
+                                      fontFamily:"var(--font-mono)"}}>
+                                      {new Date(r.submittedAt).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
+                                    </span>
+                                  </div>
+                                  {r.customAnswer&&(
+                                    <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6,
+                                      fontStyle:"italic"}}>
+                                      "{r.customAnswer}"
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {showCreate&&<SurveyCreateModal accounts={accounts} onClose={()=>setShowCreate(false)}
+        onCreate={createSurvey} toast={toast}/>}
+      {showSend&&<SurveySendModal survey={showSend} onClose={()=>setShowSend(null)}
+        onSend={sendSurvey} toast={toast}/>}
+    </div>
+  );
+};
+
+// ── Public survey response page ───────────────────────────────────────────────
+const SurveyResponsePage = ({ token }) => {
+  const [survey,    setSurvey]    = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState("");
+  const [score,     setScore]     = useState(null);
+  const [answer,    setAnswer]    = useState("");
+  const [respName,  setRespName]  = useState("");
+  const [submitting,setSubmitting]= useState(false);
+  const [done,      setDone]      = useState(false);
+
+  useEffect(()=>{
+    fetch(`${API_URL}/survey/${token}`)
+      .then(r=>r.json())
+      .then(d=>{
+        if (d.error) setError(d.error);
+        else setSurvey(d);
+      })
+      .catch(()=>setError("Could not load survey — please check the link and try again"))
+      .finally(()=>setLoading(false));
+  },[token]);
+
+  const submit = async () => {
+    if (score===null) return;
+    setSubmitting(true);
+    try {
+      const res = await fetch(`${API_URL}/survey/${token}`, {
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          score,
+          customAnswer: answer.trim()||null,
+          respondentName: respName.trim()||null,
+        }),
+      });
+      const data = await res.json();
+      if (data.error) throw new Error(data.error);
+      setDone(true);
+    } catch (err) {
+      setError(err.message || "Submission failed — please try again");
+    } finally { setSubmitting(false); }
+  };
+
+  const sc = survey ? SURVEY_CFG[survey.type] : null;
+
+  return (
+    <>
+      <style>{STYLES}</style>
+      <div style={{minHeight:"100vh",background:"var(--bg)",display:"flex",
+        alignItems:"center",justifyContent:"center",padding:24}}>
+        <div style={{width:"100%",maxWidth:520,animation:"fadeUp .25s ease"}}>
+
+          {/* Logo */}
+          <div style={{display:"flex",alignItems:"center",gap:10,justifyContent:"center",marginBottom:32}}>
+            <div style={{width:32,height:32,borderRadius:"var(--r)",background:"var(--indigo)",
+              display:"flex",alignItems:"center",justifyContent:"center",
+              boxShadow:"0 2px 8px var(--indigo-glow)"}}>
+              <span style={{color:"white",fontSize:14,fontWeight:800}}>P</span>
+            </div>
+            <span style={{fontWeight:800,fontSize:17,letterSpacing:"-.03em"}}>Pulse</span>
+          </div>
+
+          {loading&&(
+            <div style={{textAlign:"center",padding:48}}>
+              <div style={{width:28,height:28,border:"3px solid var(--border2)",
+                borderTopColor:"var(--indigo)",borderRadius:"50%",margin:"0 auto",
+                animation:"spin .7s linear infinite"}}/>
+            </div>
+          )}
+
+          {!loading&&error&&(
+            <div style={{background:"var(--bg2)",borderRadius:"var(--r-xl)",padding:32,
+              textAlign:"center",boxShadow:"var(--shadow-lg)",border:"1.5px solid var(--border)"}}>
+              <Ic n="dismiss" size={40} color="var(--rose)" style={{margin:"0 auto 16px"}}/>
+              <div style={{fontWeight:700,fontSize:18,marginBottom:8}}>Survey unavailable</div>
+              <div style={{fontSize:14,color:"var(--text3)",lineHeight:1.6}}>{error}</div>
+            </div>
+          )}
+
+          {!loading&&!error&&!done&&survey&&(
+            <div style={{background:"var(--bg2)",borderRadius:"var(--r-xl)",padding:32,
+              boxShadow:"var(--shadow-lg)",border:"1.5px solid var(--border)"}}>
+
+              {/* Header */}
+              <div style={{marginBottom:28}}>
+                <div style={{display:"inline-flex",alignItems:"center",gap:6,
+                  background:sc.bg,border:`1.5px solid ${sc.color}33`,
+                  borderRadius:"var(--r-xs)",padding:"3px 10px",marginBottom:12}}>
+                  <span style={{fontSize:11,fontWeight:700,color:sc.color,
+                    fontFamily:"var(--font-mono)"}}>{sc.label}</span>
+                  <span style={{fontSize:11,color:sc.color}}>{sc.full}</span>
+                </div>
+                <h1 style={{fontWeight:800,fontSize:22,letterSpacing:"-.02em",marginBottom:6}}>
+                  {survey.type==="NPS"
+                    ? "How likely are you to recommend us?"
+                    : survey.type==="CES"
+                    ? "How easy was it to work with us?"
+                    : "How satisfied are you with our service?"}
+                </h1>
+                <div style={{fontSize:13,color:"var(--text3)"}}>
+                  From <strong>{survey.accountName}</strong>
+                </div>
+              </div>
+
+              {/* Score selector */}
+              {survey.type==="NPS"&&(
+                <div style={{marginBottom:24}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(11,1fr)",gap:4,marginBottom:8}}>
+                    {Array.from({length:11},(_,i)=>(
+                      <button key={i} onClick={()=>setScore(i)}
+                        style={{aspectRatio:"1",borderRadius:"var(--r-sm)",border:"2px solid",
+                          fontFamily:"var(--font-mono)",fontWeight:700,fontSize:13,cursor:"pointer",
+                          transition:"all .12s",
+                          borderColor:score===i?(i>=9?"var(--emerald)":i>=7?"var(--amber)":"var(--rose)"):"var(--border)",
+                          background:score===i?(i>=9?"var(--emerald-dim)":i>=7?"var(--amber-dim)":"var(--rose-dim)"):"var(--bg3)",
+                          color:score===i?(i>=9?"var(--emerald)":i>=7?"var(--amber)":"var(--rose)"):"var(--text2)"}}>
+                        {i}
+                      </button>
+                    ))}
+                  </div>
+                  <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--text3)"}}>
+                    <span>Not at all likely</span>
+                    <span>Extremely likely</span>
+                  </div>
+                  {score!==null&&(
+                    <div style={{textAlign:"center",marginTop:10,fontSize:13,fontWeight:600,
+                      color:npsColor(score),animation:"fadeUp .15s ease"}}>
+                      {npsLabel(score)} — score {score}/10
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {(survey.type==="CES"||survey.type==="CSAT")&&(
+                <div style={{marginBottom:24}}>
+                  <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
+                    {[
+                      {v:1,label:survey.type==="CES"?"Very difficult":"Very dissatisfied"},
+                      {v:2,label:survey.type==="CES"?"Difficult":"Dissatisfied"},
+                      {v:3,label:"Neutral"},
+                      {v:4,label:survey.type==="CES"?"Easy":"Satisfied"},
+                      {v:5,label:survey.type==="CES"?"Very easy":"Very satisfied"},
+                    ].map(({v,label})=>(
+                      <button key={v} onClick={()=>setScore(v)}
+                        style={{padding:"14px 8px",borderRadius:"var(--r)",border:"2px solid",
+                          cursor:"pointer",transition:"all .12s",
+                          borderColor:score===v?(v>=4?"var(--emerald)":v===3?"var(--amber)":"var(--rose)"):"var(--border)",
+                          background:score===v?(v>=4?"var(--emerald-dim)":v===3?"var(--amber-dim)":"var(--rose-dim)"):"var(--bg3)",
+                          fontFamily:"var(--font-display)"}}>
+                        <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:20,
+                          color:score===v?(v>=4?"var(--emerald)":v===3?"var(--amber)":"var(--rose)"):"var(--text2)",
+                          marginBottom:4}}>{v}</div>
+                        <div style={{fontSize:9,fontWeight:600,color:"var(--text3)",
+                          textTransform:"uppercase",letterSpacing:".05em",lineHeight:1.3}}>{label}</div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Custom question */}
+              {survey.customQuestion&&(
+                <div style={{marginBottom:20}}>
+                  <div style={{fontSize:14,fontWeight:600,marginBottom:8,color:"var(--text)"}}>
+                    {survey.customQuestion}
+                  </div>
+                  <textarea value={answer} onChange={e=>setAnswer(e.target.value)}
+                    placeholder="Your answer…"
+                    style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
+                      borderRadius:"var(--r)",padding:"10px 12px",color:"var(--text)",
+                      fontFamily:"var(--font-display)",fontSize:13,outline:"none",
+                      resize:"vertical",minHeight:80,lineHeight:1.6}}/>
+                </div>
+              )}
+
+              {/* Name */}
+              <div style={{marginBottom:24}}>
+                <Inp value={respName} onChange={e=>setRespName(e.target.value)}
+                  placeholder="Your name (optional)"
+                  style={{fontSize:13}}/>
+              </div>
+
+              <Btn onClick={submit}
+                disabled={score===null||submitting}
+                style={{width:"100%",padding:"13px",fontSize:14,opacity:score===null?0.5:1}}>
+                {submitting
+                  ? <span style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center"}}>
+                      <span style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",
+                        borderTopColor:"white",borderRadius:"50%",display:"inline-block",
+                        animation:"spin .7s linear infinite"}}/>Submitting…
+                    </span>
+                  : "Submit feedback"}
+              </Btn>
+
+              {score===null&&(
+                <div style={{textAlign:"center",fontSize:12,color:"var(--text3)",marginTop:8}}>
+                  Select a score above to continue
+                </div>
+              )}
+            </div>
+          )}
+
+          {done&&(
+            <div style={{background:"var(--bg2)",borderRadius:"var(--r-xl)",padding:"40px 32px",
+              textAlign:"center",boxShadow:"var(--shadow-lg)",border:"1.5px solid var(--border)",
+              animation:"scaleIn .2s ease"}}>
+              <div style={{display:"flex",justifyContent:"center",marginBottom:16}}>
+                <Ic n="success" size={48} color="var(--emerald)"/>
+              </div>
+              <div style={{fontWeight:800,fontSize:22,marginBottom:8}}>Thank you!</div>
+              <div style={{fontSize:14,color:"var(--text3)",lineHeight:1.7}}>
+                Your feedback has been received. We appreciate you taking the time to share your thoughts.
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+};
+
 // ─── App ──────────────────────────────────────────────────────────────────────
 // ─── API client ───────────────────────────────────────────────────────────────
 const API_URL    = import.meta.env.VITE_API_URL    || "";
@@ -4719,6 +5493,12 @@ export default function App() {
     return <AuthScreen onAuth={s => { if(s) setSession(s); }}/>;
   }
 
+  // Survey response page — render if URL is /survey/:token
+  const surveyToken = window.location.pathname.match(/^\/survey\/([a-f0-9]+)$/)?.[1];
+  if (surveyToken) {
+    return <SurveyResponsePage token={surveyToken}/>;
+  }
+
   const logout = () => {
     clearSession();
     setSession(null);
@@ -4726,12 +5506,13 @@ export default function App() {
   };
 
   const NAV = [
-    { id:"portfolio",   icon:"portfolio", label:"Portfolio",        active:true  },
-    { id:"tasks",       icon:"tasks", label:"Tasks",            active:true, badge:taskAlerts>0?taskAlerts:null },
-    { id:"pipeline",    icon:"pipeline", label:"Renewal Pipeline", active:true  },
-    { id:"playbooks",   icon:"playbooks", label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
-    { id:"briefing",    icon:"briefing", label:"Daily Briefing",   active:false, tip:"Phase 4" },
-    { id:"integrations",icon:"integrations", label:"Integrations", active:true },
+    { id:"portfolio",    icon:"portfolio",    label:"Portfolio",        active:true  },
+    { id:"tasks",        icon:"tasks",        label:"Tasks",            active:true, badge:taskAlerts>0?taskAlerts:null },
+    { id:"pipeline",     icon:"pipeline",     label:"Renewal Pipeline", active:true  },
+    { id:"playbooks",    icon:"playbooks",    label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
+    { id:"surveys",      icon:"survey",       label:"Surveys",          active:true  },
+    { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
+    { id:"briefing",     icon:"briefing",     label:"Daily Briefing",   active:false, tip:"Phase 4" },
   ];
 
   return (
@@ -4818,6 +5599,11 @@ export default function App() {
 
         {/* Main */}
         <div style={{flex:1,overflow:"auto",padding:"32px"}}>
+
+          {/* ── SURVEYS VIEW ── */}
+          {view==="surveys"&&(
+            <SurveysPage accounts={active} session={session} toast={toast}/>
+          )}
 
           {/* ── INTEGRATIONS VIEW ── */}
           {view==="integrations"&&(
