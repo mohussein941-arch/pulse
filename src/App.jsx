@@ -1174,22 +1174,61 @@ const SGuide = ({ role }) => {
 
 // ─── Stakeholder modal ────────────────────────────────────────────────────────
 const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
-  const [list,setList]     = useState(account.stakeholders);
-  const [sel,setSel]       = useState(null);
-  const [adding,setAdding] = useState(false);
-  const [form,setForm]     = useState({name:"",title:"",role:"Neutral",sentiment:"Neutral",lastTouch:todayStr()});
+  const [list,    setList]    = useState(account.stakeholders);
+  const [sel,     setSel]     = useState(null);
+  const [adding,  setAdding]  = useState(false);
+  const [editing, setEditing] = useState(null); // id of stakeholder being edited
+  const [form,    setForm]    = useState({name:"",title:"",email:"",role:"Neutral",sentiment:"Neutral",lastTouch:todayStr()});
 
   const commit = upd => { setList(upd); onUpdate(account.id,{stakeholders:upd}); };
+
   const add = () => {
     if(!form.name) return;
     commit([...list,{id:Date.now(),...form}]);
     toast("Stakeholder added","success");
     setAdding(false);
-    setForm({name:"",title:"",role:"Neutral",sentiment:"Neutral",lastTouch:todayStr()});
+    setForm({name:"",title:"",email:"",role:"Neutral",sentiment:"Neutral",lastTouch:todayStr()});
   };
+
+  const startEdit = (s) => {
+    setEditing(s.id);
+    setAdding(false);
+    setSel(null);
+    setForm({ name:s.name, title:s.title||"", email:s.email||"", role:s.role||"Neutral", sentiment:s.sentiment||"Neutral", lastTouch:s.lastTouch||todayStr() });
+  };
+
+  const saveEdit = () => {
+    if (!form.name) return;
+    commit(list.map(s => s.id===editing ? {...s,...form} : s));
+    toast("Stakeholder updated","success");
+    setEditing(null);
+    setForm({name:"",title:"",email:"",role:"Neutral",sentiment:"Neutral",lastTouch:todayStr()});
+  };
+
+  const cancelEdit = () => {
+    setEditing(null);
+    setForm({name:"",title:"",email:"",role:"Neutral",sentiment:"Neutral",lastTouch:todayStr()});
+  };
+
   const remove = id => { commit(list.filter(s=>s.id!==id)); if(sel===id)setSel(null); toast("Stakeholder removed","info"); };
   const silent = list.filter(s=>s.role==="Champion"&&ago(s.lastTouch)>30);
   const selStk = list.find(s=>s.id===sel);
+
+  const StakeholderForm = ({ onSave, onCancel, saveLabel }) => (
+    <div style={{background:"var(--bg3)",border:"1.5px solid var(--border2)",borderRadius:"var(--r-lg)",padding:16}}>
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
+        <Fld label="Full Name"><Inp value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Sara Al-Mansoori"/></Fld>
+        <Fld label="Title"><Inp value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="VP Operations"/></Fld>
+        <Fld label="Email"><Inp type="email" value={form.email||""} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="sara@company.com"/></Fld>
+        <Fld label="Role"><Slct value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))}>{["Champion","Neutral","Detractor","Blocker"].map(r=><option key={r}>{r}</option>)}</Slct></Fld>
+        <Fld label="Sentiment"><Slct value={form.sentiment} onChange={e=>setForm(f=>({...f,sentiment:e.target.value}))}>{["Positive","Neutral","Negative"].map(s=><option key={s}>{s}</option>)}</Slct></Fld>
+      </div>
+      <div style={{display:"flex",gap:8,marginTop:4}}>
+        <Btn onClick={onSave} style={{flex:1}}>{saveLabel}</Btn>
+        <Btn variant="ghost" onClick={onCancel} style={{flex:1}}>Cancel</Btn>
+      </div>
+    </div>
+  );
 
   return (
     <Modal title={`Stakeholder Map — ${account.name}`} onClose={onClose} wide>
@@ -1211,68 +1250,88 @@ const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
             {list.map(s=>{
               const rc=ROLE_CFG[s.role]||ROLE_CFG.Neutral;
               const active=sel===s.id, isSilent=s.role==="Champion"&&ago(s.lastTouch)>30;
+
+              // Show inline edit form for this stakeholder
+              if (editing===s.id) {
+                return (
+                  <div key={s.id}>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--indigo)",marginBottom:6}}>
+                      Editing {s.name}
+                    </div>
+                    <StakeholderForm onSave={saveEdit} onCancel={cancelEdit} saveLabel="Save changes"/>
+                  </div>
+                );
+              }
+
               return (
                 <div key={s.id} onClick={()=>setSel(active?null:s.id)}
                   style={{background:active?rc.bg:"var(--bg3)",
                     border:`1.5px solid ${isSilent?"var(--rose)":active?rc.color+"44":"var(--border)"}`,
                     borderRadius:"var(--r)",padding:"14px 16px",cursor:"pointer",transition:"all .15s"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                    <div>
-                      <div style={{fontWeight:600,fontSize:14,marginBottom:3}}>{s.name}{isSilent&&" 🚨"}</div>
-                      <div style={{fontSize:12,color:"var(--text2)",marginBottom:8}}>{s.title}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{fontWeight:600,fontSize:14,marginBottom:3}}>{s.name}</div>
+                      <div style={{fontSize:12,color:"var(--text2)",marginBottom:4}}>{s.title}</div>
+                      {s.email&&(
+                        <div style={{fontSize:11,color:"var(--text3)",marginBottom:6,
+                          fontFamily:"var(--font-mono)"}}>{s.email}</div>
+                      )}
                       <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
                         <Badge label={s.role} color={rc.color} bg={rc.bg}/>
                         <Badge label={`${sentIcon(s.sentiment)} ${s.sentiment}`} color="var(--text2)" bg="var(--bg4)"/>
                         <Badge label={`${ago(s.lastTouch)}d ago`} color={ago(s.lastTouch)>30?"var(--rose)":"var(--text3)"} bg="var(--bg4)"/>
                       </div>
                     </div>
-                    <button onClick={e=>{e.stopPropagation();remove(s.id);}} className="icon-btn"
-                      style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}><Ic n="close" size={13} color="var(--text3)"/></button>
+                    <div style={{display:"flex",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
+                      <button onClick={()=>startEdit(s)} className="icon-btn"
+                        style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",
+                          padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}>
+                        <Ic n="edit" size={13} color="var(--indigo)"/>
+                      </button>
+                      <button onClick={()=>remove(s.id)} className="icon-btn"
+                        style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",
+                          padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}>
+                        <Ic n="close" size={13} color="var(--rose)"/>
+                      </button>
+                    </div>
                   </div>
                   {active&&<SGuide role={s.role}/>}
                 </div>
               );
             })}
           </div>
-          {adding?(
-            <div style={{background:"var(--bg3)",border:"1.5px solid var(--border2)",borderRadius:"var(--r-lg)",padding:16}}>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
-                <Fld label="Full Name"><Inp value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="Sara Al-Mansoori"/></Fld>
-                <Fld label="Title"><Inp value={form.title} onChange={e=>setForm(f=>({...f,title:e.target.value}))} placeholder="VP Operations"/></Fld>
-                <Fld label="Email"><Inp type="email" value={form.email||""} onChange={e=>setForm(f=>({...f,email:e.target.value}))} placeholder="sara@company.com"/></Fld>
-                <Fld label="Role"><Slct value={form.role} onChange={e=>setForm(f=>({...f,role:e.target.value}))}>{["Champion","Neutral","Detractor","Blocker"].map(r=><option key={r}>{r}</option>)}</Slct></Fld>
-                <Fld label="Sentiment"><Slct value={form.sentiment} onChange={e=>setForm(f=>({...f,sentiment:e.target.value}))}>{["Positive","Neutral","Negative"].map(s=><option key={s}>{s}</option>)}</Slct></Fld>
-              </div>
-              <div style={{display:"flex",gap:8,marginTop:4}}>
-                <Btn onClick={add} style={{flex:1}}>Add Contact</Btn>
-                <Btn variant="ghost" onClick={()=>setAdding(false)} style={{flex:1}}>Cancel</Btn>
-              </div>
-            </div>
-          ):(
-            <button onClick={()=>setAdding(true)}
+
+          {/* Add form */}
+          {adding&&!editing?(
+            <StakeholderForm onSave={add} onCancel={()=>setAdding(false)} saveLabel="Add Contact"/>
+          ):(!editing&&(
+            <button onClick={()=>{setAdding(true);setSel(null);}}
               style={{width:"100%",background:"transparent",color:"var(--indigo)",border:"1.5px dashed var(--border2)",
                 borderRadius:"var(--r)",padding:"11px",fontFamily:"var(--font-mono)",fontSize:13,cursor:"pointer"}}>
               + Add Stakeholder
             </button>
-          )}
+          ))}
         </div>
         <div>
           {selStk?(
             <div>
               <div style={{fontWeight:700,fontSize:15,marginBottom:4}}>{selStk.name}</div>
               <div style={{fontSize:13,color:"var(--text2)",marginBottom:2}}>{selStk.title}</div>
+              {selStk.email&&(
+                <div style={{fontSize:12,color:"var(--text3)",marginBottom:8,fontFamily:"var(--font-mono)"}}>{selStk.email}</div>
+              )}
               <SGuide role={selStk.role}/>
             </div>
           ):(
             <div style={{background:"var(--bg3)",borderRadius:"var(--r-lg)",padding:20}}>
-              <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>📖 Stakeholder Playbooks</div>
+              <div style={{fontWeight:700,fontSize:14,marginBottom:6}}>Stakeholder Playbooks</div>
               <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6,marginBottom:20}}>
                 Click any contact to see tailored tactics.
               </div>
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
                 {Object.entries(STAKEHOLDER_GUIDE).map(([role,g])=>(
                   <div key={role} style={{display:"flex",gap:12,alignItems:"center",background:"white",borderRadius:"var(--r)",padding:"12px 14px",boxShadow:"var(--shadow-sm)"}}>
-                    <span style={{fontSize:20}}><span style={{width:28,height:28,borderRadius:"var(--r-sm)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:12,background:g.color,color:"white",flexShrink:0}}>{g.mark}</span></span>
+                    <span style={{width:28,height:28,borderRadius:"var(--r-sm)",display:"flex",alignItems:"center",justifyContent:"center",fontWeight:800,fontSize:12,background:g.color,color:"white",flexShrink:0}}>{g.mark}</span>
                     <div>
                       <div style={{fontWeight:600,fontSize:13,color:g.color}}>{role}</div>
                       <div style={{fontSize:12,color:"var(--text3)",marginTop:1}}>{g.tactics.length} tactics</div>
@@ -4478,7 +4537,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
     const body = `${greeting}\n\n${defaultMsg}\n\nClick here to take the survey:\n${survey.link}\n\nThank you for your time.\n`;
     const subject = encodeURIComponent(`Quick ${typeLabels[survey.type]} — ${survey.accountName}`);
     const bodyEnc = encodeURIComponent(body);
-    window.open(`mailto:${recipientEmail}?subject=${subject}&body=${bodyEnc}`);
+    window.location.href = `mailto:${recipientEmail}?subject=${subject}&body=${bodyEnc}`;
     toast("Email client opened — review and send","success");
   };
 
