@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 
-// ─── Styles ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Styles â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -57,7 +57,7 @@ const STYLES = `
   button:disabled { opacity:0.45; cursor:not-allowed; }
 `;
 
-// ─── Scenario config ──────────────────────────────────────────────────────────
+// â”€â”€â”€ Scenario config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SCENARIO_CFG = {
   "Onboarding": { color:"var(--teal)",   bg:"var(--teal-dim)",   abbr:"OB" },
   "Churn Risk": { color:"var(--rose)",   bg:"var(--rose-dim)",   abbr:"CR" },
@@ -65,9 +65,9 @@ const SCENARIO_CFG = {
   "Executive":  { color:"var(--violet)", bg:"var(--violet-dim)", abbr:"EX" },
 };
 
-// ─── PLAYBOOK LIBRARY ─────────────────────────────────────────────────────────
+// â”€â”€â”€ PLAYBOOK LIBRARY â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PLAYBOOK_LIBRARY = [
-  // ── ONBOARDING ──
+  // â”€â”€ ONBOARDING â”€â”€
   {
     id:"pb-001",
     name:"New Account Activation",
@@ -78,14 +78,14 @@ const PLAYBOOK_LIBRARY = [
     successMetric:"Customer achieves first meaningful value within 30 days",
     summary:"Poor onboarding is the #3 driver of churn. The first 30 days set the tone for the entire relationship. Speed and personalisation are non-negotiable.",
     steps:[
-      { id:1, title:"Send personalised welcome email", owner:"CSM", timeline:"Day 1", action:"Reference their specific goal from the sales process — not a template opener. Make it personal.", commsTemplate:"Subject: Welcome to [Product] — let's make this count\n\nHi [Name],\n\nReally glad to have [Company] on board. I've been looking forward to working with you.\n\nBased on what [Sales Rep] shared, your primary goal is [goal]. That's exactly what we're going to focus on together.\n\nI'll send a calendar invite for our kickoff call shortly — aiming for this week while everything is fresh.\n\nLooking forward to it.\n\n[Your name]" },
-      { id:2, title:"Schedule kickoff call within 48 hours", owner:"CSM", timeline:"Day 1–2", action:"Don't let the account go cold at the handoff moment. Book before you do anything else.", commsTemplate:"Subject: Kickoff call — [Company] x [Product]\n\nHi [Name],\n\nI've blocked [time/date] for our kickoff — just 45 minutes to align on your goals and set up for success.\n\n[Calendar link]\n\nIf this doesn't work, here are two alternatives: [time1] or [time2].\n\nSee you then." },
-      { id:3, title:"Run kickoff call", owner:"CSM", timeline:"Day 3", action:"Agenda: understand their definition of success, agree on 30-day milestones, confirm all key contacts. Do not start with product demos.", commsTemplate:"Kickoff agenda:\n1. Their business context and goals (15 min — you listen)\n2. Agree on 3 milestones for the first 30 days (10 min)\n3. Map key contacts and stakeholders (10 min)\n4. Product walkthrough focused on their specific use case (10 min)" },
-      { id:4, title:"Send kickoff summary email", owner:"CSM", timeline:"Day 5", action:"Document agreed milestones and responsibilities in writing. Shared ownership starts here.", commsTemplate:"Subject: Kickoff summary — [Company]\n\nHi [Name],\n\nGreat call today. Here's what we agreed:\n\n30-Day Milestones:\n1. [Milestone 1] — Owner: [Name] — By: [Date]\n2. [Milestone 2] — Owner: [Name] — By: [Date]\n3. [Milestone 3] — Owner: [Name] — By: [Date]\n\nNext check-in: [Date]\n\nAny corrections or additions, let me know." },
-      { id:5, title:"First product usage check", owner:"CSM", timeline:"Day 7", action:"Check if they are logging in. If usage is zero — call immediately. Do not email. Every silent day in onboarding costs 30 days of adoption later.", commsTemplate:"If no usage detected — call script:\n\"Hi [Name], I was reviewing your account and noticed you haven't had a chance to log in yet. Totally normal in the first week — I just want to make sure we haven't left you without something you need. Do you have 10 minutes now?\"" },
-      { id:6, title:"Mid-onboarding check-in", owner:"CSM", timeline:"Day 14", action:"Review milestone progress. If behind, diagnose the blocker — is it technical, time, or motivation? Each has a different fix.", commsTemplate:"Subject: Two weeks in — how are things going?\n\nHi [Name],\n\nWe're at the halfway point of your first 30 days. Quick check:\n\n✓ [Milestone 1] — on track?\n○ [Milestone 2] — any blockers?\n\nHappy to jump on a call if anything needs unblocking. What's your honest read on progress so far?" },
-      { id:7, title:"Share industry case study", owner:"CSM", timeline:"Day 21", action:"A relevant case study from their industry showing a customer who achieved the same goal. Reinforces the path forward.", commsTemplate:"Subject: How [Similar Company] achieved [Goal]\n\nHi [Name],\n\nThought this might be timely — [Similar Company] had a very similar challenge to yours and got to [result] in [timeframe].\n\n[Case study link or attachment]\n\nA couple of things they did that I think would work well for your team too: [2–3 specific points].\n\nWorth a quick call to map this to your situation?" },
-      { id:8, title:"First value review call", owner:"CSM", timeline:"Day 30", action:"Did they hit their first milestone? If yes — celebrate and set next 30-day goals. If no — activate Slow Onboarding Recovery playbook immediately.", commsTemplate:"30-day review agenda:\n1. Celebrate what was achieved (even partial wins)\n2. Honest review of what didn't happen and why\n3. Set next 30-day milestone\n4. Any changes to the team, goals, or priorities?\n\nClose with: 'What's the one thing that would make the next 30 days a clear success for you?'" },
+      { id:1, title:"Send personalised welcome email", owner:"CSM", timeline:"Day 1", action:"Reference their specific goal from the sales process â€” not a template opener. Make it personal.", commsTemplate:"Subject: Welcome to [Product] â€” let's make this count\n\nHi [Name],\n\nReally glad to have [Company] on board. I've been looking forward to working with you.\n\nBased on what [Sales Rep] shared, your primary goal is [goal]. That's exactly what we're going to focus on together.\n\nI'll send a calendar invite for our kickoff call shortly â€” aiming for this week while everything is fresh.\n\nLooking forward to it.\n\n[Your name]" },
+      { id:2, title:"Schedule kickoff call within 48 hours", owner:"CSM", timeline:"Day 1â€“2", action:"Don't let the account go cold at the handoff moment. Book before you do anything else.", commsTemplate:"Subject: Kickoff call â€” [Company] x [Product]\n\nHi [Name],\n\nI've blocked [time/date] for our kickoff â€” just 45 minutes to align on your goals and set up for success.\n\n[Calendar link]\n\nIf this doesn't work, here are two alternatives: [time1] or [time2].\n\nSee you then." },
+      { id:3, title:"Run kickoff call", owner:"CSM", timeline:"Day 3", action:"Agenda: understand their definition of success, agree on 30-day milestones, confirm all key contacts. Do not start with product demos.", commsTemplate:"Kickoff agenda:\n1. Their business context and goals (15 min â€” you listen)\n2. Agree on 3 milestones for the first 30 days (10 min)\n3. Map key contacts and stakeholders (10 min)\n4. Product walkthrough focused on their specific use case (10 min)" },
+      { id:4, title:"Send kickoff summary email", owner:"CSM", timeline:"Day 5", action:"Document agreed milestones and responsibilities in writing. Shared ownership starts here.", commsTemplate:"Subject: Kickoff summary â€” [Company]\n\nHi [Name],\n\nGreat call today. Here's what we agreed:\n\n30-Day Milestones:\n1. [Milestone 1] â€” Owner: [Name] â€” By: [Date]\n2. [Milestone 2] â€” Owner: [Name] â€” By: [Date]\n3. [Milestone 3] â€” Owner: [Name] â€” By: [Date]\n\nNext check-in: [Date]\n\nAny corrections or additions, let me know." },
+      { id:5, title:"First product usage check", owner:"CSM", timeline:"Day 7", action:"Check if they are logging in. If usage is zero â€” call immediately. Do not email. Every silent day in onboarding costs 30 days of adoption later.", commsTemplate:"If no usage detected â€” call script:\n\"Hi [Name], I was reviewing your account and noticed you haven't had a chance to log in yet. Totally normal in the first week â€” I just want to make sure we haven't left you without something you need. Do you have 10 minutes now?\"" },
+      { id:6, title:"Mid-onboarding check-in", owner:"CSM", timeline:"Day 14", action:"Review milestone progress. If behind, diagnose the blocker â€” is it technical, time, or motivation? Each has a different fix.", commsTemplate:"Subject: Two weeks in â€” how are things going?\n\nHi [Name],\n\nWe're at the halfway point of your first 30 days. Quick check:\n\nâœ“ [Milestone 1] â€” on track?\nâ—‹ [Milestone 2] â€” any blockers?\n\nHappy to jump on a call if anything needs unblocking. What's your honest read on progress so far?" },
+      { id:7, title:"Share industry case study", owner:"CSM", timeline:"Day 21", action:"A relevant case study from their industry showing a customer who achieved the same goal. Reinforces the path forward.", commsTemplate:"Subject: How [Similar Company] achieved [Goal]\n\nHi [Name],\n\nThought this might be timely â€” [Similar Company] had a very similar challenge to yours and got to [result] in [timeframe].\n\n[Case study link or attachment]\n\nA couple of things they did that I think would work well for your team too: [2â€“3 specific points].\n\nWorth a quick call to map this to your situation?" },
+      { id:8, title:"First value review call", owner:"CSM", timeline:"Day 30", action:"Did they hit their first milestone? If yes â€” celebrate and set next 30-day goals. If no â€” activate Slow Onboarding Recovery playbook immediately.", commsTemplate:"30-day review agenda:\n1. Celebrate what was achieved (even partial wins)\n2. Honest review of what didn't happen and why\n3. Set next 30-day milestone\n4. Any changes to the team, goals, or priorities?\n\nClose with: 'What's the one thing that would make the next 30 days a clear success for you?'" },
     ],
   },
   {
@@ -98,12 +98,12 @@ const PLAYBOOK_LIBRARY = [
     successMetric:"Customer resumes active usage within 14 days of intervention",
     summary:"Stalled onboarding predicts churn with 70%+ accuracy. The fix is almost always a phone call, not another email.",
     steps:[
-      { id:1, title:"Call directly — do not email", owner:"CSM", timeline:"Immediately", action:"Onboarding friction is almost always diagnosed in 10 minutes on a call. Email gives them an easy way to avoid the conversation.", commsTemplate:"Call script:\n\"Hi [Name], I was reviewing your account and wanted to call rather than email. I can see progress has slowed and I want to understand what's getting in the way — no agenda other than that. Do you have 10 minutes?\"" },
-      { id:2, title:"Diagnose the root blocker", owner:"CSM", timeline:"Day 1", action:"Four possible causes: Technical setup issue. Internal resource constraints. Lost executive support. Unclear value. Each needs a different response.", commsTemplate:"Diagnostic questions:\n• 'When you tried to [action], what happened?'\n• 'Is your team able to prioritise this right now or is something else taking over?'\n• 'Has anything changed in terms of priorities since we kicked off?'\n• 'On a scale of 1–10, how clear is the value you're expecting to get from us?'" },
-      { id:3, title:"Fix technical blockers same day", owner:"CSM + Support", timeline:"Day 1–2", action:"If it's technical, involve implementation or support immediately. Speed signals seriousness. Slow responses to technical issues in onboarding are unforgivable.", commsTemplate:"Internal escalation:\n'Urgent: [Company] is blocked on [specific technical issue] and has been for [X days]. This is their day [N] of onboarding. Needs same-day resolution.'" },
-      { id:4, title:"Offer to run user training directly", owner:"CSM", timeline:"Day 2–3", action:"If internal resource constraints, remove the dependency on your champion doing the training. Offer to run a 30-minute session with end users yourself.", commsTemplate:"Subject: Let me take this off your plate\n\nHi [Name],\n\nI know your team is stretched. Rather than waiting for time in your schedule, what if I ran a 30-minute session directly with [team/users] this week?\n\nI'll handle everything — just need 5 people and 30 minutes. You don't even need to be there.\n\nWould [day] at [time] work?" },
-      { id:5, title:"Escalate for lost executive support", owner:"CSM + Manager", timeline:"Day 2–3", action:"Get your manager or senior leader to send a personal note to their sponsor. Peer-to-peer outreach at this stage carries more weight than anything the CSM can do.", commsTemplate:"Executive outreach:\n\"Hi [Sponsor Name],\n\nI wanted to reach out personally regarding [Company]'s onboarding. I understand the team has had some challenges getting started and I want to make sure we're doing everything on our end to support you.\n\nWould you have 15 minutes this week for a quick call?\"" },
-      { id:6, title:"Reset the success plan", owner:"CSM", timeline:"Day 3", action:"Agree on a simplified 2-week sprint with ONE specific, achievable milestone. Small wins rebuild momentum. Don't try to catch up everything at once.", commsTemplate:"Subject: New plan — let's make this simpler\n\nHi [Name],\n\nAfter our call, I've been thinking about how to make the next two weeks a clear win.\n\nLet's focus on just one thing: [Milestone].\n\nBy [Date], you'll have [outcome]. That's it. Nothing else.\n\nI'll check in every [two days / week] to remove any blockers.\n\nDoes this work for you?" },
+      { id:1, title:"Call directly â€” do not email", owner:"CSM", timeline:"Immediately", action:"Onboarding friction is almost always diagnosed in 10 minutes on a call. Email gives them an easy way to avoid the conversation.", commsTemplate:"Call script:\n\"Hi [Name], I was reviewing your account and wanted to call rather than email. I can see progress has slowed and I want to understand what's getting in the way â€” no agenda other than that. Do you have 10 minutes?\"" },
+      { id:2, title:"Diagnose the root blocker", owner:"CSM", timeline:"Day 1", action:"Four possible causes: Technical setup issue. Internal resource constraints. Lost executive support. Unclear value. Each needs a different response.", commsTemplate:"Diagnostic questions:\nâ€¢ 'When you tried to [action], what happened?'\nâ€¢ 'Is your team able to prioritise this right now or is something else taking over?'\nâ€¢ 'Has anything changed in terms of priorities since we kicked off?'\nâ€¢ 'On a scale of 1â€“10, how clear is the value you're expecting to get from us?'" },
+      { id:3, title:"Fix technical blockers same day", owner:"CSM + Support", timeline:"Day 1â€“2", action:"If it's technical, involve implementation or support immediately. Speed signals seriousness. Slow responses to technical issues in onboarding are unforgivable.", commsTemplate:"Internal escalation:\n'Urgent: [Company] is blocked on [specific technical issue] and has been for [X days]. This is their day [N] of onboarding. Needs same-day resolution.'" },
+      { id:4, title:"Offer to run user training directly", owner:"CSM", timeline:"Day 2â€“3", action:"If internal resource constraints, remove the dependency on your champion doing the training. Offer to run a 30-minute session with end users yourself.", commsTemplate:"Subject: Let me take this off your plate\n\nHi [Name],\n\nI know your team is stretched. Rather than waiting for time in your schedule, what if I ran a 30-minute session directly with [team/users] this week?\n\nI'll handle everything â€” just need 5 people and 30 minutes. You don't even need to be there.\n\nWould [day] at [time] work?" },
+      { id:5, title:"Escalate for lost executive support", owner:"CSM + Manager", timeline:"Day 2â€“3", action:"Get your manager or senior leader to send a personal note to their sponsor. Peer-to-peer outreach at this stage carries more weight than anything the CSM can do.", commsTemplate:"Executive outreach:\n\"Hi [Sponsor Name],\n\nI wanted to reach out personally regarding [Company]'s onboarding. I understand the team has had some challenges getting started and I want to make sure we're doing everything on our end to support you.\n\nWould you have 15 minutes this week for a quick call?\"" },
+      { id:6, title:"Reset the success plan", owner:"CSM", timeline:"Day 3", action:"Agree on a simplified 2-week sprint with ONE specific, achievable milestone. Small wins rebuild momentum. Don't try to catch up everything at once.", commsTemplate:"Subject: New plan â€” let's make this simpler\n\nHi [Name],\n\nAfter our call, I've been thinking about how to make the next two weeks a clear win.\n\nLet's focus on just one thing: [Milestone].\n\nBy [Date], you'll have [outcome]. That's it. Nothing else.\n\nI'll check in every [two days / week] to remove any blockers.\n\nDoes this work for you?" },
     ],
   },
   {
@@ -116,31 +116,31 @@ const PLAYBOOK_LIBRARY = [
     successMetric:"Executive contact established and engaged within 45 days",
     summary:"Single-threaded relationships are your biggest churn risk. Getting executive air cover early protects the entire relationship.",
     steps:[
-      { id:1, title:"Ask your champion directly", owner:"CSM", timeline:"Week 4", action:"'Who in leadership has visibility into the outcomes we're delivering?' Do not guess — ask.", commsTemplate:"'[Name], I want to make sure the value we're delivering gets visibility at the right level internally. Who in leadership would care most about the outcomes we're working toward together?'" },
-      { id:2, title:"Prepare an executive ROI summary", owner:"CSM", timeline:"Week 4–5", action:"One page, outcome-focused, no product features. Executives read outcomes, not capabilities. Include: before/after metrics, time to value, what's next.", commsTemplate:"Executive summary structure:\n• The goal: [What they were trying to achieve]\n• Where they were: [Baseline metric]\n• What we did: [3 bullet points max]\n• Where they are now: [Result metric]\n• What's next: [Next milestone or opportunity]" },
-      { id:3, title:"Request a 20-minute executive briefing", owner:"CSM", timeline:"Week 5", action:"Frame it as sharing early wins, not as a check-in. Go through your champion for the introduction.", commsTemplate:"Template for champion to send:\n'[Executive Name], I wanted to share some early results from our work with [Product]. Our CSM [Name] has put together a concise summary — would you have 20 minutes this month for a quick briefing? I think you'll find it worthwhile.'" },
-      { id:4, title:"Run the executive meeting", owner:"CSM + Manager", timeline:"Week 5–6", action:"Open with their business priority (reference recent news). Connect your impact to that priority. Close with one forward-looking question, not a product pitch.", commsTemplate:"Executive meeting structure:\n1. 'I saw [company news] — how is that affecting your priorities?' (2 min)\n2. 'Here's what we've delivered so far and why it matters for [priority]' (5 min)\n3. 'Looking at the next quarter, here's what we're focused on' (5 min)\n4. 'What would make this partnership most valuable for you personally?' (close)" },
-      { id:5, title:"Send executive follow-up within 24 hours", owner:"CSM", timeline:"Day after meeting", action:"One page. Decisions made. Next steps named. Executives respect speed and precision above all else.", commsTemplate:"Subject: Follow-up — [Company] x [Product] executive briefing\n\nHi [Executive Name],\n\nThank you for your time today. Key points:\n\n• [Result 1]\n• [Result 2]\n• Next milestone: [Goal] by [Date]\n\nI'll keep you updated on progress quarterly. Please don't hesitate to reach out directly.\n\n[Your name and direct contact]" },
+      { id:1, title:"Ask your champion directly", owner:"CSM", timeline:"Week 4", action:"'Who in leadership has visibility into the outcomes we're delivering?' Do not guess â€” ask.", commsTemplate:"'[Name], I want to make sure the value we're delivering gets visibility at the right level internally. Who in leadership would care most about the outcomes we're working toward together?'" },
+      { id:2, title:"Prepare an executive ROI summary", owner:"CSM", timeline:"Week 4â€“5", action:"One page, outcome-focused, no product features. Executives read outcomes, not capabilities. Include: before/after metrics, time to value, what's next.", commsTemplate:"Executive summary structure:\nâ€¢ The goal: [What they were trying to achieve]\nâ€¢ Where they were: [Baseline metric]\nâ€¢ What we did: [3 bullet points max]\nâ€¢ Where they are now: [Result metric]\nâ€¢ What's next: [Next milestone or opportunity]" },
+      { id:3, title:"Request a 20-minute executive briefing", owner:"CSM", timeline:"Week 5", action:"Frame it as sharing early wins, not as a check-in. Go through your champion for the introduction.", commsTemplate:"Template for champion to send:\n'[Executive Name], I wanted to share some early results from our work with [Product]. Our CSM [Name] has put together a concise summary â€” would you have 20 minutes this month for a quick briefing? I think you'll find it worthwhile.'" },
+      { id:4, title:"Run the executive meeting", owner:"CSM + Manager", timeline:"Week 5â€“6", action:"Open with their business priority (reference recent news). Connect your impact to that priority. Close with one forward-looking question, not a product pitch.", commsTemplate:"Executive meeting structure:\n1. 'I saw [company news] â€” how is that affecting your priorities?' (2 min)\n2. 'Here's what we've delivered so far and why it matters for [priority]' (5 min)\n3. 'Looking at the next quarter, here's what we're focused on' (5 min)\n4. 'What would make this partnership most valuable for you personally?' (close)" },
+      { id:5, title:"Send executive follow-up within 24 hours", owner:"CSM", timeline:"Day after meeting", action:"One page. Decisions made. Next steps named. Executives respect speed and precision above all else.", commsTemplate:"Subject: Follow-up â€” [Company] x [Product] executive briefing\n\nHi [Executive Name],\n\nThank you for your time today. Key points:\n\nâ€¢ [Result 1]\nâ€¢ [Result 2]\nâ€¢ Next milestone: [Goal] by [Date]\n\nI'll keep you updated on progress quarterly. Please don't hesitate to reach out directly.\n\n[Your name and direct contact]" },
     ],
   },
 
-  // ── CHURN RISK ──
+  // â”€â”€ CHURN RISK â”€â”€
   {
     id:"pb-004",
     name:"Early Warning Response",
     scenario:"Churn Risk",
     priority:"High",
-    trigger:"Health score 40–55 OR CES declines 2 consecutive readings",
+    trigger:"Health score 40â€“55 OR CES declines 2 consecutive readings",
     triggerCondition: a => (a.healthScore >= 40 && a.healthScore < 55) || (a.cesHistory && a.cesHistory.length >= 3 && a.cesHistory.at(-1).value < a.cesHistory.at(-2).value && a.cesHistory.at(-2).value < a.cesHistory.at(-3).value),
     successMetric:"Health score recovers above 60 within 45 days",
-    summary:"Accounts in the 40–55 range have a 35–50% churn probability. The window to intervene is open — don't wait for it to close.",
+    summary:"Accounts in the 40â€“55 range have a 35â€“50% churn probability. The window to intervene is open â€” don't wait for it to close.",
     steps:[
-      { id:1, title:"Make personalised contact — reference the signal", owner:"CSM", timeline:"Day 1", action:"Do not send a generic 'just checking in' email. Reference the specific signal — it shows you're paying attention.", commsTemplate:"Subject: Checking in on something specific\n\nHi [Name],\n\nI noticed [product usage has dropped / your CES score has declined over the last two readings] and I wanted to reach out before our next scheduled call.\n\nI'd rather hear from you early than find out later there was something I could have helped with.\n\nDo you have 15 minutes this week?" },
-      { id:2, title:"Book a dedicated health call", owner:"CSM", timeline:"Day 1–2", action:"Not a standard check-in — a specific call with a clear purpose. Make the customer feel you've noticed and you care.", commsTemplate:"'I'd like to set aside some time specifically to talk about [Company]'s experience with us. Not a standard check-in — I want to understand what's really going on. When works best for you this week?'" },
-      { id:3, title:"Diagnose across 4 dimensions", owner:"CSM", timeline:"Day 2–3", action:"Product (features not working?). People (champion distracted?). Process (workflow not fitting?). Priority (business focus shifted?). One of these is the real cause.", commsTemplate:"Diagnostic questions:\n• Product: 'Are there specific features that aren't working the way you expected?'\n• People: 'Has anything changed in your team's bandwidth or focus recently?'\n• Process: 'Is the way we set up the workflow still matching how your team actually works?'\n• Priority: 'Has anything shifted in your business priorities since we last spoke?'" },
-      { id:4, title:"Assign the right intervention", owner:"CSM", timeline:"Day 3", action:"Based on root cause: technical fix → support team same day. Re-engagement → reset success plan. Stakeholder → executive outreach. Priority shift → re-scope success plan.", commsTemplate:"Internal note template:\nRoot cause identified: [cause]\nIntervention: [action]\nOwner: [person]\nDeadline: [date]\nRisk level: [High/Critical]" },
-      { id:5, title:"Create a written recovery plan with the customer", owner:"CSM", timeline:"Day 3–5", action:"Shared ownership is critical. They need skin in the game. Document what you're each doing and by when.", commsTemplate:"Subject: Recovery plan — [Company]\n\nHi [Name],\n\nFollowing our call, here's what we've agreed:\n\nOn our side:\n• [Action 1] by [Date] — Owner: [Name]\n• [Action 2] by [Date] — Owner: [Name]\n\nOn your side:\n• [Action 1] by [Date]\n\nNext check-in: [Date]\n\nDoes this capture it correctly?" },
-      { id:6, title:"Bi-weekly check-ins with written updates", owner:"CSM", timeline:"Ongoing", action:"Don't reduce cadence until the health score has visibly improved. Consistency is what rebuilds confidence.", commsTemplate:"Subject: Progress update — [Company] recovery plan\n\nHi [Name],\n\nQuick update on where we are:\n\n✓ [Completed action]\n⟳ [In progress action] — on track for [date]\n○ [Upcoming action]\n\nHealth metrics this week: [metric]\nChange from last week: [change]\n\nNext check-in: [date]" },
+      { id:1, title:"Make personalised contact â€” reference the signal", owner:"CSM", timeline:"Day 1", action:"Do not send a generic 'just checking in' email. Reference the specific signal â€” it shows you're paying attention.", commsTemplate:"Subject: Checking in on something specific\n\nHi [Name],\n\nI noticed [product usage has dropped / your CES score has declined over the last two readings] and I wanted to reach out before our next scheduled call.\n\nI'd rather hear from you early than find out later there was something I could have helped with.\n\nDo you have 15 minutes this week?" },
+      { id:2, title:"Book a dedicated health call", owner:"CSM", timeline:"Day 1â€“2", action:"Not a standard check-in â€” a specific call with a clear purpose. Make the customer feel you've noticed and you care.", commsTemplate:"'I'd like to set aside some time specifically to talk about [Company]'s experience with us. Not a standard check-in â€” I want to understand what's really going on. When works best for you this week?'" },
+      { id:3, title:"Diagnose across 4 dimensions", owner:"CSM", timeline:"Day 2â€“3", action:"Product (features not working?). People (champion distracted?). Process (workflow not fitting?). Priority (business focus shifted?). One of these is the real cause.", commsTemplate:"Diagnostic questions:\nâ€¢ Product: 'Are there specific features that aren't working the way you expected?'\nâ€¢ People: 'Has anything changed in your team's bandwidth or focus recently?'\nâ€¢ Process: 'Is the way we set up the workflow still matching how your team actually works?'\nâ€¢ Priority: 'Has anything shifted in your business priorities since we last spoke?'" },
+      { id:4, title:"Assign the right intervention", owner:"CSM", timeline:"Day 3", action:"Based on root cause: technical fix â†’ support team same day. Re-engagement â†’ reset success plan. Stakeholder â†’ executive outreach. Priority shift â†’ re-scope success plan.", commsTemplate:"Internal note template:\nRoot cause identified: [cause]\nIntervention: [action]\nOwner: [person]\nDeadline: [date]\nRisk level: [High/Critical]" },
+      { id:5, title:"Create a written recovery plan with the customer", owner:"CSM", timeline:"Day 3â€“5", action:"Shared ownership is critical. They need skin in the game. Document what you're each doing and by when.", commsTemplate:"Subject: Recovery plan â€” [Company]\n\nHi [Name],\n\nFollowing our call, here's what we've agreed:\n\nOn our side:\nâ€¢ [Action 1] by [Date] â€” Owner: [Name]\nâ€¢ [Action 2] by [Date] â€” Owner: [Name]\n\nOn your side:\nâ€¢ [Action 1] by [Date]\n\nNext check-in: [Date]\n\nDoes this capture it correctly?" },
+      { id:6, title:"Bi-weekly check-ins with written updates", owner:"CSM", timeline:"Ongoing", action:"Don't reduce cadence until the health score has visibly improved. Consistency is what rebuilds confidence.", commsTemplate:"Subject: Progress update â€” [Company] recovery plan\n\nHi [Name],\n\nQuick update on where we are:\n\nâœ“ [Completed action]\nâŸ³ [In progress action] â€” on track for [date]\nâ—‹ [Upcoming action]\n\nHealth metrics this week: [metric]\nChange from last week: [change]\n\nNext check-in: [date]" },
       { id:7, title:"Escalate to Critical Recovery if no improvement", owner:"CSM", timeline:"Day 21", action:"If health score has not improved after 21 days of active intervention, escalate immediately. Do not extend the timeline hoping things improve.", commsTemplate:"Internal escalation:\n'[Company] has been on the Early Warning playbook for 21 days with no meaningful improvement. Health score: [X]. Churn risk: [X]%. Escalating to Critical Recovery. Need manager involvement by EOD.'" },
     ],
   },
@@ -152,16 +152,16 @@ const PLAYBOOK_LIBRARY = [
     trigger:"Health score below 40 OR churn risk above 65% OR customer signals intent to leave",
     triggerCondition: a => a.healthScore < 40 || a.churnRisk > 65,
     successMetric:"Customer commits to staying and re-engages with the product",
-    summary:"Every day counts. The approach here is radically different from standard CS — radical honesty, executive involvement, and proof over promises.",
+    summary:"Every day counts. The approach here is radically different from standard CS â€” radical honesty, executive involvement, and proof over promises.",
     steps:[
       { id:1, title:"Escalate internally before contacting customer", owner:"CSM + Manager", timeline:"Day 1", action:"Align your manager on the situation, the risk, and the plan before anything goes to the customer. No surprises internally.", commsTemplate:"Internal brief:\nAccount: [Name]\nARR at risk: [Amount]\nRoot cause: [Summary]\nChurn probability: [X]%\nProposed approach: [Plan]\nWhat I need from you: [Specific ask]" },
-      { id:2, title:"Make personal contact within 24 hours", owner:"CSM", timeline:"Day 1", action:"Not email — call. Your voice signals urgency and care that email cannot. Leave a voicemail if needed.", commsTemplate:"Call opener:\n'Hi [Name], I'm calling rather than emailing because I think this warrants a real conversation. I'm genuinely concerned about your experience with us and I want to understand where we've fallen short. Do you have 15 minutes right now?'\n\nVoicemail: 'Hi [Name], it's [Your name] from [Company]. I wanted to speak with you personally — not about renewals or anything commercial. I just want to understand your experience. Please call me back at [number] whenever is convenient.'" },
-      { id:3, title:"Listen — do not defend or pitch", owner:"CSM", timeline:"Day 1–2", action:"Open with radical honesty. Listen for 80% of the conversation. Take notes. Resist every urge to explain or solve in the moment.", commsTemplate:"Opening:\n'Before I say anything else, I want to hear from you. Where have we let you down?'\n\nDuring the call: take notes, reflect back what you're hearing, do not interrupt.\n\nClose: 'Thank you for being honest with me. I'm going to take everything you've said seriously and come back to you within 48 hours with a concrete plan.'" },
-      { id:4, title:"Bring in a senior leader", owner:"Manager / VP CS", timeline:"Day 2–3", action:"VP of CS or CEO depending on account size. This signals the relationship matters at the highest level. Peer-to-peer contact changes the dynamic.", commsTemplate:"Executive outreach:\n'Hi [Customer Executive],\n\nI'm reaching out personally because I understand your experience with us has not been what we both hoped for. I take that seriously.\n\nI'd welcome the opportunity to speak with you directly — not to pitch or defend, but to listen and commit to making this right.\n\nWould 20 minutes this week work?'" },
-      { id:5, title:"Send executive recovery brief within 48 hours", owner:"CSM", timeline:"Day 2–3", action:"What went wrong. What you're doing about it. What commitment you're making. Specific dates, specific owners. No vague promises.", commsTemplate:"Subject: Our commitment to [Company]\n\nHi [Name],\n\nFollowing our conversation, I want to put in writing what happened, what we're doing, and what you can expect from us.\n\nWhat went wrong:\n[Honest, specific summary]\n\nWhat we're doing:\n• [Action 1] — Owner: [Name] — By: [Date]\n• [Action 2] — Owner: [Name] — By: [Date]\n\nOur commitment:\n[Specific, measurable outcome] by [Date]. If we don't deliver, [what you'll do].\n\n[Senior leader name] is personally overseeing this." },
+      { id:2, title:"Make personal contact within 24 hours", owner:"CSM", timeline:"Day 1", action:"Not email â€” call. Your voice signals urgency and care that email cannot. Leave a voicemail if needed.", commsTemplate:"Call opener:\n'Hi [Name], I'm calling rather than emailing because I think this warrants a real conversation. I'm genuinely concerned about your experience with us and I want to understand where we've fallen short. Do you have 15 minutes right now?'\n\nVoicemail: 'Hi [Name], it's [Your name] from [Company]. I wanted to speak with you personally â€” not about renewals or anything commercial. I just want to understand your experience. Please call me back at [number] whenever is convenient.'" },
+      { id:3, title:"Listen â€” do not defend or pitch", owner:"CSM", timeline:"Day 1â€“2", action:"Open with radical honesty. Listen for 80% of the conversation. Take notes. Resist every urge to explain or solve in the moment.", commsTemplate:"Opening:\n'Before I say anything else, I want to hear from you. Where have we let you down?'\n\nDuring the call: take notes, reflect back what you're hearing, do not interrupt.\n\nClose: 'Thank you for being honest with me. I'm going to take everything you've said seriously and come back to you within 48 hours with a concrete plan.'" },
+      { id:4, title:"Bring in a senior leader", owner:"Manager / VP CS", timeline:"Day 2â€“3", action:"VP of CS or CEO depending on account size. This signals the relationship matters at the highest level. Peer-to-peer contact changes the dynamic.", commsTemplate:"Executive outreach:\n'Hi [Customer Executive],\n\nI'm reaching out personally because I understand your experience with us has not been what we both hoped for. I take that seriously.\n\nI'd welcome the opportunity to speak with you directly â€” not to pitch or defend, but to listen and commit to making this right.\n\nWould 20 minutes this week work?'" },
+      { id:5, title:"Send executive recovery brief within 48 hours", owner:"CSM", timeline:"Day 2â€“3", action:"What went wrong. What you're doing about it. What commitment you're making. Specific dates, specific owners. No vague promises.", commsTemplate:"Subject: Our commitment to [Company]\n\nHi [Name],\n\nFollowing our conversation, I want to put in writing what happened, what we're doing, and what you can expect from us.\n\nWhat went wrong:\n[Honest, specific summary]\n\nWhat we're doing:\nâ€¢ [Action 1] â€” Owner: [Name] â€” By: [Date]\nâ€¢ [Action 2] â€” Owner: [Name] â€” By: [Date]\n\nOur commitment:\n[Specific, measurable outcome] by [Date]. If we don't deliver, [what you'll do].\n\n[Senior leader name] is personally overseeing this." },
       { id:6, title:"Define one 'proof of life' milestone", owner:"CSM", timeline:"Day 3", action:"A single meaningful win you can deliver within 14 days. Give them a reason to believe before asking for anything.", commsTemplate:"'I don't want to ask you to commit to anything right now. What I'd like to do is earn back your confidence with one concrete delivery by [date]. If we achieve [milestone], would you be willing to have a fresh conversation about the path forward?'" },
-      { id:7, title:"Daily check-ins until milestone delivered", owner:"CSM", timeline:"Daily", action:"Do not reduce cadence until you have delivered the proof milestone and the customer has acknowledged it. Consistency is what rebuilds trust.", commsTemplate:"Daily update (keep short):\n'Hi [Name] — quick update: [progress]. On track for [date]. Anything you need from me today?'" },
-      { id:8, title:"Formal recovery review", owner:"CSM + Manager", timeline:"Day 14–21", action:"Acknowledge what happened openly. Present the new success plan. Ask for a renewed commitment.", commsTemplate:"Recovery review agenda:\n1. Acknowledge the past honestly (5 min)\n2. Present what was delivered and prove it (10 min)\n3. Introduce the new success plan (10 min)\n4. Ask: 'Based on what you've seen, are you willing to continue this relationship?'" },
+      { id:7, title:"Daily check-ins until milestone delivered", owner:"CSM", timeline:"Daily", action:"Do not reduce cadence until you have delivered the proof milestone and the customer has acknowledged it. Consistency is what rebuilds trust.", commsTemplate:"Daily update (keep short):\n'Hi [Name] â€” quick update: [progress]. On track for [date]. Anything you need from me today?'" },
+      { id:8, title:"Formal recovery review", owner:"CSM + Manager", timeline:"Day 14â€“21", action:"Acknowledge what happened openly. Present the new success plan. Ask for a renewed commitment.", commsTemplate:"Recovery review agenda:\n1. Acknowledge the past honestly (5 min)\n2. Present what was delivered and prove it (10 min)\n3. Introduce the new success plan (10 min)\n4. Ask: 'Based on what you've seen, are you willing to continue this relationship?'" },
     ],
   },
   {
@@ -175,18 +175,18 @@ const PLAYBOOK_LIBRARY = [
       return days >= 30;
     },
     successMetric:"Customer responds and re-engages in a scheduled conversation",
-    summary:"Disengagement is the #1 predictor of churn before it becomes visible. Research before you reach out — personalisation is the difference between a response and being ignored.",
+    summary:"Disengagement is the #1 predictor of churn before it becomes visible. Research before you reach out â€” personalisation is the difference between a response and being ignored.",
     steps:[
-      { id:1, title:"Research before reaching out", owner:"CSM", timeline:"Day 1", action:"Check their company news, LinkedIn activity, and product usage data. Personalise your outreach around something real — not 'I wanted to check in'.", commsTemplate:"Research checklist:\n□ Any company news in the last 30 days?\n□ Any LinkedIn posts from key contacts?\n□ Product usage trend — up, down, or flat?\n□ Any open tickets or unresolved issues?\n□ Renewal date — how far away?" },
-      { id:2, title:"First outreach — personal, no agenda", owner:"CSM", timeline:"Day 1", action:"Short, personal, no product agenda. Give them a reason to respond that isn't 'because my CSM emailed me'.", commsTemplate:"Subject: Saw this and thought of you\n\nHi [Name],\n\nI came across [relevant industry article / company news] and immediately thought of the challenge you mentioned around [topic they raised].\n\n[One sentence observation or question about it]\n\nHow are things going on your end?\n\n[Your name]\n\nP.S. No agenda — genuinely curious." },
-      { id:3, title:"Try a different channel if no response in 5 days", owner:"CSM", timeline:"Day 6", action:"If you've been emailing, call. If you've been calling, try LinkedIn. Channel fatigue is real.", commsTemplate:"LinkedIn message:\n'Hi [Name] — I've been trying to reach you and wanted to try a different channel. No pressure at all, just wanted to make sure [Company] has everything you need from our side. Happy to connect whenever works for you.'" },
+      { id:1, title:"Research before reaching out", owner:"CSM", timeline:"Day 1", action:"Check their company news, LinkedIn activity, and product usage data. Personalise your outreach around something real â€” not 'I wanted to check in'.", commsTemplate:"Research checklist:\nâ–¡ Any company news in the last 30 days?\nâ–¡ Any LinkedIn posts from key contacts?\nâ–¡ Product usage trend â€” up, down, or flat?\nâ–¡ Any open tickets or unresolved issues?\nâ–¡ Renewal date â€” how far away?" },
+      { id:2, title:"First outreach â€” personal, no agenda", owner:"CSM", timeline:"Day 1", action:"Short, personal, no product agenda. Give them a reason to respond that isn't 'because my CSM emailed me'.", commsTemplate:"Subject: Saw this and thought of you\n\nHi [Name],\n\nI came across [relevant industry article / company news] and immediately thought of the challenge you mentioned around [topic they raised].\n\n[One sentence observation or question about it]\n\nHow are things going on your end?\n\n[Your name]\n\nP.S. No agenda â€” genuinely curious." },
+      { id:3, title:"Try a different channel if no response in 5 days", owner:"CSM", timeline:"Day 6", action:"If you've been emailing, call. If you've been calling, try LinkedIn. Channel fatigue is real.", commsTemplate:"LinkedIn message:\n'Hi [Name] â€” I've been trying to reach you and wanted to try a different channel. No pressure at all, just wanted to make sure [Company] has everything you need from our side. Happy to connect whenever works for you.'" },
       { id:4, title:"Send a value-focused email", owner:"CSM", timeline:"Day 10", action:"Give them a reason to reply. A relevant ROI insight, industry benchmark, or new feature tied to their stated goal.", commsTemplate:"Subject: [Industry] benchmark you might find useful\n\nHi [Name],\n\nWe've been seeing some interesting patterns across our [industry] customers. Companies that [action] are seeing [result].\n\nGiven your goal around [their goal], I thought this might be worth sharing.\n\n[One specific data point or insight]\n\nWould this be worth a 20-minute call to explore what it means for [Company]?" },
-      { id:5, title:"Escalate through stakeholder map", owner:"CSM", timeline:"Day 14", action:"Is there another contact in the account? A colleague, their manager? Check the stakeholder map and reach out through a different person.", commsTemplate:"Outreach to secondary contact:\n'Hi [Name] — I've been trying to reach [Primary Contact] and haven't been able to connect. I wanted to make sure [Company] has everything they need from us. Are you the right person to speak with, or is there someone better placed?'" },
-      { id:6, title:"Permission to close the loop email", owner:"CSM", timeline:"Day 21", action:"The most effective re-engagement email in CS. Gets the highest response rate of any sequence because it gives them control.", commsTemplate:"Subject: Checking in one last time\n\nHi [Name],\n\nI've reached out a few times over the past few weeks and I don't want to be a nuisance.\n\nI still believe there's real value we can deliver for [Company] around [their goal]. But I also understand priorities change.\n\nAre you still interested in working toward [goal]? If now isn't the right time, just let me know and I'll adjust my approach — no hard feelings at all.\n\nEither way, I just want to make sure I'm being useful to you.\n\n[Your name]" },
+      { id:5, title:"Escalate through stakeholder map", owner:"CSM", timeline:"Day 14", action:"Is there another contact in the account? A colleague, their manager? Check the stakeholder map and reach out through a different person.", commsTemplate:"Outreach to secondary contact:\n'Hi [Name] â€” I've been trying to reach [Primary Contact] and haven't been able to connect. I wanted to make sure [Company] has everything they need from us. Are you the right person to speak with, or is there someone better placed?'" },
+      { id:6, title:"Permission to close the loop email", owner:"CSM", timeline:"Day 21", action:"The most effective re-engagement email in CS. Gets the highest response rate of any sequence because it gives them control.", commsTemplate:"Subject: Checking in one last time\n\nHi [Name],\n\nI've reached out a few times over the past few weeks and I don't want to be a nuisance.\n\nI still believe there's real value we can deliver for [Company] around [their goal]. But I also understand priorities change.\n\nAre you still interested in working toward [goal]? If now isn't the right time, just let me know and I'll adjust my approach â€” no hard feelings at all.\n\nEither way, I just want to make sure I'm being useful to you.\n\n[Your name]" },
     ],
   },
 
-  // ── RENEWAL ──
+  // â”€â”€ RENEWAL â”€â”€
   {
     id:"pb-007",
     name:"Renewal Preparation",
@@ -200,13 +200,13 @@ const PLAYBOOK_LIBRARY = [
     successMetric:"Renewal committed verbally at the 60-day mark with zero last-minute negotiation",
     summary:"Renewals won 90 days out have 3x higher expansion rates. The goal is to make renewal a natural next step, not a negotiation.",
     steps:[
-      { id:1, title:"Internal renewal readiness assessment", owner:"CSM", timeline:"90 days out", action:"Know your position before the customer does. Health score, open tickets, CES trend, stakeholder coverage, success plan progress.", commsTemplate:"Renewal readiness checklist:\n□ Health score: [X] — trend: [up/down/flat]\n□ CES trend: [improving/declining/flat]\n□ Open tickets: [X] — any unresolved critical issues?\n□ Stakeholder coverage: [Champion name] — are they still in role?\n□ Executive sponsor: [Name] — last contact: [Date]\n□ Success plan progress: [X]% complete\n□ Known risks: [List any]\n□ Expansion opportunity: [Yes/No/Maybe]" },
-      { id:2, title:"Prepare ROI summary report", owner:"CSM", timeline:"Days 1–5", action:"Quantify value delivered. Time saved, revenue impacted, tickets reduced, adoption rate. Make it undeniable. Numbers that the customer can present to their own leadership.", commsTemplate:"ROI summary structure:\n• Goal at the start: [Original objective]\n• Key results delivered:\n  - [Metric 1]: [Before] → [After] = [% improvement]\n  - [Metric 2]: [Before] → [After] = [% improvement]\n• Usage growth: [X]% increase in active users\n• Support health: [X]% reduction in tickets\n• What's ahead: [Next milestone or expansion opportunity]" },
-      { id:3, title:"Schedule dedicated renewal planning call", owner:"CSM", timeline:"Days 5–7", action:"Not a regular check-in — a strategic review. Frame it as planning for a strong next year.", commsTemplate:"Subject: Planning for a strong next year — [Company]\n\nHi [Name],\n\nWith your renewal coming up in about 90 days, I'd like to set aside time for a proper review of what we've achieved and what we're building toward together.\n\nThis isn't a renewal pitch — it's a strategic session to make sure we're fully aligned on your goals for the next year.\n\nDo you have an hour in the next two weeks? I'll also invite [their executive sponsor] if you think that adds value." },
-      { id:4, title:"Run renewal planning call", owner:"CSM", timeline:"Days 7–14", action:"Open with their business goals for next year first. Connect what you've delivered to those goals. Then discuss renewal naturally — not as a transaction.", commsTemplate:"Renewal call structure:\n1. 'What are the top 2–3 priorities for your team in the next 12 months?' (listen first)\n2. 'Here's how what we've built together connects to those priorities' (present ROI)\n3. 'Here's what we're planning to deliver in year 2' (forward-looking)\n4. 'Given all of that, I'd love to get the renewal sorted early so we can stay focused on the work. Does that make sense to you?'" },
-      { id:5, title:"Introduce expansion if appropriate", owner:"CSM", timeline:"Day 14", action:"Present expansion as part of the vision conversation — never as an add-on at the end of a renewal call.", commsTemplate:"'Given what you shared about [goal / new team / new geography], I think there's an opportunity to do more together next year. I've put together a quick summary of what that could look like — would it be worth 20 minutes to explore?'" },
-      { id:6, title:"Get verbal commitment", owner:"CSM", timeline:"Days 14–21", action:"A verbal 'yes, let's move forward' 90 days out avoids procurement delays and last-minute surprises.", commsTemplate:"'Based on everything we've discussed, are you comfortable moving forward with the renewal? I can get the paperwork moving early so it's done and off your plate.'" },
-      { id:7, title:"Send written renewal summary", owner:"CSM", timeline:"Within 48 hours of verbal", action:"Proposed terms, timeline, and next steps in writing. Speed closes deals.", commsTemplate:"Subject: Renewal summary — [Company]\n\nHi [Name],\n\nGreat conversation — here's what we discussed:\n\nRenewal terms: [Summary]\nEffective date: [Date]\nNext steps: [Who does what by when]\n\nI'll send the formal agreement to [contact] by [date]. Any questions, call me directly.\n\n[Your name]" },
+      { id:1, title:"Internal renewal readiness assessment", owner:"CSM", timeline:"90 days out", action:"Know your position before the customer does. Health score, open tickets, CES trend, stakeholder coverage, success plan progress.", commsTemplate:"Renewal readiness checklist:\nâ–¡ Health score: [X] â€” trend: [up/down/flat]\nâ–¡ CES trend: [improving/declining/flat]\nâ–¡ Open tickets: [X] â€” any unresolved critical issues?\nâ–¡ Stakeholder coverage: [Champion name] â€” are they still in role?\nâ–¡ Executive sponsor: [Name] â€” last contact: [Date]\nâ–¡ Success plan progress: [X]% complete\nâ–¡ Known risks: [List any]\nâ–¡ Expansion opportunity: [Yes/No/Maybe]" },
+      { id:2, title:"Prepare ROI summary report", owner:"CSM", timeline:"Days 1â€“5", action:"Quantify value delivered. Time saved, revenue impacted, tickets reduced, adoption rate. Make it undeniable. Numbers that the customer can present to their own leadership.", commsTemplate:"ROI summary structure:\nâ€¢ Goal at the start: [Original objective]\nâ€¢ Key results delivered:\n  - [Metric 1]: [Before] â†’ [After] = [% improvement]\n  - [Metric 2]: [Before] â†’ [After] = [% improvement]\nâ€¢ Usage growth: [X]% increase in active users\nâ€¢ Support health: [X]% reduction in tickets\nâ€¢ What's ahead: [Next milestone or expansion opportunity]" },
+      { id:3, title:"Schedule dedicated renewal planning call", owner:"CSM", timeline:"Days 5â€“7", action:"Not a regular check-in â€” a strategic review. Frame it as planning for a strong next year.", commsTemplate:"Subject: Planning for a strong next year â€” [Company]\n\nHi [Name],\n\nWith your renewal coming up in about 90 days, I'd like to set aside time for a proper review of what we've achieved and what we're building toward together.\n\nThis isn't a renewal pitch â€” it's a strategic session to make sure we're fully aligned on your goals for the next year.\n\nDo you have an hour in the next two weeks? I'll also invite [their executive sponsor] if you think that adds value." },
+      { id:4, title:"Run renewal planning call", owner:"CSM", timeline:"Days 7â€“14", action:"Open with their business goals for next year first. Connect what you've delivered to those goals. Then discuss renewal naturally â€” not as a transaction.", commsTemplate:"Renewal call structure:\n1. 'What are the top 2â€“3 priorities for your team in the next 12 months?' (listen first)\n2. 'Here's how what we've built together connects to those priorities' (present ROI)\n3. 'Here's what we're planning to deliver in year 2' (forward-looking)\n4. 'Given all of that, I'd love to get the renewal sorted early so we can stay focused on the work. Does that make sense to you?'" },
+      { id:5, title:"Introduce expansion if appropriate", owner:"CSM", timeline:"Day 14", action:"Present expansion as part of the vision conversation â€” never as an add-on at the end of a renewal call.", commsTemplate:"'Given what you shared about [goal / new team / new geography], I think there's an opportunity to do more together next year. I've put together a quick summary of what that could look like â€” would it be worth 20 minutes to explore?'" },
+      { id:6, title:"Get verbal commitment", owner:"CSM", timeline:"Days 14â€“21", action:"A verbal 'yes, let's move forward' 90 days out avoids procurement delays and last-minute surprises.", commsTemplate:"'Based on everything we've discussed, are you comfortable moving forward with the renewal? I can get the paperwork moving early so it's done and off your plate.'" },
+      { id:7, title:"Send written renewal summary", owner:"CSM", timeline:"Within 48 hours of verbal", action:"Proposed terms, timeline, and next steps in writing. Speed closes deals.", commsTemplate:"Subject: Renewal summary â€” [Company]\n\nHi [Name],\n\nGreat conversation â€” here's what we discussed:\n\nRenewal terms: [Summary]\nEffective date: [Date]\nNext steps: [Who does what by when]\n\nI'll send the formal agreement to [contact] by [date]. Any questions, call me directly.\n\n[Your name]" },
     ],
   },
   {
@@ -220,17 +220,17 @@ const PLAYBOOK_LIBRARY = [
       return days > 0 && days <= 60 && (a.healthScore < 55 || a.churnRisk > 50);
     },
     successMetric:"Customer commits to renewing with a clear recovery plan in place",
-    summary:"This is your last realistic window to save the renewal. The approach is fundamentally different — stop all standard renewal outreach immediately.",
+    summary:"This is your last realistic window to save the renewal. The approach is fundamentally different â€” stop all standard renewal outreach immediately.",
     steps:[
       { id:1, title:"Stop standard renewal outreach immediately", owner:"CSM", timeline:"Day 1", action:"This account needs a completely different conversation. No renewal reminders, no proposal emails.", commsTemplate:"Internal note: 'Pausing all standard renewal comms for [Company]. Activating At-Risk Renewal playbook. Do not send renewal proposal until further notice.'" },
-      { id:2, title:"Escalate internally and agree on terms flexibility", owner:"CSM + Manager", timeline:"Day 1", action:"Agree upfront what you're willing to offer — flexibility on terms, additional support, executive involvement. Know your position before the customer call.", commsTemplate:"Internal brief:\n• ARR at risk: [Amount]\n• Root cause of risk: [Summary]\n• Competitive threat: [Yes/No]\n• What we're willing to offer:\n  - [Option 1]\n  - [Option 2]\n• What we're not willing to offer: [Limits]\n• Who is getting involved: [Names]" },
-      { id:3, title:"Call the champion directly — be honest", owner:"CSM", timeline:"Day 1–2", action:"Not email. Be honest: 'I know the experience hasn't been what we both expected. I want to make this right before the renewal conversation.'", commsTemplate:"Call script:\n'Hi [Name], I wanted to call you rather than email. I'm aware the renewal is coming up and I also know the experience hasn't been everything we both wanted it to be. I don't want to have a commercial conversation until we've addressed that. Can we talk honestly about where things stand?'" },
-      { id:4, title:"Diagnose the specific renewal risk", owner:"CSM", timeline:"Day 2–3", action:"Product value gap? Internal priorities shifting? Budget pressure? Competitive threat? Each requires a fundamentally different response.", commsTemplate:"Risk diagnosis questions:\n• 'On a scale of 1–10, how likely are you to renew right now? What would make it a 10?'\n• 'Is there a specific competitor you're evaluating?'\n• 'Is this a budget conversation or a value conversation?'\n• 'Has anything changed internally that's affecting this decision?'" },
-      { id:5, title:"Respond to competitive threat — do not discount first", owner:"CSM", timeline:"Day 3", action:"Restate your differentiated value before offering any pricing flexibility. Discounting as the first move signals you don't believe in your own product.", commsTemplate:"'I'd like to understand more about what [competitor] is offering before we talk about pricing. What are the specific things they're promising that you feel we're not delivering? That's what I want to address.'" },
-      { id:6, title:"Respond to budget pressure — explore right-sizing", owner:"CSM", timeline:"Day 3", action:"Explore a right-sized renewal — fewer seats, shorter term, a pause option. Losing 20% ARR is better than losing 100% and the relationship.", commsTemplate:"'If budget is the primary challenge, I'd rather find a structure that works for you today than lose you entirely. Let's look at what a scaled-back version could look like — we can always grow back into it. What's the number that would make this work?'" },
-      { id:7, title:"Bring in executive peer-to-peer", owner:"Manager / VP CS", timeline:"Days 3–5", action:"A peer-to-peer executive conversation at this stage carries more weight than anything a CSM can do.", commsTemplate:"Executive outreach:\n'Hi [Customer Executive],\n\nI wanted to reach out personally ahead of your renewal. I understand there have been some challenges and I'd value the opportunity to speak with you directly about how we can make this work.\n\nWould 20 minutes this week be possible?'" },
+      { id:2, title:"Escalate internally and agree on terms flexibility", owner:"CSM + Manager", timeline:"Day 1", action:"Agree upfront what you're willing to offer â€” flexibility on terms, additional support, executive involvement. Know your position before the customer call.", commsTemplate:"Internal brief:\nâ€¢ ARR at risk: [Amount]\nâ€¢ Root cause of risk: [Summary]\nâ€¢ Competitive threat: [Yes/No]\nâ€¢ What we're willing to offer:\n  - [Option 1]\n  - [Option 2]\nâ€¢ What we're not willing to offer: [Limits]\nâ€¢ Who is getting involved: [Names]" },
+      { id:3, title:"Call the champion directly â€” be honest", owner:"CSM", timeline:"Day 1â€“2", action:"Not email. Be honest: 'I know the experience hasn't been what we both expected. I want to make this right before the renewal conversation.'", commsTemplate:"Call script:\n'Hi [Name], I wanted to call you rather than email. I'm aware the renewal is coming up and I also know the experience hasn't been everything we both wanted it to be. I don't want to have a commercial conversation until we've addressed that. Can we talk honestly about where things stand?'" },
+      { id:4, title:"Diagnose the specific renewal risk", owner:"CSM", timeline:"Day 2â€“3", action:"Product value gap? Internal priorities shifting? Budget pressure? Competitive threat? Each requires a fundamentally different response.", commsTemplate:"Risk diagnosis questions:\nâ€¢ 'On a scale of 1â€“10, how likely are you to renew right now? What would make it a 10?'\nâ€¢ 'Is there a specific competitor you're evaluating?'\nâ€¢ 'Is this a budget conversation or a value conversation?'\nâ€¢ 'Has anything changed internally that's affecting this decision?'" },
+      { id:5, title:"Respond to competitive threat â€” do not discount first", owner:"CSM", timeline:"Day 3", action:"Restate your differentiated value before offering any pricing flexibility. Discounting as the first move signals you don't believe in your own product.", commsTemplate:"'I'd like to understand more about what [competitor] is offering before we talk about pricing. What are the specific things they're promising that you feel we're not delivering? That's what I want to address.'" },
+      { id:6, title:"Respond to budget pressure â€” explore right-sizing", owner:"CSM", timeline:"Day 3", action:"Explore a right-sized renewal â€” fewer seats, shorter term, a pause option. Losing 20% ARR is better than losing 100% and the relationship.", commsTemplate:"'If budget is the primary challenge, I'd rather find a structure that works for you today than lose you entirely. Let's look at what a scaled-back version could look like â€” we can always grow back into it. What's the number that would make this work?'" },
+      { id:7, title:"Bring in executive peer-to-peer", owner:"Manager / VP CS", timeline:"Days 3â€“5", action:"A peer-to-peer executive conversation at this stage carries more weight than anything a CSM can do.", commsTemplate:"Executive outreach:\n'Hi [Customer Executive],\n\nI wanted to reach out personally ahead of your renewal. I understand there have been some challenges and I'd value the opportunity to speak with you directly about how we can make this work.\n\nWould 20 minutes this week be possible?'" },
       { id:8, title:"Propose a 30-day recovery sprint", owner:"CSM", timeline:"Day 5", action:"One clear, deliverable milestone before the renewal signs. Give them a reason to believe.", commsTemplate:"'I'd like to propose something. Before we finalise the renewal, let me deliver [specific outcome] in the next 30 days. If I do, I'm confident you'll want to continue. Does that feel fair?'" },
-      { id:9, title:"Get a decision before day 30", owner:"CSM", timeline:"Day 30", action:"Yes, no, or a timeline for a decision. No ambiguity. A 'no' you can work with. Ambiguity you cannot.", commsTemplate:"'I want to be respectful of your time and process. By [date], I'd like to know if we're moving forward — even if it's a modified version of what we discussed. Can you commit to a decision by then?'" },
+      { id:9, title:"Get a decision before day 30", owner:"CSM", timeline:"Day 30", action:"Yes, no, or a timeline for a decision. No ambiguity. A 'no' you can work with. Ambiguity you cannot.", commsTemplate:"'I want to be respectful of your time and process. By [date], I'd like to know if we're moving forward â€” even if it's a modified version of what we discussed. Can you commit to a decision by then?'" },
     ],
   },
   {
@@ -243,15 +243,15 @@ const PLAYBOOK_LIBRARY = [
     successMetric:"Expansion opportunity identified, qualified, and in commercial discussion",
     summary:"Healthy accounts that aren't expanded are a missed revenue opportunity. The key is making expansion feel like their idea, not a sales call.",
     steps:[
-      { id:1, title:"Identify the specific expansion signal", owner:"CSM", timeline:"Day 1", action:"More users, new use cases, new department, new geography, or feature upgrade. Know exactly what you're proposing before you call.", commsTemplate:"Expansion signal checklist:\n□ User count growing beyond current licence?\n□ New department showing interest?\n□ Customer mentioned a new initiative that fits?\n□ Feature usage at capacity — ready for upgrade tier?\n□ New geography or office opening?" },
-      { id:2, title:"Book a value review call — frame it as success", owner:"CSM", timeline:"Days 1–5", action:"Do not frame it as an expansion call. Frame it as celebrating their results and planning what's next.", commsTemplate:"Subject: Celebrating some strong results — [Company]\n\nHi [Name],\n\nI've been reviewing your results over the last quarter and I'm genuinely impressed with what your team has accomplished.\n\nI'd love to share what I'm seeing and talk about what the next phase could look like.\n\n30 minutes — when works for you?" },
-      { id:3, title:"Open the call with their future priorities", owner:"CSM", timeline:"Days 5–7", action:"Ask about their next 6-month priorities before mentioning anything commercial. Listen for the expansion hooks.", commsTemplate:"Opening questions:\n• 'What are the biggest initiatives your team is working on in the next 6 months?'\n• 'Are there parts of your business that aren't yet using [Product] that you think could benefit?'\n• 'How has your team grown since we started working together?'" },
-      { id:4, title:"Present expansion as the solution to their stated goal", owner:"CSM", timeline:"Day 7", action:"Connect the expansion directly to something they said. 'Given what you just told me about [goal], I think this could help' — not a product pitch.", commsTemplate:"'You mentioned [goal / new initiative] — I think there's a natural opportunity here. [Expansion option] would allow you to [specific outcome tied to their goal]. Would it be worth exploring what that looks like?'" },
-      { id:5, title:"Involve sales or account management for commercial negotiation", owner:"CSM + Sales", timeline:"Days 7–14", action:"CSM stays as the trusted advisor. Sales or AM handles the commercial conversation. Don't blur those lines.", commsTemplate:"Internal handoff:\n'I've had an expansion conversation with [Company]. [Name] is open to [expansion type]. Here's what they told me about their priorities: [summary]. They're expecting to hear from someone about next steps this week.'" },
+      { id:1, title:"Identify the specific expansion signal", owner:"CSM", timeline:"Day 1", action:"More users, new use cases, new department, new geography, or feature upgrade. Know exactly what you're proposing before you call.", commsTemplate:"Expansion signal checklist:\nâ–¡ User count growing beyond current licence?\nâ–¡ New department showing interest?\nâ–¡ Customer mentioned a new initiative that fits?\nâ–¡ Feature usage at capacity â€” ready for upgrade tier?\nâ–¡ New geography or office opening?" },
+      { id:2, title:"Book a value review call â€” frame it as success", owner:"CSM", timeline:"Days 1â€“5", action:"Do not frame it as an expansion call. Frame it as celebrating their results and planning what's next.", commsTemplate:"Subject: Celebrating some strong results â€” [Company]\n\nHi [Name],\n\nI've been reviewing your results over the last quarter and I'm genuinely impressed with what your team has accomplished.\n\nI'd love to share what I'm seeing and talk about what the next phase could look like.\n\n30 minutes â€” when works for you?" },
+      { id:3, title:"Open the call with their future priorities", owner:"CSM", timeline:"Days 5â€“7", action:"Ask about their next 6-month priorities before mentioning anything commercial. Listen for the expansion hooks.", commsTemplate:"Opening questions:\nâ€¢ 'What are the biggest initiatives your team is working on in the next 6 months?'\nâ€¢ 'Are there parts of your business that aren't yet using [Product] that you think could benefit?'\nâ€¢ 'How has your team grown since we started working together?'" },
+      { id:4, title:"Present expansion as the solution to their stated goal", owner:"CSM", timeline:"Day 7", action:"Connect the expansion directly to something they said. 'Given what you just told me about [goal], I think this could help' â€” not a product pitch.", commsTemplate:"'You mentioned [goal / new initiative] â€” I think there's a natural opportunity here. [Expansion option] would allow you to [specific outcome tied to their goal]. Would it be worth exploring what that looks like?'" },
+      { id:5, title:"Involve sales or account management for commercial negotiation", owner:"CSM + Sales", timeline:"Days 7â€“14", action:"CSM stays as the trusted advisor. Sales or AM handles the commercial conversation. Don't blur those lines.", commsTemplate:"Internal handoff:\n'I've had an expansion conversation with [Company]. [Name] is open to [expansion type]. Here's what they told me about their priorities: [summary]. They're expecting to hear from someone about next steps this week.'" },
     ],
   },
 
-  // ── EXECUTIVE ──
+  // â”€â”€ EXECUTIVE â”€â”€
   {
     id:"pb-010",
     name:"QBR Preparation & Delivery",
@@ -260,17 +260,17 @@ const PLAYBOOK_LIBRARY = [
     trigger:"6 weeks before quarterly milestone for Enterprise or Growth accounts",
     triggerCondition: a => (a.plan === "Enterprise" || a.plan === "Growth"),
     successMetric:"Executive leaves with a clear picture of ROI, aligned on next quarter goals, and engaged in a forward-looking conversation",
-    summary:"CS teams running consistent QBRs maintain NRR 15–20 points higher. The secret: build the review around their business, not your product.",
+    summary:"CS teams running consistent QBRs maintain NRR 15â€“20 points higher. The secret: build the review around their business, not your product.",
     steps:[
-      { id:1, title:"Sync with champion — build their agenda", owner:"CSM", timeline:"6 weeks out", action:"'What do your execs care about right now? What would make you look great to your boss?' Build the QBR around their agenda, not yours.", commsTemplate:"Pre-QBR sync questions:\n• 'What are the top 2–3 priorities for your leadership team right now?'\n• 'Is there anything sensitive I should avoid in the room?'\n• 'What would make you personally look great if it came out of this meeting?'\n• 'Who else should be in the room?'\n• 'What do you want your exec to walk away thinking about us?'" },
-      { id:2, title:"Pull and interpret all data", owner:"CSM", timeline:"4 weeks out", action:"Usage, adoption, ticket resolution, milestone progress, CES. Interpret it — don't just aggregate it. What does the data actually mean for their business?", commsTemplate:"QBR data pack:\n□ Product usage trend (month over month)\n□ Feature adoption — which features, which teams\n□ Support: tickets opened, time to resolve, satisfaction\n□ Success plan: milestones completed vs planned\n□ CES trend\n□ Key wins with business impact (quantified)\n□ What's underperforming and why" },
-      { id:3, title:"Build narrative using Before-Action-After framework", owner:"CSM", timeline:"3 weeks out", action:"Before (the pain that triggered purchase) → Action (what was adopted) → After (the business outcome). The feature is the middle of the story. The outcome is the point.", commsTemplate:"QBR narrative structure:\n1. Executive summary (1 slide): the one number that matters\n2. Where you started: [Business challenge / baseline metric]\n3. What you built together: [Key actions taken]\n4. Where you are now: [Outcome metrics]\n5. What's next: [Goals for next quarter]\n6. One expansion or opportunity to explore (if applicable)" },
-      { id:4, title:"Confirm the right attendees", owner:"CSM", timeline:"2 weeks out", action:"Economic buyer must be in the room. If the budget holder isn't there, you're presenting to influencers not decision-makers.", commsTemplate:"Required attendees:\nCustomer side: Economic buyer / budget owner, day-to-day champion, relevant technical lead\nYour side: CSM, executive sponsor (for strategic accounts), product specialist (if roadmap discussion needed)\n\nIf economic buyer won't attend: 'I'd really like [Executive Name] to be part of this — the ROI discussion will be most valuable with them in the room. Is there a way to make that happen?'" },
-      { id:5, title:"Share deck with champion 1 week in advance", owner:"CSM", timeline:"1 week out", action:"Ask them to review and flag anything sensitive. No surprises in the room.", commsTemplate:"'I've put together the QBR deck — would you mind reviewing it before I send it more widely? I want to make sure I've captured everything correctly and nothing lands the wrong way in the room.'" },
-      { id:6, title:"Open with their business priorities — not a product recap", owner:"CSM", timeline:"Meeting day", action:"First question: 'What's changed in your world since we last spoke?' This signals you're a strategic partner, not a vendor reporting.", commsTemplate:"QBR opening:\n'Before I take you through what we've prepared, I'd like to understand what's top of mind for you right now. What's changed in your business since we last met?'\n\n[Listen for 5 minutes before presenting anything]" },
-      { id:7, title:"Spend 40% of the meeting on the future", owner:"CSM", timeline:"Meeting day", action:"QBRs that are purely retrospective miss the expansion and alignment opportunity. The future half is where relationships deepen.", commsTemplate:"Future-focused questions:\n• 'Given what we've built together, what's the next problem you want to solve?'\n• 'Where are you seeing the biggest opportunity in your market right now?'\n• 'If you could change one thing about how we work together, what would it be?'" },
-      { id:8, title:"Close with aligned next steps — never just 'thanks for your time'", owner:"CSM", timeline:"Meeting day", action:"Every QBR should end with an agreed goal, an aligned action, or an expansion path to explore. Closing with 'thanks' stalls momentum.", commsTemplate:"QBR close:\n'Before we wrap up — let's agree on the one or two things that matter most for next quarter. [Write them down publicly]. And I want to set up our next touchpoint before we leave this room. When works for you?'" },
-      { id:9, title:"Send written follow-up within 24 hours", owner:"CSM", timeline:"Day after meeting", action:"Decisions made. Next steps named. Owners assigned. Executives respect precision and follow-through above all else.", commsTemplate:"Subject: QBR follow-up — [Company] + [Product]\n\nHi [Name],\n\nThank you for a great session today. Here's a summary:\n\nKey results discussed:\n• [Result 1]\n• [Result 2]\n\nAgreed next steps:\n• [Action 1] — Owner: [Name] — By: [Date]\n• [Action 2] — Owner: [Name] — By: [Date]\n\nNext QBR: [Proposed date]\n\nAny additions or corrections, let me know." },
+      { id:1, title:"Sync with champion â€” build their agenda", owner:"CSM", timeline:"6 weeks out", action:"'What do your execs care about right now? What would make you look great to your boss?' Build the QBR around their agenda, not yours.", commsTemplate:"Pre-QBR sync questions:\nâ€¢ 'What are the top 2â€“3 priorities for your leadership team right now?'\nâ€¢ 'Is there anything sensitive I should avoid in the room?'\nâ€¢ 'What would make you personally look great if it came out of this meeting?'\nâ€¢ 'Who else should be in the room?'\nâ€¢ 'What do you want your exec to walk away thinking about us?'" },
+      { id:2, title:"Pull and interpret all data", owner:"CSM", timeline:"4 weeks out", action:"Usage, adoption, ticket resolution, milestone progress, CES. Interpret it â€” don't just aggregate it. What does the data actually mean for their business?", commsTemplate:"QBR data pack:\nâ–¡ Product usage trend (month over month)\nâ–¡ Feature adoption â€” which features, which teams\nâ–¡ Support: tickets opened, time to resolve, satisfaction\nâ–¡ Success plan: milestones completed vs planned\nâ–¡ CES trend\nâ–¡ Key wins with business impact (quantified)\nâ–¡ What's underperforming and why" },
+      { id:3, title:"Build narrative using Before-Action-After framework", owner:"CSM", timeline:"3 weeks out", action:"Before (the pain that triggered purchase) â†’ Action (what was adopted) â†’ After (the business outcome). The feature is the middle of the story. The outcome is the point.", commsTemplate:"QBR narrative structure:\n1. Executive summary (1 slide): the one number that matters\n2. Where you started: [Business challenge / baseline metric]\n3. What you built together: [Key actions taken]\n4. Where you are now: [Outcome metrics]\n5. What's next: [Goals for next quarter]\n6. One expansion or opportunity to explore (if applicable)" },
+      { id:4, title:"Confirm the right attendees", owner:"CSM", timeline:"2 weeks out", action:"Economic buyer must be in the room. If the budget holder isn't there, you're presenting to influencers not decision-makers.", commsTemplate:"Required attendees:\nCustomer side: Economic buyer / budget owner, day-to-day champion, relevant technical lead\nYour side: CSM, executive sponsor (for strategic accounts), product specialist (if roadmap discussion needed)\n\nIf economic buyer won't attend: 'I'd really like [Executive Name] to be part of this â€” the ROI discussion will be most valuable with them in the room. Is there a way to make that happen?'" },
+      { id:5, title:"Share deck with champion 1 week in advance", owner:"CSM", timeline:"1 week out", action:"Ask them to review and flag anything sensitive. No surprises in the room.", commsTemplate:"'I've put together the QBR deck â€” would you mind reviewing it before I send it more widely? I want to make sure I've captured everything correctly and nothing lands the wrong way in the room.'" },
+      { id:6, title:"Open with their business priorities â€” not a product recap", owner:"CSM", timeline:"Meeting day", action:"First question: 'What's changed in your world since we last spoke?' This signals you're a strategic partner, not a vendor reporting.", commsTemplate:"QBR opening:\n'Before I take you through what we've prepared, I'd like to understand what's top of mind for you right now. What's changed in your business since we last met?'\n\n[Listen for 5 minutes before presenting anything]" },
+      { id:7, title:"Spend 40% of the meeting on the future", owner:"CSM", timeline:"Meeting day", action:"QBRs that are purely retrospective miss the expansion and alignment opportunity. The future half is where relationships deepen.", commsTemplate:"Future-focused questions:\nâ€¢ 'Given what we've built together, what's the next problem you want to solve?'\nâ€¢ 'Where are you seeing the biggest opportunity in your market right now?'\nâ€¢ 'If you could change one thing about how we work together, what would it be?'" },
+      { id:8, title:"Close with aligned next steps â€” never just 'thanks for your time'", owner:"CSM", timeline:"Meeting day", action:"Every QBR should end with an agreed goal, an aligned action, or an expansion path to explore. Closing with 'thanks' stalls momentum.", commsTemplate:"QBR close:\n'Before we wrap up â€” let's agree on the one or two things that matter most for next quarter. [Write them down publicly]. And I want to set up our next touchpoint before we leave this room. When works for you?'" },
+      { id:9, title:"Send written follow-up within 24 hours", owner:"CSM", timeline:"Day after meeting", action:"Decisions made. Next steps named. Owners assigned. Executives respect precision and follow-through above all else.", commsTemplate:"Subject: QBR follow-up â€” [Company] + [Product]\n\nHi [Name],\n\nThank you for a great session today. Here's a summary:\n\nKey results discussed:\nâ€¢ [Result 1]\nâ€¢ [Result 2]\n\nAgreed next steps:\nâ€¢ [Action 1] â€” Owner: [Name] â€” By: [Date]\nâ€¢ [Action 2] â€” Owner: [Name] â€” By: [Date]\n\nNext QBR: [Proposed date]\n\nAny additions or corrections, let me know." },
     ],
   },
   {
@@ -283,11 +283,11 @@ const PLAYBOOK_LIBRARY = [
     successMetric:"Executive-to-executive relationship established, account stabilised within 30 days",
     summary:"When CSM-level intervention isn't enough, executive involvement changes the dynamic entirely. Brief your leadership completely before any contact.",
     steps:[
-      { id:1, title:"Brief leadership completely before any contact", owner:"CSM", timeline:"Day 1", action:"Your VP or CCO needs full context, not a surprise. Prepare a one-page brief covering the situation, history, risk, and proposed approach.", commsTemplate:"Leadership brief:\nAccount: [Name] | ARR: [Amount] | Renewal: [Date]\nSituation: [2–3 sentence summary]\nHistory: [Key events timeline]\nRoot cause: [Best diagnosis]\nWhat we've tried: [CSM actions taken]\nWhy escalation is needed: [Specific reason]\nProposed approach: [Plan]\nWhat I need: [Specific ask from leadership]" },
-      { id:2, title:"Executive reaches out peer-to-peer", owner:"VP CS / CCO / CEO", timeline:"Day 1–2", action:"Not a CSM action. VP to VP, CEO to CEO depending on account size. Brief, personal, non-defensive.", commsTemplate:"Executive outreach:\n'Hi [Customer Executive],\n\nI wanted to reach out personally. I understand your experience with us has been challenging and I take that seriously.\n\nI'd welcome the chance to speak with you directly — not to pitch or defend, but to listen and to understand what we need to do differently.\n\nWould 20 minutes this week work for you?'" },
-      { id:3, title:"Executive-to-executive call: listen, validate, commit", owner:"VP CS / CCO", timeline:"Day 3–5", action:"Listen, validate, and commit to a specific action with a specific date. Executives respond to peers who demonstrate accountability.", commsTemplate:"Executive call structure:\n1. 'Tell me about your experience from your perspective' (listen for 10 minutes)\n2. 'You're right to be frustrated. That's not the experience we want for you.'\n3. 'Here is specifically what I'm committing to: [action] by [date]. You have my personal guarantee.'\n4. 'What else would rebuild your confidence in us?'" },
-      { id:4, title:"CSM creates formal recovery brief within 48 hours", owner:"CSM", timeline:"Day 5–6", action:"What happened. What you're doing. What you're committing to. Specific dates, specific owners.", commsTemplate:"Recovery brief:\nDate: [Date]\nPrepared by: [CSM name] + [Executive name]\n\nWhat happened:\n[Factual, non-defensive summary]\n\nActions we're taking:\n• [Action 1] — Owner: [Name] — By: [Date]\n• [Action 2] — Owner: [Name] — By: [Date]\n\nOur commitment:\n[Specific, measurable outcome] by [Date]" },
-      { id:5, title:"Establish joint working cadence", owner:"CSM + Executive", timeline:"Day 7 onward", action:"Both executive teams involved in a regular touchpoint until the account is stable. Signals sustained commitment.", commsTemplate:"Joint cadence proposal:\n'I'd like to propose a bi-weekly working session between our teams — [CSM name] and [Executive name] on our side, [their contacts] on yours — until we've delivered [milestone]. After that, we can return to a normal cadence. Does that work?'" },
+      { id:1, title:"Brief leadership completely before any contact", owner:"CSM", timeline:"Day 1", action:"Your VP or CCO needs full context, not a surprise. Prepare a one-page brief covering the situation, history, risk, and proposed approach.", commsTemplate:"Leadership brief:\nAccount: [Name] | ARR: [Amount] | Renewal: [Date]\nSituation: [2â€“3 sentence summary]\nHistory: [Key events timeline]\nRoot cause: [Best diagnosis]\nWhat we've tried: [CSM actions taken]\nWhy escalation is needed: [Specific reason]\nProposed approach: [Plan]\nWhat I need: [Specific ask from leadership]" },
+      { id:2, title:"Executive reaches out peer-to-peer", owner:"VP CS / CCO / CEO", timeline:"Day 1â€“2", action:"Not a CSM action. VP to VP, CEO to CEO depending on account size. Brief, personal, non-defensive.", commsTemplate:"Executive outreach:\n'Hi [Customer Executive],\n\nI wanted to reach out personally. I understand your experience with us has been challenging and I take that seriously.\n\nI'd welcome the chance to speak with you directly â€” not to pitch or defend, but to listen and to understand what we need to do differently.\n\nWould 20 minutes this week work for you?'" },
+      { id:3, title:"Executive-to-executive call: listen, validate, commit", owner:"VP CS / CCO", timeline:"Day 3â€“5", action:"Listen, validate, and commit to a specific action with a specific date. Executives respond to peers who demonstrate accountability.", commsTemplate:"Executive call structure:\n1. 'Tell me about your experience from your perspective' (listen for 10 minutes)\n2. 'You're right to be frustrated. That's not the experience we want for you.'\n3. 'Here is specifically what I'm committing to: [action] by [date]. You have my personal guarantee.'\n4. 'What else would rebuild your confidence in us?'" },
+      { id:4, title:"CSM creates formal recovery brief within 48 hours", owner:"CSM", timeline:"Day 5â€“6", action:"What happened. What you're doing. What you're committing to. Specific dates, specific owners.", commsTemplate:"Recovery brief:\nDate: [Date]\nPrepared by: [CSM name] + [Executive name]\n\nWhat happened:\n[Factual, non-defensive summary]\n\nActions we're taking:\nâ€¢ [Action 1] â€” Owner: [Name] â€” By: [Date]\nâ€¢ [Action 2] â€” Owner: [Name] â€” By: [Date]\n\nOur commitment:\n[Specific, measurable outcome] by [Date]" },
+      { id:5, title:"Establish joint working cadence", owner:"CSM + Executive", timeline:"Day 7 onward", action:"Both executive teams involved in a regular touchpoint until the account is stable. Signals sustained commitment.", commsTemplate:"Joint cadence proposal:\n'I'd like to propose a bi-weekly working session between our teams â€” [CSM name] and [Executive name] on our side, [their contacts] on yours â€” until we've delivered [milestone]. After that, we can return to a normal cadence. Does that work?'" },
     ],
   },
   {
@@ -301,21 +301,21 @@ const PLAYBOOK_LIBRARY = [
       return silentChampion;
     },
     successMetric:"New champion identified and activated within 30 days",
-    summary:"Losing a champion without a successor is a top-3 churn risk. The window to establish a new champion closes within 2–3 weeks of their departure. Move immediately.",
+    summary:"Losing a champion without a successor is a top-3 churn risk. The window to establish a new champion closes within 2â€“3 weeks of their departure. Move immediately.",
     steps:[
-      { id:1, title:"Move immediately — the window closes fast", owner:"CSM", timeline:"Day 1", action:"If champion has left: the 2–3 week window to establish a successor is your most critical timeline in account management.", commsTemplate:"Internal alert:\n'Champion [Name] at [Company] has [left / gone silent]. Activating Champion Succession playbook. Need to establish new contact within 14 days. ARR at risk: [Amount].'" },
-      { id:2, title:"Map all remaining contacts in the account", owner:"CSM", timeline:"Day 1–2", action:"Who is next in seniority? Who was the champion working with most closely? Who attended the kickoff? Who is still active in the product?", commsTemplate:"Contact mapping:\n□ Who attended our kickoff call?\n□ Who is cc'd on our emails?\n□ Who is active in the product?\n□ Who reports to [departing champion]?\n□ Who is their most likely internal successor?" },
-      { id:3, title:"Get a warm introduction from the departing champion", owner:"CSM", timeline:"Day 1–2", action:"If they're still reachable, a warm handoff is worth everything. Make it easy for them to do — draft the introduction for them.", commsTemplate:"Request to departing champion:\n'Before you go, would you be able to introduce me to [successor name]? I've drafted a quick intro email if it would help — just let me know and I'll send it for your review:\n\n[Draft: \"Hi [Successor], I wanted to introduce you to [CSM name], who has been our main contact at [Product]. They've been incredibly helpful with [achievement] and I'd recommend a 30-minute intro call to make sure nothing falls through in the transition.\"]'" },
-      { id:4, title:"Contact the most likely successor directly", owner:"CSM", timeline:"Day 2–3", action:"Acknowledge the transition, offer continuity, ask to introduce yourself. Not a sales call — a relationship call.", commsTemplate:"Subject: [Name] mentioned you as the right person to connect with\n\nHi [Successor Name],\n\nI understand [former champion] has moved on — I wanted to reach out personally to introduce myself and make sure [Company] continues to get everything you need from us.\n\nI've been working with [Company] for [duration] on [goal summary]. I'd love to schedule 30 minutes to bring you up to speed and understand your priorities.\n\nWhen works for you this week?" },
-      { id:5, title:"Run a fresh discovery call", owner:"CSM", timeline:"Day 3–5", action:"Do NOT assume the new contact shares the former champion's goals or sentiment. Start fresh. Ask the same questions you'd ask a new account.", commsTemplate:"Discovery questions for new champion:\n• 'What do you already know about what [Company] has been doing with [Product]?'\n• 'What matters most to you personally in terms of what we deliver?'\n• 'Is there anything about the existing setup you'd want to change?'\n• 'What does success look like from your perspective?'" },
-      { id:6, title:"Rebuild the success plan from their perspective", owner:"CSM", timeline:"Days 5–10", action:"Their definition of value may be entirely different from the previous champion. Don't carry over assumptions.", commsTemplate:"'I've put together a summary of where we are with [Company] — I'd love your input on whether the goals and milestones still reflect what matters to you, or whether we should adjust.'" },
-      { id:7, title:"Share a concise state of the account briefing", owner:"CSM", timeline:"Days 5–10", action:"What's been achieved, what's in progress, what's planned. Give them context without overwhelming them.", commsTemplate:"Subject: [Company] + [Product] — account summary\n\nHi [Name],\n\nAs promised, here's a quick summary of where things stand:\n\n✓ What we've achieved together:\n• [Achievement 1]\n• [Achievement 2]\n\n⟳ What's in progress:\n• [Initiative 1] — expected completion: [Date]\n\n○ What's planned:\n• [Upcoming milestone]\n\nHappy to walk through any of this on a call — just let me know." },
-      { id:8, title:"Map a minimum of 2 contacts going forward", owner:"CSM", timeline:"Day 10 onward", action:"Never rely on a single champion again. Use this moment as the forcing function to build a wider stakeholder map.", commsTemplate:"'One thing I've learned from this transition — I'd like to make sure we have at least two people connected between our teams going forward, so we never lose continuity. Who else on your team would benefit from being looped in?'" },
+      { id:1, title:"Move immediately â€” the window closes fast", owner:"CSM", timeline:"Day 1", action:"If champion has left: the 2â€“3 week window to establish a successor is your most critical timeline in account management.", commsTemplate:"Internal alert:\n'Champion [Name] at [Company] has [left / gone silent]. Activating Champion Succession playbook. Need to establish new contact within 14 days. ARR at risk: [Amount].'" },
+      { id:2, title:"Map all remaining contacts in the account", owner:"CSM", timeline:"Day 1â€“2", action:"Who is next in seniority? Who was the champion working with most closely? Who attended the kickoff? Who is still active in the product?", commsTemplate:"Contact mapping:\nâ–¡ Who attended our kickoff call?\nâ–¡ Who is cc'd on our emails?\nâ–¡ Who is active in the product?\nâ–¡ Who reports to [departing champion]?\nâ–¡ Who is their most likely internal successor?" },
+      { id:3, title:"Get a warm introduction from the departing champion", owner:"CSM", timeline:"Day 1â€“2", action:"If they're still reachable, a warm handoff is worth everything. Make it easy for them to do â€” draft the introduction for them.", commsTemplate:"Request to departing champion:\n'Before you go, would you be able to introduce me to [successor name]? I've drafted a quick intro email if it would help â€” just let me know and I'll send it for your review:\n\n[Draft: \"Hi [Successor], I wanted to introduce you to [CSM name], who has been our main contact at [Product]. They've been incredibly helpful with [achievement] and I'd recommend a 30-minute intro call to make sure nothing falls through in the transition.\"]'" },
+      { id:4, title:"Contact the most likely successor directly", owner:"CSM", timeline:"Day 2â€“3", action:"Acknowledge the transition, offer continuity, ask to introduce yourself. Not a sales call â€” a relationship call.", commsTemplate:"Subject: [Name] mentioned you as the right person to connect with\n\nHi [Successor Name],\n\nI understand [former champion] has moved on â€” I wanted to reach out personally to introduce myself and make sure [Company] continues to get everything you need from us.\n\nI've been working with [Company] for [duration] on [goal summary]. I'd love to schedule 30 minutes to bring you up to speed and understand your priorities.\n\nWhen works for you this week?" },
+      { id:5, title:"Run a fresh discovery call", owner:"CSM", timeline:"Day 3â€“5", action:"Do NOT assume the new contact shares the former champion's goals or sentiment. Start fresh. Ask the same questions you'd ask a new account.", commsTemplate:"Discovery questions for new champion:\nâ€¢ 'What do you already know about what [Company] has been doing with [Product]?'\nâ€¢ 'What matters most to you personally in terms of what we deliver?'\nâ€¢ 'Is there anything about the existing setup you'd want to change?'\nâ€¢ 'What does success look like from your perspective?'" },
+      { id:6, title:"Rebuild the success plan from their perspective", owner:"CSM", timeline:"Days 5â€“10", action:"Their definition of value may be entirely different from the previous champion. Don't carry over assumptions.", commsTemplate:"'I've put together a summary of where we are with [Company] â€” I'd love your input on whether the goals and milestones still reflect what matters to you, or whether we should adjust.'" },
+      { id:7, title:"Share a concise state of the account briefing", owner:"CSM", timeline:"Days 5â€“10", action:"What's been achieved, what's in progress, what's planned. Give them context without overwhelming them.", commsTemplate:"Subject: [Company] + [Product] â€” account summary\n\nHi [Name],\n\nAs promised, here's a quick summary of where things stand:\n\nâœ“ What we've achieved together:\nâ€¢ [Achievement 1]\nâ€¢ [Achievement 2]\n\nâŸ³ What's in progress:\nâ€¢ [Initiative 1] â€” expected completion: [Date]\n\nâ—‹ What's planned:\nâ€¢ [Upcoming milestone]\n\nHappy to walk through any of this on a call â€” just let me know." },
+      { id:8, title:"Map a minimum of 2 contacts going forward", owner:"CSM", timeline:"Day 10 onward", action:"Never rely on a single champion again. Use this moment as the forcing function to build a wider stakeholder map.", commsTemplate:"'One thing I've learned from this transition â€” I'd like to make sure we have at least two people connected between our teams going forward, so we never lose continuity. Who else on your team would benefit from being looped in?'" },
     ],
   },
 ];
 
-// ─── Trigger engine ───────────────────────────────────────────────────────────
+// â”€â”€â”€ Trigger engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const getTriggeredPlaybooks = (account) => {
   return PLAYBOOK_LIBRARY.filter(pb => {
     try { return pb.triggerCondition(account); } catch { return false; }
@@ -331,23 +331,23 @@ const getPriorityConfig = (priority) => ({
   Medium:   { color:"var(--sky)",    bg:"var(--sky-dim)",    label:"Medium"   },
 }[priority] || { color:"var(--text3)", bg:"var(--bg4)", label:priority });
 
-// ─── Stakeholder playbooks ────────────────────────────────────────────────────
+// â”€â”€â”€ Stakeholder playbooks â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STAKEHOLDER_GUIDE = {
   Champion:  { mark:"C", color:"var(--emerald)", bg:"var(--emerald-dim)", headline:"Protecting your Champion",
-    tactics:["Schedule a monthly 1:1 outside business reviews — make it personal, not transactional.","Give early access to features or roadmap previews. They need to feel like insiders.","Help them look good internally — share ROI data they can present upward.","Identify a backup champion. Single-threaded relationships are your biggest churn risk.","Send a personal thank-you when they advocate for you. Never take it for granted."],
+    tactics:["Schedule a monthly 1:1 outside business reviews â€” make it personal, not transactional.","Give early access to features or roadmap previews. They need to feel like insiders.","Help them look good internally â€” share ROI data they can present upward.","Identify a backup champion. Single-threaded relationships are your biggest churn risk.","Send a personal thank-you when they advocate for you. Never take it for granted."],
     warning:"Champion at risk if: no contact in 30+ days, title change, or company reorg detected." },
   Neutral:   { mark:"N", color:"var(--indigo)", bg:"var(--indigo-dim)", headline:"Activating a Neutral contact",
-    tactics:["Find their personal win — what does success look like for them specifically?","Invite them to a webinar or exclusive event. Low commitment, high impression.","Ask for their opinion on the roadmap. People support what they help build.","Share a case study from their exact industry and role.","Get one small win on their behalf — resolve something fast and make sure they know."],
+    tactics:["Find their personal win â€” what does success look like for them specifically?","Invite them to a webinar or exclusive event. Low commitment, high impression.","Ask for their opinion on the roadmap. People support what they help build.","Share a case study from their exact industry and role.","Get one small win on their behalf â€” resolve something fast and make sure they know."],
     warning:"Neutrals move quickly to detractors if ignored during contract renewal cycles." },
   Detractor: { mark:"D", color:"var(--amber)", bg:"var(--amber-dim)", headline:"Turning a Detractor around",
-    tactics:["Book a call with one goal: listen. Don't pitch, don't defend. Just understand.","Acknowledge the problem explicitly — 'You're right, that experience was not acceptable.'","Create a written action plan with dates. Detractors trust proof, not promises.","Loop in a senior leader — it signals the company takes them seriously.","Follow up every 2 weeks with updates even when there's nothing new. Silence kills trust."],
+    tactics:["Book a call with one goal: listen. Don't pitch, don't defend. Just understand.","Acknowledge the problem explicitly â€” 'You're right, that experience was not acceptable.'","Create a written action plan with dates. Detractors trust proof, not promises.","Loop in a senior leader â€” it signals the company takes them seriously.","Follow up every 2 weeks with updates even when there's nothing new. Silence kills trust."],
     warning:"Detractors who feel ignored become champions for the competition. Act within 72 hours." },
   Blocker:   { mark:"B", color:"var(--rose)", bg:"var(--rose-dim)", headline:"Navigating around a Blocker",
-    tactics:["Understand why they're blocking — budget, fear of change, or a past bad experience?","Never fight them directly. Build champions above or beside them instead.","Find their concern and solve it on its own terms. Blockers often flip when truly heard.","Involve them in a small, low-risk decision. Ownership reduces resistance dramatically.","Bring a business case that makes them look good if the project succeeds."],
+    tactics:["Understand why they're blocking â€” budget, fear of change, or a past bad experience?","Never fight them directly. Build champions above or beside them instead.","Find their concern and solve it on its own terms. Blockers often flip when truly heard.","Involve them in a small, low-risk decision. Ownership reduces resistance dramatically.","Bring a business case that makes them look good if the project succeeds."],
     warning:"Never escalate over a blocker's head without exhausting all direct approaches first." },
 };
 
-// ─── Seed data ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Seed data â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SEED = [
   { id:1, name:"Noon E-Commerce", industry:"E-Commerce", plan:"Enterprise", arr:120000, renewalDate:"2026-09-15", nps:72, ces:4.2,
     cesHistory:[{date:"2024-09-01",value:3.8},{date:"2024-10-01",value:4.0},{date:"2024-11-01",value:4.1},{date:"2024-12-01",value:4.2}],
@@ -358,28 +358,28 @@ const SEED = [
     activePlaybookId:null, activePlaybookSteps:{}, snoozedPlaybooks:[], prepNotes:"", notes:"Strong relationship with Sara. Renewal conversation started." },
   { id:2, name:"Talabat", industry:"Food Delivery", plan:"Growth", arr:84000, renewalDate:"2026-03-01", nps:41, ces:2.9,
     cesHistory:[{date:"2024-09-01",value:4.1},{date:"2024-10-01",value:3.8},{date:"2024-11-01",value:3.3},{date:"2024-12-01",value:2.9}],
-    lastContact:"2024-12-05", openTickets:7, productUsage:52, archived:false, nextAction:"Book urgent call with Ahmed — address CES decline + ticket backlog",
+    lastContact:"2024-12-05", openTickets:7, productUsage:52, archived:false, nextAction:"Book urgent call with Ahmed â€” address CES decline + ticket backlog",
     stakeholders:[{id:1,name:"Ahmed Karimi",title:"VP Product",role:"Detractor",sentiment:"Negative",lastTouch:"2024-12-05"},{id:2,name:"Layla Hassan",title:"Ops Manager",role:"Blocker",sentiment:"Negative",lastTouch:"2024-11-20"}],
     successPlan:{goal:"Full API integration by Q1",milestones:[{id:1,text:"Complete API requirements doc",done:true},{id:2,text:"Dev environment setup",done:false},{id:3,text:"Staging integration test",done:false},{id:4,text:"Production go-live",done:false},{id:5,text:"Post-launch monitoring",done:false},{id:6,text:"Sign-off and handover",done:false}]},
     activityLog:[{id:1,date:"2024-12-05",type:"Call",note:"Ahmed frustrated with API delays. Escalated internally."},{id:2,date:"2024-11-20",type:"Email",note:"Layla raised concerns about timeline again."}],
-    activePlaybookId:null, activePlaybookSteps:{}, snoozedPlaybooks:[], prepNotes:"", notes:"CES declining 3 months straight. Ticket backlog growing. Renewal in 60 days — urgent." },
+    activePlaybookId:null, activePlaybookSteps:{}, snoozedPlaybooks:[], prepNotes:"", notes:"CES declining 3 months straight. Ticket backlog growing. Renewal in 60 days â€” urgent." },
   { id:3, name:"Careem", industry:"Mobility", plan:"Enterprise", arr:210000, renewalDate:"2026-11-30", nps:68, ces:3.8,
     cesHistory:[{date:"2024-09-01",value:3.5},{date:"2024-10-01",value:3.6},{date:"2024-11-01",value:3.8},{date:"2024-12-01",value:3.8}],
-    lastContact:"2024-12-20", openTickets:1, productUsage:79, archived:false, nextAction:"Schedule QBR for Q1 — expansion discussion with Priya",
+    lastContact:"2024-12-20", openTickets:1, productUsage:79, archived:false, nextAction:"Schedule QBR for Q1 â€” expansion discussion with Priya",
     stakeholders:[{id:1,name:"Priya Mehta",title:"Director of Partnerships",role:"Champion",sentiment:"Positive",lastTouch:"2024-12-20"},{id:2,name:"Omar Shaikh",title:"CTO",role:"Neutral",sentiment:"Neutral",lastTouch:"2024-11-15"},{id:3,name:"Dana Al-Farsi",title:"Finance Lead",role:"Neutral",sentiment:"Positive",lastTouch:"2024-12-01"}],
     successPlan:{goal:"Expand to 3 new city operations",milestones:[{id:1,text:"City feasibility assessment",done:true},{id:2,text:"Onboard city ops team",done:true},{id:3,text:"Pilot launch in City 1",done:false},{id:4,text:"Evaluate pilot results",done:false},{id:5,text:"Scale to cities 2 & 3",done:false}]},
     activityLog:[{id:1,date:"2024-12-20",type:"Meeting",note:"QBR completed. Priya confirmed expansion budget approved."}],
     activePlaybookId:null, activePlaybookSteps:{}, snoozedPlaybooks:[], prepNotes:"", notes:"Expansion potential. Budget cycle Q1." },
   { id:4, name:"Anghami", industry:"Music Streaming", plan:"Starter", arr:28000, renewalDate:"2026-02-14", nps:55, ces:3.5,
     cesHistory:[{date:"2024-09-01",value:3.5},{date:"2024-10-01",value:3.5},{date:"2024-11-01",value:3.5},{date:"2024-12-01",value:3.5}],
-    lastContact:"2024-11-10", openTickets:0, productUsage:61, archived:false, nextAction:"Re-engage Fadi — send personalised check-in email today",
+    lastContact:"2024-11-10", openTickets:0, productUsage:61, archived:false, nextAction:"Re-engage Fadi â€” send personalised check-in email today",
     stakeholders:[{id:1,name:"Fadi Bishara",title:"Product Manager",role:"Neutral",sentiment:"Neutral",lastTouch:"2024-11-10"}],
     successPlan:{goal:"Launch branded playlist feature",milestones:[{id:1,text:"Define feature requirements",done:true},{id:2,text:"Design review with product team",done:false},{id:3,text:"Beta launch",done:false}]},
     activityLog:[{id:1,date:"2024-11-10",type:"Email",note:"Sent feature update. No response yet."}],
     activePlaybookId:null, activePlaybookSteps:{}, snoozedPlaybooks:[], prepNotes:"", notes:"Gone quiet. Last contact 7 weeks ago. Renewal in ~45 days." },
 ];
 
-// ─── Config ───────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Config â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const STAGE_CFG = {
   "Healthy":         { color:"var(--emerald)", bg:"var(--emerald-dim)", border:"rgba(5,150,105,0.25)"  },
   "Stable":          { color:"var(--sky)",     bg:"var(--sky-dim)",     border:"rgba(2,132,199,0.25)"  },
@@ -396,7 +396,7 @@ const ACT_TYPES  = ["Call","Email","Meeting","Note"];
 const ACT_ICONS  = { Call:"Ph", Email:"Em", Meeting:"Mx", Note:"Nt" };
 const ACT_COLORS = { Call:"var(--emerald)", Email:"var(--indigo)", Meeting:"var(--violet)", Note:"var(--amber)" };
 
-// ─── Health engine ────────────────────────────────────────────────────────────
+// â”€â”€â”€ Health engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const calcHealth = (a) => {
   const nps  = Math.round((a.nps/100)*25);
   const ces  = Math.round((a.ces/5)*25);
@@ -414,17 +414,17 @@ const calcHealth = (a) => {
   ]};
 };
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Helpers â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const hColor   = s => s>=70?"var(--emerald)":s>=45?"var(--amber)":"var(--rose)";
 const fmtMoney = n => n>=1000?`$${(n/1000).toFixed(0)}k`:`$${n}`;
 const ago      = d => Math.floor((new Date()-new Date(d))/86400000);
 const until    = d => Math.ceil((new Date(d)-new Date())/86400000);
 const todayStr = () => new Date().toISOString().split("T")[0];
-const sentIcon = s => s==="Positive"?"↑":s==="Negative"?"↓":"→";
+const sentIcon = s => s==="Positive"?"â†‘":s==="Negative"?"â†“":"â†’";
 const initials = name => name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
 const hue      = name => { let h=0; for(let c of name) h=(h*31+c.charCodeAt(0))%360; return h; };
 
-// ─── Data layer — API-first, localStorage fallback ───────────────────────────
+// â”€â”€â”€ Data layer â€” API-first, localStorage fallback â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // If VITE_API_URL is set, all reads/writes go to the backend.
 // If not set (local dev without backend), falls back to localStorage silently.
 
@@ -438,9 +438,9 @@ const save = a => {
   try { localStorage.setItem("pulse_v4", JSON.stringify(a)); } catch {}
 };
 
-// ─── Primitives ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Primitives â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-// SVG icon system — replaces all emoji in functional UI contexts
+// SVG icon system â€” replaces all emoji in functional UI contexts
 const Ic = ({ n, size=16, color="currentColor", style={} }) => {
   const icons = {
     // Navigation
@@ -491,7 +491,7 @@ const Ic = ({ n, size=16, color="currentColor", style={} }) => {
   );
 };
 
-// Scenario badge — colored abbr pill, replaces emoji scenario indicators
+// Scenario badge â€” colored abbr pill, replaces emoji scenario indicators
 const ScenarioBadge = ({ scenario, small }) => {
   const sc = SCENARIO_CFG[scenario]||SCENARIO_CFG["Onboarding"];
   return (
@@ -659,7 +659,7 @@ const Confirm = ({ msg, onConfirm, onCancel }) => {
   );
 };
 
-// ─── PLAYBOOK LIBRARY PAGE ────────────────────────────────────────────────────
+// â”€â”€â”€ PLAYBOOK LIBRARY PAGE â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const PlaybookStepView = ({ step, done, onToggle, expanded, onExpand }) => {
   return (
     <div style={{background:"white",borderRadius:"var(--r)",border:`1.5px solid ${done?"var(--emerald-dim)":"var(--border)"}`,
@@ -681,7 +681,7 @@ const PlaybookStepView = ({ step, done, onToggle, expanded, onExpand }) => {
             )}
           </div>
         </div>
-        <span style={{fontSize:11,color:"var(--text3)",flexShrink:0}}>{expanded?"▲":"▼"}</span>
+        <span style={{fontSize:11,color:"var(--text3)",flexShrink:0}}>{expanded?"â–²":"â–¼"}</span>
       </div>
       {expanded && (
         <div style={{padding:"0 16px 14px 44px",borderTop:"1px solid var(--border)"}}>
@@ -719,7 +719,7 @@ const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle }) 
       <button onClick={onBack}
         style={{background:"none",border:"none",color:"var(--indigo)",cursor:"pointer",
           fontSize:13,fontWeight:600,padding:0,marginBottom:20,display:"flex",alignItems:"center",gap:6}}>
-        ← Back to library
+        â† Back to library
       </button>
 
       <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
@@ -757,7 +757,7 @@ const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle }) 
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
             <span style={{fontSize:13,fontWeight:600}}>Progress</span>
             <span style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--indigo)",fontWeight:600}}>
-              {completedCount}/{playbook.steps.length} steps · {progress}%
+              {completedCount}/{playbook.steps.length} steps Â· {progress}%
             </span>
           </div>
           <Bar value={progress} color={progress===100?"var(--emerald)":"var(--indigo)"}/>
@@ -766,7 +766,7 @@ const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle }) 
 
       <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",
         textTransform:"uppercase",letterSpacing:".08em",marginBottom:12}}>
-        {playbook.steps.length} steps — click to expand
+        {playbook.steps.length} steps â€” click to expand
       </div>
 
       {playbook.steps.map(step=>(
@@ -827,7 +827,7 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
       <div style={{marginBottom:28}}>
         <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Playbook Library</h1>
         <div style={{fontSize:13,color:"var(--text3)"}}>
-          {PLAYBOOK_LIBRARY.length} world-class plays · sourced from Gainsight, ChurnZero, Totango & CS leaders
+          {PLAYBOOK_LIBRARY.length} world-class plays Â· sourced from Gainsight, ChurnZero, Totango & CS leaders
         </div>
       </div>
 
@@ -881,7 +881,7 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
             );
           })}
         </div>
-        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search playbooks…"
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search playbooksâ€¦"
           style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
             padding:"8px 14px",color:"var(--text)",fontFamily:"var(--font-display)",
             fontSize:13,outline:"none",width:200,marginLeft:"auto"}}/>
@@ -918,7 +918,7 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
                       <Badge label={pc.label} color={pc.color} bg={pc.bg} small/>
                     </div>
                     <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:12}}>
-                      {pb.summary.slice(0,100)}…
+                      {pb.summary.slice(0,100)}â€¦
                     </div>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                       <div style={{display:"flex",gap:8}}>
@@ -932,7 +932,7 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
                           </span>
                         )}
                       </div>
-                      <span style={{fontSize:11,color:"var(--indigo)",fontWeight:600}}>View →</span>
+                      <span style={{fontSize:11,color:"var(--indigo)",fontWeight:600}}>View â†’</span>
                     </div>
                   </div>
                 );
@@ -950,7 +950,7 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
   );
 };
 
-// ─── Active playbook in Detail panel ─────────────────────────────────────────
+// â”€â”€â”€ Active playbook in Detail panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const ActivePlaybookTab = ({ account, onUpdate }) => {
   const [expandedStep, setExpandedStep] = useState(null);
   const [showLibrary,  setShowLibrary]  = useState(false);
@@ -982,7 +982,7 @@ const ActivePlaybookTab = ({ account, onUpdate }) => {
         <button onClick={()=>setShowLibrary(false)}
           style={{background:"none",border:"none",color:"var(--indigo)",cursor:"pointer",
             fontSize:13,fontWeight:600,padding:0,marginBottom:16,display:"flex",alignItems:"center",gap:6}}>
-          ← Back to account
+          â† Back to account
         </button>
         <div style={{display:"flex",flexDirection:"column",gap:10}}>
           {PLAYBOOK_LIBRARY.map(pb=>{
@@ -1040,7 +1040,7 @@ const ActivePlaybookTab = ({ account, onUpdate }) => {
               <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
                 <span style={{fontSize:11,color:"var(--text2)",fontFamily:"var(--font-mono)"}}>Progress</span>
                 <span style={{fontSize:11,fontFamily:"var(--font-mono)",color:sc.color,fontWeight:600}}>
-                  {completedCount}/{activePb.steps.length} · {progress}%
+                  {completedCount}/{activePb.steps.length} Â· {progress}%
                 </span>
               </div>
               <Bar value={progress} color={sc.color}/>
@@ -1051,7 +1051,7 @@ const ActivePlaybookTab = ({ account, onUpdate }) => {
         {/* Steps */}
         <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",
           textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>
-          Steps — click to expand template
+          Steps â€” click to expand template
         </div>
         {activePb.steps.map(step=>(
           <PlaybookStepView
@@ -1074,14 +1074,14 @@ const ActivePlaybookTab = ({ account, onUpdate }) => {
     );
   }
 
-  // No active playbook — show suggestions
+  // No active playbook â€” show suggestions
   const snoozed = account.snoozedPlaybooks||[];
   const unsnoozedTriggered = triggered.filter(pb=>!snoozed.includes(pb.id));
   return (
     <div>
       {unsnoozedTriggered.length>0&&(
         <div style={{marginBottom:20}}>
-          <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>🎯 Suggested for this account</div>
+          <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>ðŸŽ¯ Suggested for this account</div>
           <div style={{fontSize:12,color:"var(--text2)",marginBottom:14,lineHeight:1.6}}>
             Based on this account's signals, these playbooks are recommended. Activate one to start tracking your progress.
           </div>
@@ -1105,14 +1105,14 @@ const ActivePlaybookTab = ({ account, onUpdate }) => {
                       <button onClick={()=>snoozesuggestion(pb.id)}
                         title="Dismiss"
                         style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",
-                          fontSize:14,padding:"0 2px",lineHeight:1}}>×</button>
+                          fontSize:14,padding:"0 2px",lineHeight:1}}>Ã—</button>
                     </div>
                   </div>
                   <div style={{fontSize:12,color:"var(--text2)",marginBottom:10,lineHeight:1.5}}>
-                    {pb.summary.slice(0,120)}…
+                    {pb.summary.slice(0,120)}â€¦
                   </div>
                   <Btn onClick={()=>activatePlaybook(pb)} style={{width:"100%",padding:"8px",fontSize:12}}>
-                    Activate — {pb.steps.length} steps
+                    Activate â€” {pb.steps.length} steps
                   </Btn>
                 </div>
               );
@@ -1121,7 +1121,7 @@ const ActivePlaybookTab = ({ account, onUpdate }) => {
         </div>
       )}
 
-      {/* Healthy account — no triggers */}
+      {/* Healthy account â€” no triggers */}
       {unsnoozedTriggered.length===0&&(
         <div style={{background:"var(--emerald-dim)",border:"1.5px solid rgba(5,150,105,0.2)",
           borderRadius:"var(--r-lg)",padding:"20px 18px",marginBottom:16,textAlign:"center"}}>
@@ -1130,7 +1130,7 @@ const ActivePlaybookTab = ({ account, onUpdate }) => {
             This account looks healthy
           </div>
           <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>
-            No playbooks are currently triggered based on this account's signals. Keep up the great work — or browse the library to run a proactive play.
+            No playbooks are currently triggered based on this account's signals. Keep up the great work â€” or browse the library to run a proactive play.
           </div>
         </div>
       )}
@@ -1139,13 +1139,13 @@ const ActivePlaybookTab = ({ account, onUpdate }) => {
         style={{width:"100%",background:"transparent",color:"var(--indigo)",
           border:"1.5px dashed var(--border2)",borderRadius:"var(--r)",padding:"12px",
           fontFamily:"var(--font-mono)",fontSize:12,cursor:"pointer"}}>
-        Browse all {PLAYBOOK_LIBRARY.length} playbooks →
+        Browse all {PLAYBOOK_LIBRARY.length} playbooks â†’
       </button>
     </div>
   );
 };
 
-// ─── Stakeholder guide ────────────────────────────────────────────────────────
+// â”€â”€â”€ Stakeholder guide â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SGuide = ({ role }) => {
   const g=STAKEHOLDER_GUIDE[role]; if(!g) return null;
   return (
@@ -1172,7 +1172,7 @@ const SGuide = ({ role }) => {
   );
 };
 
-// ─── Stakeholder modal ────────────────────────────────────────────────────────
+// â”€â”€â”€ Stakeholder modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
   const [list,    setList]    = useState(account.stakeholders);
   const [sel,     setSel]     = useState(null);
@@ -1231,13 +1231,13 @@ const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
   );
 
   return (
-    <Modal title={`Stakeholder Map — ${account.name}`} onClose={onClose} wide>
+    <Modal title={`Stakeholder Map â€” ${account.name}`} onClose={onClose} wide>
       {silent.length>0&&(
         <div style={{background:"var(--rose-dim)",border:"1.5px solid rgba(225,29,72,0.2)",borderRadius:"var(--r)",
           padding:"12px 16px",marginBottom:20,display:"flex",gap:10}}>
           <Ic n="alert" size={16} color="var(--rose)"/>
           <div style={{fontSize:13,color:"var(--rose)"}}>
-            <strong>Silent Champion alert:</strong> {silent.map(s=>s.name).join(", ")} — no contact in 30+ days.
+            <strong>Silent Champion alert:</strong> {silent.map(s=>s.name).join(", ")} â€” no contact in 30+ days.
           </div>
         </div>
       )}
@@ -1347,7 +1347,7 @@ const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
   );
 };
 
-// ─── Account form ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Account form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AccountForm = ({ onClose, onSave, existing, toast }) => {
   const init = existing
     ? { name:existing.name, industry:existing.industry, plan:existing.plan, arr:existing.arr,
@@ -1379,7 +1379,7 @@ const AccountForm = ({ onClose, onSave, existing, toast }) => {
   };
 
   return (
-    <Modal title={existing?`Edit — ${existing.name}`:"Add New Account"} onClose={onClose}>
+    <Modal title={existing?`Edit â€” ${existing.name}`:"Add New Account"} onClose={onClose}>
       <div style={{background:"var(--bg3)",border:`1.5px solid ${sc.border}`,borderRadius:"var(--r)",
         padding:"12px 16px",marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>Live health preview</div>
@@ -1394,11 +1394,11 @@ const AccountForm = ({ onClose, onSave, existing, toast }) => {
         <Fld label="Plan"><Slct value={f.plan} onChange={s("plan")}>{["Starter","Growth","Enterprise"].map(p=><option key={p}>{p}</option>)}</Slct></Fld>
         <Fld label="ARR ($)"><Inp type="number" value={f.arr} onChange={s("arr")} placeholder="84000"/></Fld>
         <Fld label="Renewal Date"><Inp type="date" value={f.renewalDate} onChange={s("renewalDate")}/></Fld>
-        <Fld label="NPS (0–100)"><Inp type="number" value={f.nps} onChange={s("nps")} placeholder="65"/></Fld>
-        <Fld label="CES (1–5)"><Inp type="number" step=".1" value={f.ces} onChange={s("ces")} placeholder="3.8"/></Fld>
+        <Fld label="NPS (0â€“100)"><Inp type="number" value={f.nps} onChange={s("nps")} placeholder="65"/></Fld>
+        <Fld label="CES (1â€“5)"><Inp type="number" step=".1" value={f.ces} onChange={s("ces")} placeholder="3.8"/></Fld>
         <Fld label="Product Usage (%)"><Inp type="number" value={f.productUsage} onChange={s("productUsage")} placeholder="75"/></Fld>
         <Fld label="Open Tickets"><Inp type="number" value={f.openTickets} onChange={s("openTickets")} placeholder="2"/></Fld>
-        <div style={{gridColumn:"1/-1"}}><Fld label="🎯 Next Action"><Inp value={f.nextAction} onChange={s("nextAction")} placeholder="e.g. Send renewal proposal to Sara by Jan 15"/></Fld></div>
+        <div style={{gridColumn:"1/-1"}}><Fld label="ðŸŽ¯ Next Action"><Inp value={f.nextAction} onChange={s("nextAction")} placeholder="e.g. Send renewal proposal to Sara by Jan 15"/></Fld></div>
         <div style={{gridColumn:"1/-1"}}>
           <Fld label="Notes">
             <textarea value={f.notes} onChange={s("notes")} placeholder="Key context, risks, opportunities..."
@@ -1416,7 +1416,7 @@ const AccountForm = ({ onClose, onSave, existing, toast }) => {
   );
 };
 
-// ─── Log CES ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Log CES â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const LogCES = ({ account, onClose, onUpdate, toast }) => {
   const [val,setVal] = useState("");
   const [dt,setDt]   = useState(todayStr());
@@ -1430,19 +1430,19 @@ const LogCES = ({ account, onClose, onUpdate, toast }) => {
     onClose();
   };
   return (
-    <Modal title={`Log CES — ${account.name}`} onClose={onClose}>
+    <Modal title={`Log CES â€” ${account.name}`} onClose={onClose}>
       <div style={{marginBottom:20}}>
         <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6,marginBottom:16}}>
           Add a new Customer Effort Score reading. Updates the trend line and health score automatically.
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 16px"}}>
-          <Fld label="CES Score (1–5)"><Inp type="number" step=".1" min="1" max="5" value={val} onChange={e=>setVal(e.target.value)} placeholder="3.8"/></Fld>
+          <Fld label="CES Score (1â€“5)"><Inp type="number" step=".1" min="1" max="5" value={val} onChange={e=>setVal(e.target.value)} placeholder="3.8"/></Fld>
           <Fld label="Date"><Inp type="date" value={dt} onChange={e=>setDt(e.target.value)}/></Fld>
         </div>
         <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 14px",marginTop:4}}>
           <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",marginBottom:8,textTransform:"uppercase",letterSpacing:".08em"}}>CES Reference</div>
           <div style={{display:"flex",justifyContent:"space-between"}}>
-            {[["1–2","High Friction","var(--rose)"],["2.5–3.4","Moderate","var(--amber)"],["3.5–5","Low Effort","var(--emerald)"]].map(([r,l,c])=>(
+            {[["1â€“2","High Friction","var(--rose)"],["2.5â€“3.4","Moderate","var(--amber)"],["3.5â€“5","Low Effort","var(--emerald)"]].map(([r,l,c])=>(
               <div key={r} style={{textAlign:"center"}}>
                 <div style={{fontFamily:"var(--font-mono)",fontWeight:700,color:c,fontSize:13}}>{r}</div>
                 <div style={{color:"var(--text3)",fontSize:11,marginTop:2}}>{l}</div>
@@ -1459,7 +1459,7 @@ const LogCES = ({ account, onClose, onUpdate, toast }) => {
   );
 };
 
-// ─── Call / Meeting Prep Sheet ────────────────────────────────────────────────
+// â”€â”€â”€ Call / Meeting Prep Sheet â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
   const [notes, setNotes] = useState(account.prepNotes||"");
   const [copied, setCopied] = useState(false);
@@ -1492,13 +1492,13 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
 
   const copyBrief = () => {
     const lines = [
-      `CALL PREP — ${account.name}`,
+      `CALL PREP â€” ${account.name}`,
       `Date: ${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}`,
       ``,
       `ACCOUNT SNAPSHOT`,
       `Health: ${account.healthScore}/100  Stage: ${account.stage}  Churn Risk: ${account.churnRisk}%`,
       `ARR: ${fmtMoney(account.arr)}  Plan: ${account.plan}  CES: ${account.ces.toFixed(1)}/5`,
-      `Renewal: ${account.renewalDate ? `${rdays > 0 ? rdays+"d away" : "Overdue"} (${account.renewalDate})` : "—"}`,
+      `Renewal: ${account.renewalDate ? `${rdays > 0 ? rdays+"d away" : "Overdue"} (${account.renewalDate})` : "â€”"}`,
       ``,
       `LAST TOUCHPOINT`,
       lastActivity
@@ -1508,7 +1508,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
       ``,
       `STAKEHOLDERS`,
       stakeholders.length > 0
-        ? stakeholders.map(s=>`${s.name} (${s.title}) — ${s.role} — ${s.sentiment}`).join("\n")
+        ? stakeholders.map(s=>`${s.name} (${s.title}) â€” ${s.role} â€” ${s.sentiment}`).join("\n")
         : "No stakeholders mapped",
       ``,
       `ACTIVE PLAYBOOK`,
@@ -1545,7 +1545,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
               <div style={{fontWeight:800,fontSize:17,letterSpacing:"-.02em"}}>{account.name}</div>
               <div style={{fontSize:12,color:"var(--text3)",marginTop:3,display:"flex",alignItems:"center",gap:6}}>
                 <Ic n="prep" size={12} color="var(--text3)"/>
-                Pre-call brief · {new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}
+                Pre-call brief Â· {new Date().toLocaleDateString("en-US",{weekday:"short",month:"short",day:"numeric"})}
               </div>
             </div>
           </div>
@@ -1662,7 +1662,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
                     <div style={{background:"var(--indigo-dim)",borderRadius:"var(--r)",padding:"10px 12px"}}>
                       <div style={{fontSize:10,fontWeight:600,color:"var(--indigo)",
                         textTransform:"uppercase",letterSpacing:".07em",marginBottom:4}}>
-                        Next · {nextStep.timeline}
+                        Next Â· {nextStep.timeline}
                       </div>
                       <div style={{fontSize:13,color:"var(--text)",fontWeight:600,marginBottom:4}}>{nextStep.title}</div>
                       <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{nextStep.action}</div>
@@ -1730,7 +1730,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
                     {account.ces.toFixed(1)}
                   </span>
                   <span style={{fontSize:12,color:cesTrend>0?"var(--emerald)":cesTrend<0?"var(--rose)":"var(--text3)"}}>
-                    {cesTrend>0?"↑ Improving":cesTrend<0?"↓ Declining":"→ Flat"}
+                    {cesTrend>0?"â†‘ Improving":cesTrend<0?"â†“ Declining":"â†’ Flat"}
                   </span>
                 </div>
               </div>
@@ -1779,7 +1779,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
   );
 };
 
-// ─── Detail panel ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Detail panel â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
   const [showStk,setShowStk]     = useState(false);
   const [showEdit,setShowEdit]   = useState(false);
@@ -1818,7 +1818,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
   const toggleMs=id=>{
     const upd=account.successPlan.milestones.map(m=>m.id===id?{...m,done:!m.done}:m);
     onUpdate(account.id,{successPlan:{...account.successPlan,milestones:upd}});
-    toast(upd.find(m=>m.id===id).done?"Milestone completed ✓":"Milestone re-opened","success");
+    toast(upd.find(m=>m.id===id).done?"Milestone completed âœ“":"Milestone re-opened","success");
   };
   const addMs=()=>{
     if(!newMs.trim()) return;
@@ -1856,7 +1856,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
                 <div style={{fontWeight:800,fontSize:16,lineHeight:1.2}}>{account.name}</div>
                 <div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}>
                   <span style={{fontSize:11,color:"var(--text3)"}}>{account.industry}</span>
-                  <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
+                  <span style={{fontSize:11,color:"var(--text3)"}}>Â·</span>
                   <span style={{fontSize:11,color:"var(--text3)"}}>{account.plan}</span>
                   <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
                 </div>
@@ -1872,7 +1872,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
               <button onClick={onClose} className="icon-btn"
                 style={{background:"var(--bg3)",border:"none",color:"var(--text2)",
                   cursor:"pointer",width:32,height:32,borderRadius:"var(--r-sm)",fontSize:18,
-                  display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                  display:"flex",alignItems:"center",justifyContent:"center"}}>Ã—</button>
             </div>
           </div>
 
@@ -1894,7 +1894,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
                   <span style={{fontSize:13,color:account.nextAction?"var(--violet)":"var(--text3)",
                     fontWeight:account.nextAction?600:400,
                     overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                    {account.nextAction||"No next action — click to add"}
+                    {account.nextAction||"No next action â€” click to add"}
                   </span>
                 </div>
                 <button onClick={()=>{setActDraft(account.nextAction||"");setEditAct(true);}}
@@ -1945,7 +1945,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
                 <Ic n="bell" size={20} color="var(--rose)"/>
                 <div>
                   <div style={{fontWeight:700,fontSize:13,color:"var(--rose)"}}>Renewal in {rdays} days</div>
-                  <div style={{fontSize:12,color:"var(--text2)",marginTop:2}}>Start the conversation now — don't wait.</div>
+                  <div style={{fontSize:12,color:"var(--text2)",marginTop:2}}>Start the conversation now â€” don't wait.</div>
                 </div>
               </div>
             )}
@@ -1987,7 +1987,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
               <Bar value={account.productUsage} color={account.productUsage>=70?"var(--emerald)":account.productUsage>=45?"var(--amber)":"var(--rose)"}/>
               <button onClick={()=>setTab("health")}
                 style={{marginTop:12,background:"none",border:"none",color:"var(--indigo)",fontSize:12,cursor:"pointer",fontWeight:600,padding:0}}>
-                See full breakdown →
+                See full breakdown â†’
               </button>
             </div>
             <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
@@ -2000,7 +2000,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
                   </div>
                   <div style={{fontSize:12,fontFamily:"var(--font-mono)",marginTop:4,
                     color:cesTrend>0?"var(--emerald)":cesTrend<0?"var(--rose)":"var(--text3)"}}>
-                    {cesTrend>0?"↑ Improving":cesTrend<0?"↓ Declining — investigate":"→ Flat"}
+                    {cesTrend>0?"â†‘ Improving":cesTrend<0?"â†“ Declining â€” investigate":"â†’ Flat"}
                   </div>
                 </div>
                 <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
@@ -2015,7 +2015,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
             <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
                 <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Stakeholders</div>
-                <button onClick={()=>setShowStk(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage →</button>
+                <button onClick={()=>setShowStk(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage â†’</button>
               </div>
               {account.stakeholders.length===0
                 ?<div style={{fontSize:13,color:"var(--text3)"}}>No stakeholders mapped yet</div>
@@ -2046,7 +2046,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
               <div style={{background:"var(--bg3)",border:`1.5px solid ${rdays<=60&&rdays>0?"rgba(225,29,72,.3)":"var(--border)"}`,borderRadius:"var(--r)",padding:14}}>
                 <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Renewal</div>
-                <div style={{fontFamily:"var(--font-mono)",fontSize:13,fontWeight:500}}>{account.renewalDate||"—"}</div>
+                <div style={{fontFamily:"var(--font-mono)",fontSize:13,fontWeight:500}}>{account.renewalDate||"â€”"}</div>
                 <div style={{fontSize:11,marginTop:2,fontFamily:"var(--font-mono)",color:rdays<=60&&rdays>0?"var(--rose)":"var(--text3)"}}>{rdays>0?`${rdays}d away`:"Overdue"}</div>
               </div>
               <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:14}}>
@@ -2087,7 +2087,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
               ):(
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
                   <div style={{fontSize:13,color:account.successPlan.goal?"var(--text)":"var(--text3)",lineHeight:1.6,fontWeight:500}}>
-                    {account.successPlan.goal||"No goal defined yet — click Edit to add one"}
+                    {account.successPlan.goal||"No goal defined yet â€” click Edit to add one"}
                   </div>
                   <button onClick={()=>{setGoalDraft(account.successPlan.goal);setEditGoal(true);}}
                     style={{fontSize:11,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}}>Edit</button>
@@ -2098,7 +2098,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
               <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
                   <span style={{fontSize:12,color:"var(--text2)",fontWeight:600}}>Progress</span>
-                  <span style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--indigo)",fontWeight:600}}>{doneMs}/{totalMs} · {planPct}%</span>
+                  <span style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--indigo)",fontWeight:600}}>{doneMs}/{totalMs} Â· {planPct}%</span>
                 </div>
                 <Bar value={planPct} color={planPct>=70?"var(--emerald)":planPct>=40?"var(--indigo)":"var(--amber)"}/>
               </div>
@@ -2114,12 +2114,12 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
                       style={{width:16,height:16,cursor:"pointer",accentColor:"var(--indigo)",flexShrink:0}}/>
                     <span style={{fontSize:13,flex:1,color:m.done?"var(--text3)":"var(--text)",textDecoration:m.done?"line-through":"none"}}>{m.text}</span>
                     <button onClick={()=>delMs(m.id)}
-                      style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",display:"flex",alignItems:"center",padding:"3px",borderRadius:"var(--r-xs)"}}>×</button>
+                      style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",display:"flex",alignItems:"center",padding:"3px",borderRadius:"var(--r-xs)"}}>Ã—</button>
                   </div>
                 ))}
               </div>
               <div style={{display:"flex",gap:8}}>
-                <Inp value={newMs} onChange={e=>setNewMs(e.target.value)} placeholder="Add a milestone…"
+                <Inp value={newMs} onChange={e=>setNewMs(e.target.value)} placeholder="Add a milestoneâ€¦"
                   onKeyDown={e=>e.key==="Enter"&&addMs()} style={{flex:1,fontSize:13,padding:"8px 12px"}}/>
                 <Btn onClick={addMs} style={{padding:"8px 16px",fontSize:13}}>+</Btn>
               </div>
@@ -2136,7 +2136,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
               </div>
               <Fld label="Note">
                 <textarea value={logF.note} onChange={e=>setLogF(f=>({...f,note:e.target.value}))}
-                  placeholder="What happened? Key outcomes, follow-ups…"
+                  placeholder="What happened? Key outcomes, follow-upsâ€¦"
                   style={{width:"100%",background:"white",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
                     padding:"9px 12px",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:14,
                     outline:"none",resize:"vertical",minHeight:70}}/>
@@ -2197,7 +2197,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
               <div style={{fontSize:12,fontWeight:700,color:"var(--indigo)",marginBottom:6}}>Improvement opportunities</div>
               {calcHealth(account).parts.filter(p=>p.pts<p.max).map(p=>(
                 <div key={p.label} style={{fontSize:12,color:"var(--text2)",marginBottom:4}}>
-                  → <strong>{p.label}</strong>: {p.note} — +{p.max-p.pts} pts available
+                  â†’ <strong>{p.label}</strong>: {p.note} â€” +{p.max-p.pts} pts available
                 </div>
               ))}
             </div>
@@ -2223,7 +2223,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
   );
 };
 
-// ─── Bulk upload ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Bulk upload â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TEMPLATE_FIELDS = [
   { key:"name",         label:"Company Name",      required:true,  hint:"e.g. Noon E-Commerce" },
   { key:"industry",     label:"Industry",          required:false, hint:"e.g. E-Commerce"       },
@@ -2235,7 +2235,7 @@ const TEMPLATE_FIELDS = [
   { key:"productUsage", label:"Product Usage (%)", required:false, hint:"e.g. 75"                },
   { key:"openTickets",  label:"Open Tickets",      required:false, hint:"e.g. 2"                 },
   { key:"nextAction",   label:"Next Action",       required:false, hint:"e.g. Book QBR by Feb 1" },
-  { key:"notes",        label:"Notes",             required:false, hint:"Key context, risks…"    },
+  { key:"notes",        label:"Notes",             required:false, hint:"Key context, risksâ€¦"    },
 ];
 
 const downloadTemplate = () => {
@@ -2297,9 +2297,9 @@ const validateRow = (raw, headerMap) => {
   if(r.plan&&!validPlans.includes(r.plan)) errors.push("Plan must be Starter, Growth, or Enterprise");
   if(!r.plan) r.plan="Starter";
   if(r.arr&&isNaN(Number(r.arr))) errors.push("ARR must be a number");
-  if(r.nps&&(isNaN(Number(r.nps))||Number(r.nps)<0||Number(r.nps)>100)) errors.push("NPS must be 0–100");
-  if(r.ces&&(isNaN(Number(r.ces))||Number(r.ces)<1||Number(r.ces)>5)) errors.push("CES must be 1–5");
-  if(r.productUsage&&(isNaN(Number(r.productUsage))||Number(r.productUsage)<0||Number(r.productUsage)>100)) errors.push("Product Usage must be 0–100");
+  if(r.nps&&(isNaN(Number(r.nps))||Number(r.nps)<0||Number(r.nps)>100)) errors.push("NPS must be 0â€“100");
+  if(r.ces&&(isNaN(Number(r.ces))||Number(r.ces)<1||Number(r.ces)>5)) errors.push("CES must be 1â€“5");
+  if(r.productUsage&&(isNaN(Number(r.productUsage))||Number(r.productUsage)<0||Number(r.productUsage)>100)) errors.push("Product Usage must be 0â€“100");
   if(r.openTickets&&isNaN(Number(r.openTickets))) errors.push("Open Tickets must be a number");
   if(r.renewalDate){
     const d=new Date(r.renewalDate);
@@ -2381,7 +2381,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
           <div>
             <div style={{fontWeight:700,fontSize:17}}>Bulk Import Accounts</div>
             <div style={{fontSize:12,color:"var(--text3)",marginTop:3,fontFamily:"var(--font-mono)"}}>
-              {step===1?"Step 1 of 2 — Upload your CSV":step===2?`Step 2 of 2 — Review ${results.length} rows`:"Import complete"}
+              {step===1?"Step 1 of 2 â€” Upload your CSV":step===2?`Step 2 of 2 â€” Review ${results.length} rows`:"Import complete"}
             </div>
           </div>
           <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -2391,7 +2391,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                   <div style={{width:24,height:24,borderRadius:"50%",display:"flex",alignItems:"center",
                     justifyContent:"center",fontSize:11,fontWeight:700,fontFamily:"var(--font-mono)",
                     background:step>=s?"var(--indigo)":"var(--bg4)",color:step>=s?"white":"var(--text3)"}}>
-                    {step>s?"✓":s}
+                    {step>s?"âœ“":s}
                   </div>
                   {s<2&&<div style={{width:24,height:2,background:step>s?"var(--indigo)":"var(--border)",borderRadius:99}}/>}
                 </div>
@@ -2407,9 +2407,9 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
           {step===1&&(
             <div style={{display:"flex",flexDirection:"column",gap:20}}>
               <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12}}>
-                {[{num:1,icon:"↓",title:"Download template",desc:"Pre-formatted CSV with all required and optional fields."},
-                  {num:2,icon:"✎",title:"Fill your data",desc:"One account per row. Example row included."},
-                  {num:3,icon:"→",title:"Upload & review",desc:"Preview all rows, fix errors, then import."}].map(s=>(
+                {[{num:1,icon:"â†“",title:"Download template",desc:"Pre-formatted CSV with all required and optional fields."},
+                  {num:2,icon:"âœŽ",title:"Fill your data",desc:"One account per row. Example row included."},
+                  {num:3,icon:"â†’",title:"Upload & review",desc:"Preview all rows, fix errors, then import."}].map(s=>(
                   <div key={s.num} style={{background:"var(--bg3)",borderRadius:"var(--r-lg)",padding:18,textAlign:"center"}}>
                     <div style={{fontSize:28,marginBottom:10}}>{s.icon}</div>
                     <div style={{fontWeight:700,fontSize:13,marginBottom:6}}>{s.title}</div>
@@ -2429,7 +2429,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                   style={{background:"var(--indigo)",color:"white",border:"none",borderRadius:"var(--r)",
                     padding:"10px 20px",fontWeight:700,fontSize:13,cursor:"pointer",
                     whiteSpace:"nowrap",boxShadow:"0 4px 12px var(--indigo-glow)"}}>
-                  ↓ Download Template
+                  â†“ Download Template
                 </button>
               </div>
               <div onDragOver={e=>{e.preventDefault();setDragging(true);}}
@@ -2438,7 +2438,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                   borderRadius:"var(--r-lg)",padding:"48px 32px",textAlign:"center",
                   background:dragging?"var(--indigo-dim)":"var(--bg3)",transition:"all .2s",cursor:"pointer"}}
                 onClick={()=>document.getElementById("csv-input").click()}>
-                <div style={{fontSize:40,marginBottom:12}}>"↑"</div>
+                <div style={{fontSize:40,marginBottom:12}}>"â†‘"</div>
                 <div style={{fontWeight:700,fontSize:15,marginBottom:6,color:dragging?"var(--indigo)":"var(--text)"}}>
                   {dragging?"Drop it here":"Drag & drop your CSV file here"}
                 </div>
@@ -2469,17 +2469,17 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
               {errorRows.length>0&&validRows.length>0&&(
                 <div style={{background:"var(--amber-dim)",border:"1.5px solid rgba(217,119,6,.2)",
                   borderRadius:"var(--r)",padding:"12px 16px",fontSize:13,color:"var(--text2)",display:"flex",gap:10}}>
-                  <span>💡</span>
-                  <span><strong>{errorRows.length} row{errorRows.length!==1?"s":""} have errors</strong> — deselected. You can import the {validRows.length} valid rows now.</span>
+                  <span>ðŸ’¡</span>
+                  <span><strong>{errorRows.length} row{errorRows.length!==1?"s":""} have errors</strong> â€” deselected. You can import the {validRows.length} valid rows now.</span>
                 </div>
               )}
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div style={{display:"flex",gap:8}}>
                   <button onClick={()=>selectAll(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Select all valid ({validRows.length})</button>
-                  <span style={{color:"var(--border2)"}}>·</span>
+                  <span style={{color:"var(--border2)"}}>Â·</span>
                   <button onClick={()=>selectAll(false)} style={{fontSize:12,color:"var(--text3)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Deselect all</button>
                 </div>
-                <button onClick={()=>{setStep(1);setResults([]);}} style={{fontSize:12,color:"var(--text2)",background:"none",border:"none",cursor:"pointer"}}>← Upload different file</button>
+                <button onClick={()=>{setStep(1);setResults([]);}} style={{fontSize:12,color:"var(--text2)",background:"none",border:"none",cursor:"pointer"}}>â† Upload different file</button>
               </div>
               <div style={{border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",overflow:"hidden"}}>
                 <div style={{display:"grid",gridTemplateColumns:"40px 28px 1.5fr 1fr 1fr 80px 70px 70px 80px",
@@ -2502,16 +2502,16 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                           {r.account.name||<span style={{color:"var(--rose)",fontStyle:"italic"}}>Missing</span>}
                         </div>
                         <div><Badge label={r.account.plan} color="var(--sky)" bg="var(--sky-dim)" small/></div>
-                        <div style={{fontSize:12,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.account.industry||"—"}</div>
-                        <div style={{fontFamily:"var(--font-mono)",fontSize:12}}>{r.account.arr?fmtMoney(r.account.arr):"—"}</div>
-                        <div style={{fontFamily:"var(--font-mono)",fontSize:12,color:r.account.nps>=50?"var(--emerald)":"var(--amber)"}}>{r.account.nps||"—"}</div>
-                        <div style={{fontFamily:"var(--font-mono)",fontSize:12,color:r.account.ces>=3.5?"var(--emerald)":"var(--amber)"}}>{r.account.ces?.toFixed(1)||"—"}</div>
+                        <div style={{fontSize:12,color:"var(--text3)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{r.account.industry||"â€”"}</div>
+                        <div style={{fontFamily:"var(--font-mono)",fontSize:12}}>{r.account.arr?fmtMoney(r.account.arr):"â€”"}</div>
+                        <div style={{fontFamily:"var(--font-mono)",fontSize:12,color:r.account.nps>=50?"var(--emerald)":"var(--amber)"}}>{r.account.nps||"â€”"}</div>
+                        <div style={{fontFamily:"var(--font-mono)",fontSize:12,color:r.account.ces>=3.5?"var(--emerald)":"var(--amber)"}}>{r.account.ces?.toFixed(1)||"â€”"}</div>
                         <div>
                           {hasError
-                            ?<span title={r.errors.join("; ")} style={{cursor:"help"}}><Badge label={`✕ ${r.errors.length}`} color="var(--rose)" bg="var(--rose-dim)" small/></span>
+                            ?<span title={r.errors.join("; ")} style={{cursor:"help"}}><Badge label={`âœ• ${r.errors.length}`} color="var(--rose)" bg="var(--rose-dim)" small/></span>
                             :hasWarn
-                              ?<span title={r.warnings.join("; ")} style={{cursor:"help"}}><Badge label="⚠ Warn" color="var(--amber)" bg="var(--amber-dim)" small/></span>
-                              :<Badge label="✓ Ready" color="var(--emerald)" bg="var(--emerald-dim)" small/>}
+                              ?<span title={r.warnings.join("; ")} style={{cursor:"help"}}><Badge label="âš  Warn" color="var(--amber)" bg="var(--amber-dim)" small/></span>
+                              :<Badge label="âœ“ Ready" color="var(--emerald)" bg="var(--emerald-dim)" small/>}
                         </div>
                       </div>
                     );
@@ -2543,7 +2543,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
               <Btn variant="ghost" onClick={onClose}>Cancel</Btn>
               <Btn onClick={doImport} style={{padding:"10px 28px",opacity:selectedRows.length===0?0.4:1}}
                 disabled={selectedRows.length===0||importing}>
-                {importing?"Importing…":`Import ${selectedRows.length}`}
+                {importing?"Importingâ€¦":`Import ${selectedRows.length}`}
               </Btn>
             </div>
           </div>
@@ -2553,7 +2553,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
   );
 };
 
-// ─── Account card ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Account card â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const Card = ({ account, onClick, index }) => {
   const sc      = STAGE_CFG[account.stage]||STAGE_CFG["Stable"];
   const days    = ago(account.lastContact);
@@ -2607,7 +2607,7 @@ const Card = ({ account, onClick, index }) => {
             <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>{account.name}</div>
             <div style={{display:"flex",gap:5,alignItems:"center"}}>
               <span style={{fontSize:10,color:"var(--text3)"}}>{account.industry}</span>
-              <span style={{fontSize:10,color:"var(--text3)"}}>·</span>
+              <span style={{fontSize:10,color:"var(--text3)"}}>Â·</span>
               <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
             </div>
           </div>
@@ -2692,7 +2692,7 @@ const Card = ({ account, onClick, index }) => {
   );
 };
 
-// ─── Stats bar ────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Stats bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const Stats = ({ accounts, isFiltered }) => {
   const totalArr =accounts.reduce((s,a)=>s+a.arr,0);
   const atRisk   =accounts.filter(a=>a.stage==="At Risk").length;
@@ -2741,7 +2741,7 @@ const Empty = ({ isFiltered, onClear, onAdd, onLoadDemo }) => (
   </div>
 );
 
-// ─── Task engine ─────────────────────────────────────────────────────────────
+// â”€â”€â”€ Task engine â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TASK_TYPE_CFG = {
   renewal:  { color:"var(--indigo)", bg:"var(--indigo-dim)", abbr:"RE", label:"Renewal"  },
   health:   { color:"var(--rose)",   bg:"var(--rose-dim)",   abbr:"HL", label:"Health"   },
@@ -2763,75 +2763,75 @@ const generateAutoTasks = (accounts) => {
       && cesVals.at(-1) < cesVals.at(-2)
       && cesVals.at(-2) < cesVals.at(-3);
 
-    // ── Renewal tasks ──
+    // â”€â”€ Renewal tasks â”€â”€
     if (account.renewalDate) {
       if (rdays < 0) {
         tasks.push({ id:`renewal-overdue-${account.id}`, type:"renewal", priority:"Critical",
           accountId:account.id, accountName:account.name, auto:true, done:false,
-          title:`Renewal overdue — ${account.name}`,
+          title:`Renewal overdue â€” ${account.name}`,
           description:`Renewal was due ${Math.abs(rdays)} days ago. Immediate action required.`,
           dueDate: account.renewalDate });
       } else if (rdays <= 30 && account.healthScore < 60) {
         tasks.push({ id:`renewal-critical-${account.id}`, type:"renewal", priority:"Critical",
           accountId:account.id, accountName:account.name, auto:true, done:false,
-          title:`At-risk renewal in ${rdays}d — ${account.name}`,
+          title:`At-risk renewal in ${rdays}d â€” ${account.name}`,
           description:`Renewal approaching with health score ${account.healthScore}. Activate at-risk renewal playbook now.`,
           dueDate: todayStr() });
       } else if (rdays <= 30) {
         tasks.push({ id:`renewal-30-${account.id}`, type:"renewal", priority:"High",
           accountId:account.id, accountName:account.name, auto:true, done:false,
-          title:`Renewal in ${rdays}d — finalise contract`,
+          title:`Renewal in ${rdays}d â€” finalise contract`,
           description:`Get verbal commit and send renewal paperwork for ${account.name}.`,
           dueDate: todayStr() });
       } else if (rdays <= 60 && account.healthScore < 55) {
         tasks.push({ id:`renewal-60risk-${account.id}`, type:"renewal", priority:"Critical",
           accountId:account.id, accountName:account.name, auto:true, done:false,
-          title:`At-risk renewal in ${rdays}d — ${account.name}`,
+          title:`At-risk renewal in ${rdays}d â€” ${account.name}`,
           description:`Health score ${account.healthScore} with renewal in ${rdays} days. Start recovery conversation immediately.`,
           dueDate: todayStr() });
       } else if (rdays <= 90) {
         tasks.push({ id:`renewal-90-${account.id}`, type:"renewal", priority:"High",
           accountId:account.id, accountName:account.name, auto:true, done:false,
-          title:`Start renewal prep — ${account.name}`,
+          title:`Start renewal prep â€” ${account.name}`,
           description:`Renewal in ${rdays} days. Prepare ROI summary and schedule planning call.`,
           dueDate: new Date(today.getTime() + 7*86400000).toISOString().split("T")[0] });
       }
     }
 
-    // ── Health tasks ──
+    // â”€â”€ Health tasks â”€â”€
     if (account.healthScore < 40) {
       tasks.push({ id:`health-critical-${account.id}`, type:"health", priority:"Critical",
         accountId:account.id, accountName:account.name, auto:true, done:false,
-        title:`Critical health — activate recovery for ${account.name}`,
-        description:`Health score ${account.healthScore}/100 — churn risk ${account.churnRisk}%. Escalate today.`,
+        title:`Critical health â€” activate recovery for ${account.name}`,
+        description:`Health score ${account.healthScore}/100 â€” churn risk ${account.churnRisk}%. Escalate today.`,
         dueDate: todayStr() });
     } else if (account.healthScore < 55) {
       tasks.push({ id:`health-warn-${account.id}`, type:"health", priority:"High",
         accountId:account.id, accountName:account.name, auto:true, done:false,
-        title:`Health declining — intervene on ${account.name}`,
+        title:`Health declining â€” intervene on ${account.name}`,
         description:`Health score ${account.healthScore}/100. Diagnose root cause before it drops further.`,
         dueDate: todayStr() });
     }
 
-    // ── Silent account tasks ──
+    // â”€â”€ Silent account tasks â”€â”€
     if (silent >= 30) {
       tasks.push({ id:`silent-${account.id}`, type:"silent", priority:"High",
         accountId:account.id, accountName:account.name, auto:true, done:false,
-        title:`No contact in ${silent}d — re-engage ${account.name}`,
+        title:`No contact in ${silent}d â€” re-engage ${account.name}`,
         description:`Last contact was ${silent} days ago. Risk of disengagement is high.`,
         dueDate: todayStr() });
     }
 
-    // ── CES tasks ──
+    // â”€â”€ CES tasks â”€â”€
     if (cesDeclining) {
       tasks.push({ id:`ces-${account.id}`, type:"ces", priority:"High",
         accountId:account.id, accountName:account.name, auto:true, done:false,
-        title:`CES declining 3 months — investigate ${account.name}`,
-        description:`CES dropped from ${cesVals.at(-3).toFixed(1)} → ${cesVals.at(-2).toFixed(1)} → ${cesVals.at(-1).toFixed(1)}. Find the friction source.`,
+        title:`CES declining 3 months â€” investigate ${account.name}`,
+        description:`CES dropped from ${cesVals.at(-3).toFixed(1)} â†’ ${cesVals.at(-2).toFixed(1)} â†’ ${cesVals.at(-1).toFixed(1)}. Find the friction source.`,
         dueDate: todayStr() });
     }
 
-    // ── Active playbook next step ──
+    // â”€â”€ Active playbook next step â”€â”€
     if (account.activePlaybookId) {
       const pb = PLAYBOOK_LIBRARY.find(p=>p.id===account.activePlaybookId);
       if (pb) {
@@ -2839,7 +2839,7 @@ const generateAutoTasks = (accounts) => {
         if (nextStep) {
           tasks.push({ id:`playbook-${account.id}-${nextStep.id}`, type:"playbook", priority:"Medium",
             accountId:account.id, accountName:account.name, auto:true, done:false,
-            title:`${pb.name} — next step for ${account.name}`,
+            title:`${pb.name} â€” next step for ${account.name}`,
             description:`Step: "${nextStep.title}" (${nextStep.timeline})`,
             dueDate: todayStr() });
         }
@@ -2852,7 +2852,7 @@ const generateAutoTasks = (accounts) => {
   return tasks.sort((a,b) => pOrder[a.priority]-pOrder[b.priority] || a.dueDate.localeCompare(b.dueDate));
 };
 
-// ─── Tasks Page ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ Tasks Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDeleteManual, onAccountClick }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newTask, setNewTask]         = useState({ title:"", description:"", accountId:"", priority:"High", dueDate:todayStr() });
@@ -2916,7 +2916,7 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
           )}
           <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
             <span style={{fontSize:10,fontFamily:"var(--font-mono)",fontWeight:600,color:tc.color,
-              background:tc.bg,padding:"2px 8px",borderRadius:"var(--r-xs)",letterSpacing:".03em"}}>{tc.abbr} · {tc.label}</span>
+              background:tc.bg,padding:"2px 8px",borderRadius:"var(--r-xs)",letterSpacing:".03em"}}>{tc.abbr} Â· {tc.label}</span>
             <Badge label={pc.label} color={pc.color} bg={pc.bg} small/>
             {task.accountName&&(
               <button onClick={()=>{ const a=accounts.find(acc=>acc.id===task.accountId); if(a) onAccountClick(a); }}
@@ -2997,12 +2997,12 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
             <div style={{gridColumn:"1/-1"}}>
               <Fld label="Description (optional)">
                 <Inp value={newTask.description} onChange={e=>setNewTask(p=>({...p,description:e.target.value}))}
-                  placeholder="Additional context…"/>
+                  placeholder="Additional contextâ€¦"/>
               </Fld>
             </div>
             <Fld label="Account (optional)">
               <Slct value={newTask.accountId} onChange={e=>setNewTask(p=>({...p,accountId:e.target.value}))}>
-                <option value="">— No account —</option>
+                <option value="">â€” No account â€”</option>
                 {accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
               </Slct>
             </Fld>
@@ -3065,7 +3065,7 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
   );
 };
 
-// ─── Account Tasks (detail panel tab) ────────────────────────────────────────
+// â”€â”€â”€ Account Tasks (detail panel tab) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AccountTasksTab = ({ account, accounts, manualTasks, onAddManual, onToggleManual, onDeleteManual }) => {
   const [showForm, setShowForm] = useState(false);
   const [newTask, setNewTask]   = useState({ title:"", description:"", priority:"High", dueDate:todayStr() });
@@ -3087,7 +3087,7 @@ const AccountTasksTab = ({ account, accounts, manualTasks, onAddManual, onToggle
     <div>
       <div style={{background:"var(--emerald-dim)",border:"1.5px solid rgba(5,150,105,0.2)",
         borderRadius:"var(--r)",padding:"18px",textAlign:"center",marginBottom:16}}>
-        <div style={{fontSize:24,marginBottom:8}}>✅</div>
+        <div style={{fontSize:24,marginBottom:8}}>âœ…</div>
         <div style={{fontWeight:700,fontSize:13,color:"var(--emerald)",marginBottom:4}}>No tasks for this account</div>
         <div style={{fontSize:12,color:"var(--text2)"}}>All signals are healthy. Add a manual task below if needed.</div>
       </div>
@@ -3131,7 +3131,7 @@ const AccountTasksTab = ({ account, accounts, manualTasks, onAddManual, onToggle
               </div>
               {isManual&&(
                 <button onClick={()=>onDeleteManual(task.id)}
-                  style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:14,flexShrink:0}}>✕</button>
+                  style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",fontSize:14,flexShrink:0}}>âœ•</button>
               )}
             </div>
           </div>
@@ -3169,7 +3169,7 @@ const AccountTasksTab = ({ account, accounts, manualTasks, onAddManual, onToggle
   );
 };
 
-// ─── Renewal Pipeline Page ────────────────────────────────────────────────────
+// â”€â”€â”€ Renewal Pipeline Page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
   const today = new Date();
 
@@ -3180,9 +3180,9 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
 
   const BUCKETS = [
     { id:"overdue",    label:"Overdue",     color:"var(--rose)",   bg:"var(--rose-dim)",   filter: a => a.rdays < 0 },
-    { id:"critical",   label:"≤ 30 days",   color:"var(--rose)",   bg:"var(--rose-dim)",   filter: a => a.rdays >= 0 && a.rdays <= 30 },
-    { id:"urgent",     label:"31–60 days",  color:"var(--amber)",  bg:"var(--amber-dim)",  filter: a => a.rdays > 30 && a.rdays <= 60 },
-    { id:"upcoming",   label:"61–90 days",  color:"var(--indigo)", bg:"var(--indigo-dim)", filter: a => a.rdays > 60 && a.rdays <= 90 },
+    { id:"critical",   label:"â‰¤ 30 days",   color:"var(--rose)",   bg:"var(--rose-dim)",   filter: a => a.rdays >= 0 && a.rdays <= 30 },
+    { id:"urgent",     label:"31â€“60 days",  color:"var(--amber)",  bg:"var(--amber-dim)",  filter: a => a.rdays > 30 && a.rdays <= 60 },
+    { id:"upcoming",   label:"61â€“90 days",  color:"var(--indigo)", bg:"var(--indigo-dim)", filter: a => a.rdays > 60 && a.rdays <= 90 },
     { id:"ontrack",    label:"90+ days",    color:"var(--emerald)",bg:"var(--emerald-dim)",filter: a => a.rdays > 90 },
   ];
 
@@ -3201,7 +3201,7 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
       <div style={{marginBottom:28}}>
         <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Renewal Pipeline</h1>
         <div style={{fontSize:13,color:"var(--text3)"}}>
-          {withRenewal.length} accounts · {fmtMoney(totalArr)} total ARR
+          {withRenewal.length} accounts Â· {fmtMoney(totalArr)} total ARR
         </div>
       </div>
 
@@ -3255,7 +3255,7 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
               <div style={{width:10,height:10,borderRadius:"50%",background:bucket.color,flexShrink:0}}/>
               <span style={{fontWeight:700,fontSize:15,color:bucket.color}}>{bucket.label}</span>
               <span style={{fontSize:12,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
-                {bucket.accounts.length} account{bucket.accounts.length!==1?"s":""} · {fmtMoney(bucket.arr)} ARR
+                {bucket.accounts.length} account{bucket.accounts.length!==1?"s":""} Â· {fmtMoney(bucket.arr)} ARR
               </span>
             </div>
 
@@ -3277,7 +3277,7 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
                       <div style={{fontWeight:700,fontSize:14,marginBottom:3}}>{account.name}</div>
                       <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
                         <span style={{fontSize:11,color:"var(--text3)"}}>{account.industry}</span>
-                        <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
+                        <span style={{fontSize:11,color:"var(--text3)"}}>Â·</span>
                         <span style={{fontSize:11,color:"var(--text3)"}}>{account.plan}</span>
                         <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
                         {triggered.length>0&&!account.activePlaybookId&&(
@@ -3325,7 +3325,7 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
                       <div style={{fontSize:10,color:"var(--text3)",marginTop:2}}>last contact</div>
                     </div>
 
-                    <span style={{fontSize:16,color:"var(--text3)",flexShrink:0}}>→</span>
+                    <span style={{fontSize:16,color:"var(--text3)",flexShrink:0}}>â†’</span>
                   </div>
                 );
               })}
@@ -3336,7 +3336,7 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
 
       {withRenewal.length===0&&(
         <div style={{textAlign:"center",padding:"60px 0",color:"var(--text3)",fontFamily:"var(--font-mono)",fontSize:13}}>
-          <div style={{fontSize:40,marginBottom:16}}>📅</div>
+          <div style={{fontSize:40,marginBottom:16}}>ðŸ“…</div>
           No accounts have renewal dates set. Add renewal dates to your accounts to see the pipeline.
         </div>
       )}
@@ -3344,7 +3344,7 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
   );
 };
 
-// ─── CRM Integrations ────────────────────────────────────────────────────────
+// â”€â”€â”€ CRM Integrations â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const CRM_CATALOG = [
   {
@@ -3518,7 +3518,7 @@ const CRM_CATALOG = [
     ],
     docsUrl: "https://learn.microsoft.com/en-us/power-apps/developer/data-platform/webapi/overview",
   },
-  // ── Ticketing systems ──
+  // â”€â”€ Ticketing systems â”€â”€
   {
     id: "zendesk",
     name: "Zendesk",
@@ -3660,7 +3660,7 @@ const PULSE_FIELD_OPTIONS = [
   { value:"lastContact", label:"Last Contact Date"   },
   { value:"nps",         label:"NPS Score"           },
   { value:"notes",       label:"Notes"               },
-  { value:"__skip",      label:"— Skip this field —" },
+  { value:"__skip",      label:"â€” Skip this field â€”" },
 ];
 
 const loadIntegrations = () => {
@@ -3676,7 +3676,7 @@ const loadIntegrations = () => {
       status: "idle",
     };
   });
-  // Merge with any saved data — new connectors get defaults, existing ones keep their config
+  // Merge with any saved data â€” new connectors get defaults, existing ones keep their config
   try {
     const s = localStorage.getItem("pulse_integrations_v1");
     if (s) {
@@ -3691,7 +3691,7 @@ const saveIntegrations = d => {
   try { localStorage.setItem("pulse_integrations_v1", JSON.stringify(d)); } catch {}
 };
 
-// ── Connect / Edit credentials modal ──
+// â”€â”€ Connect / Edit credentials modal â”€â”€
 const CRMConnectModal = ({ crm, config, onSave, onClose }) => {
   const [creds, setCreds] = useState({...config.credentials});
   const [testing, setTesting] = useState(false);
@@ -3706,7 +3706,7 @@ const CRMConnectModal = ({ crm, config, onSave, onClose }) => {
     const allFilled = crm.credentials.every(f => creds[f.key]?.trim());
     if (!allFilled) { setTestResult("fail"); return; }
     setTesting(true); setTestResult(null);
-    // Simulate API test — in production this would hit a backend proxy
+    // Simulate API test â€” in production this would hit a backend proxy
     setTimeout(()=>{
       setTesting(false);
       setTestResult("ok");
@@ -3778,8 +3778,8 @@ const CRMConnectModal = ({ crm, config, onSave, onClose }) => {
               <Ic n={testResult==="ok"?"check":"dismiss"} size={14} color={testResult==="ok"?"var(--emerald)":"var(--rose)"}/>
               <span style={{fontSize:13,fontWeight:600,color:testResult==="ok"?"var(--emerald)":"var(--rose)"}}>
                 {testResult==="ok"
-                  ? "Connection successful — credentials verified"
-                  : "Connection failed — check your credentials and try again"}
+                  ? "Connection successful â€” credentials verified"
+                  : "Connection failed â€” check your credentials and try again"}
               </span>
             </div>
           )}
@@ -3789,7 +3789,7 @@ const CRMConnectModal = ({ crm, config, onSave, onClose }) => {
             Need help finding your credentials?{" "}
             <a href={crm.docsUrl} target="_blank" rel="noreferrer"
               style={{color:"var(--indigo)",textDecoration:"none",fontWeight:600}}>
-              {crm.name} API docs →
+              {crm.name} API docs â†’
             </a>
           </div>
 
@@ -3801,7 +3801,7 @@ const CRMConnectModal = ({ crm, config, onSave, onClose }) => {
                 borderRadius:"var(--r)",padding:"10px",fontWeight:600,fontSize:13,cursor:"pointer",
                 fontFamily:"var(--font-display)"}}>
               {testing
-                ? <><span style={{width:13,height:13,border:"2px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>Testing…</>
+                ? <><span style={{width:13,height:13,border:"2px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>Testingâ€¦</>
                 : <><Ic n="activity" size={14} color="var(--text2)"/>Test connection</>}
             </button>
             <Btn onClick={save} style={{flex:1}} disabled={!crm.credentials.every(f=>creds[f.key]?.trim())}>
@@ -3814,7 +3814,7 @@ const CRMConnectModal = ({ crm, config, onSave, onClose }) => {
   );
 };
 
-// ── Field mapping modal ──
+// â”€â”€ Field mapping modal â”€â”€
 const CRMFieldMapModal = ({ crm, config, onSave, onClose }) => {
   const [map, setMap] = useState({...config.fieldMap});
 
@@ -3834,7 +3834,7 @@ const CRMFieldMapModal = ({ crm, config, onSave, onClose }) => {
         <div style={{padding:"20px 24px",borderBottom:"1px solid var(--border)",
           display:"flex",justifyContent:"space-between",alignItems:"center",flexShrink:0}}>
           <div>
-            <div style={{fontWeight:700,fontSize:16}}>{crm.name} — Field Mapping</div>
+            <div style={{fontWeight:700,fontSize:16}}>{crm.name} â€” Field Mapping</div>
             <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>
               Map {crm.name} fields to Pulse fields
             </div>
@@ -3862,7 +3862,7 @@ const CRMFieldMapModal = ({ crm, config, onSave, onClose }) => {
           {crm.fields.map(f=>(
             <div key={f.crmKey} style={{display:"grid",gridTemplateColumns:"1fr 28px 1fr",
               gap:8,alignItems:"center",marginBottom:10}}>
-              {/* CRM field — read only */}
+              {/* CRM field â€” read only */}
               <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",
                 borderRadius:"var(--r)",padding:"9px 12px",fontSize:13}}>
                 <div style={{fontWeight:600,fontSize:13}}>{f.crmLabel}</div>
@@ -3874,7 +3874,7 @@ const CRMFieldMapModal = ({ crm, config, onSave, onClose }) => {
               <div style={{display:"flex",justifyContent:"center"}}>
                 <Ic n="arrow_right" size={14} color="var(--text3)"/>
               </div>
-              {/* Pulse field — dropdown */}
+              {/* Pulse field â€” dropdown */}
               <Slct value={map[f.crmKey]||"__skip"}
                 onChange={e=>setMap(p=>({...p,[f.crmKey]:e.target.value}))}>
                 {PULSE_FIELD_OPTIONS.map(o=>(
@@ -3902,7 +3902,7 @@ const CRMFieldMapModal = ({ crm, config, onSave, onClose }) => {
   );
 };
 
-// ── Sync modal ──
+// â”€â”€ Sync modal â”€â”€
 const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
   const [phase, setPhase]     = useState("confirm"); // confirm | running | done
   const [progress, setProgress] = useState(0);
@@ -3920,12 +3920,12 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
     setLog([]);
 
     const steps = [
-      { pct:10, msg:`Authenticating with ${crm.name}…`            },
-      { pct:25, msg:"Fetching account records…"                    },
-      { pct:45, msg:"Applying field mapping…"                      },
-      { pct:60, msg:"Checking for duplicate accounts…"             },
-      { pct:78, msg:"Importing ticket and activity data…"          },
-      { pct:90, msg:"Calculating health scores…"                   },
+      { pct:10, msg:`Authenticating with ${crm.name}â€¦`            },
+      { pct:25, msg:"Fetching account recordsâ€¦"                    },
+      { pct:45, msg:"Applying field mappingâ€¦"                      },
+      { pct:60, msg:"Checking for duplicate accountsâ€¦"             },
+      { pct:78, msg:"Importing ticket and activity dataâ€¦"          },
+      { pct:90, msg:"Calculating health scoresâ€¦"                   },
       { pct:100,msg:"Sync complete."                               },
     ];
 
@@ -3992,7 +3992,7 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
               <div style={{padding:"12px 14px",background:"var(--amber-dim)",borderRadius:"var(--r)",
                 fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:20,
                 border:"1.5px solid rgba(217,119,6,0.15)"}}>
-                <strong>Note:</strong> This sync is one-directional — from {crm.name} into Pulse. 
+                <strong>Note:</strong> This sync is one-directional â€” from {crm.name} into Pulse. 
                 Changes you make in Pulse are not pushed back to {crm.name} in this phase.
               </div>
               <div style={{display:"flex",gap:10}}>
@@ -4012,7 +4012,7 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
             <>
               <div style={{marginBottom:20}}>
                 <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontSize:13,fontWeight:600}}>Syncing…</span>
+                  <span style={{fontSize:13,fontWeight:600}}>Syncingâ€¦</span>
                   <span style={{fontSize:13,fontFamily:"var(--font-mono)",color:"var(--indigo)"}}>{progress}%</span>
                 </div>
                 <div style={{height:6,background:"var(--bg4)",borderRadius:99,overflow:"hidden"}}>
@@ -4076,7 +4076,7 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
   );
 };
 
-// ── Main integrations page ──
+// â”€â”€ Main integrations page â”€â”€
 const IntegrationsPage = ({ onImport, toast }) => {
   const [configs, setConfigs]           = useState(loadIntegrations);
   const [showConnect, setShowConnect]   = useState(null);
@@ -4098,7 +4098,7 @@ const IntegrationsPage = ({ onImport, toast }) => {
       lastSync: ts,
       syncCount: (configs[id].syncCount||0) + results.total,
     });
-    toast(`${crm_by_id(id).name} sync complete — ${results.created} created, ${results.updated} updated`,"success");
+    toast(`${crm_by_id(id).name} sync complete â€” ${results.created} created, ${results.updated} updated`,"success");
   };
 
   const connectedCount = Object.values(configs).filter(c=>c.connected).length;
@@ -4138,7 +4138,7 @@ const IntegrationsPage = ({ onImport, toast }) => {
         display:"flex",gap:12,alignItems:"flex-start"}}>
         <Ic n="info" size={16} color="var(--indigo)" style={{flexShrink:0,marginTop:1}}/>
         <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>
-          <strong>Phase A — Configuration & manual sync.</strong> Connect your tools, configure field mapping,
+          <strong>Phase A â€” Configuration & manual sync.</strong> Connect your tools, configure field mapping,
           then trigger a manual sync to pull data into Pulse. Automatic background sync arrives in Phase 3.
         </div>
       </div>
@@ -4184,7 +4184,7 @@ const IntegrationsPage = ({ onImport, toast }) => {
               <div style={{padding:"18px 20px",borderBottom:"1px solid var(--border)",
                 display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  {/* CRM logo placeholder — colored abbr */}
+                  {/* CRM logo placeholder â€” colored abbr */}
                   <div style={{width:42,height:42,borderRadius:"var(--r)",background:crm.bg,
                     display:"flex",alignItems:"center",justifyContent:"center",
                     border:`1.5px solid ${crm.color}33`,flexShrink:0}}>
@@ -4264,7 +4264,7 @@ const IntegrationsPage = ({ onImport, toast }) => {
                               whiteSpace:"nowrap"}}>{f.crmKey}</span>
                             <Ic n="arrow_right" size={11} color="var(--text3)"/>
                             <span style={{fontWeight:600,color:mapped==="__skip"?"var(--text3)":"var(--text2)"}}>
-                              {pf?.label||"—"}
+                              {pf?.label||"â€”"}
                             </span>
                           </div>
                         );
@@ -4361,18 +4361,18 @@ const IntegrationsPage = ({ onImport, toast }) => {
   );
 };
 
-// ─── Surveys ──────────────────────────────────────────────────────────────────
+// â”€â”€â”€ Surveys â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 const SURVEY_CFG = {
-  NPS:  { color:"var(--indigo)", bg:"var(--indigo-dim)", label:"NPS",  full:"Net Promoter Score",    scale:"0 – 10", min:0, max:10 },
-  CES:  { color:"var(--teal)",   bg:"var(--teal-dim)",   label:"CES",  full:"Customer Effort Score",  scale:"1 – 5",  min:1, max:5  },
-  CSAT: { color:"var(--amber)",  bg:"var(--amber-dim)",  label:"CSAT", full:"Customer Satisfaction",  scale:"1 – 5",  min:1, max:5  },
+  NPS:  { color:"var(--indigo)", bg:"var(--indigo-dim)", label:"NPS",  full:"Net Promoter Score",    scale:"0 â€“ 10", min:0, max:10 },
+  CES:  { color:"var(--teal)",   bg:"var(--teal-dim)",   label:"CES",  full:"Customer Effort Score",  scale:"1 â€“ 5",  min:1, max:5  },
+  CSAT: { color:"var(--amber)",  bg:"var(--amber-dim)",  label:"CSAT", full:"Customer Satisfaction",  scale:"1 â€“ 5",  min:1, max:5  },
 };
 
 const npsColor = s => s >= 9 ? "var(--emerald)" : s >= 7 ? "var(--amber)" : "var(--rose)";
 const npsLabel = s => s >= 9 ? "Promoter" : s >= 7 ? "Passive" : "Detractor";
 
-// ── Survey creation modal ─────────────────────────────────────────────────────
+// â”€â”€ Survey creation modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
   const [accountId,       setAccountId]       = useState("");
   const [type,            setType]            = useState("NPS");
@@ -4426,7 +4426,7 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
         <div style={{padding:24}}>
           <Fld label="Account">
             <Slct value={accountId} onChange={e=>setAccountId(e.target.value)}>
-              <option value="">— Select an account —</option>
+              <option value="">â€” Select an account â€”</option>
               {accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
             </Slct>
           </Fld>
@@ -4450,7 +4450,7 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
 
           <div style={{padding:"10px 14px",background:"var(--bg3)",borderRadius:"var(--r)",
             marginBottom:14,fontSize:13,color:"var(--text2)",lineHeight:1.6}}>
-            <strong>{sc.full}</strong> — {
+            <strong>{sc.full}</strong> â€” {
               type==="NPS"  ? "How likely are you to recommend us to a colleague? (0=Not at all, 10=Extremely likely)" :
               type==="CES"  ? "How easy was it to work with us? (1=Very difficult, 5=Very easy)" :
                               "How satisfied are you with our service? (1=Very dissatisfied, 5=Very satisfied)"
@@ -4474,7 +4474,7 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
                 ? <span style={{display:"flex",alignItems:"center",gap:7,justifyContent:"center"}}>
                     <span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",
                       borderTopColor:"white",borderRadius:"50%",display:"inline-block",
-                      animation:"spin .7s linear infinite"}}/>Creating…
+                      animation:"spin .7s linear infinite"}}/>Creatingâ€¦
                   </span>
                 : "Create survey"}
             </Btn>
@@ -4485,7 +4485,7 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
   );
 };
 
-// ── Send survey email modal ───────────────────────────────────────────────────
+// â”€â”€ Send survey email modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
   const [copied,       setCopied]       = useState(false);
   const [selectedStk,  setSelectedStk]  = useState("");
@@ -4503,7 +4503,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
   const stakeholders  = linkedAccount?.stakeholders||[];
 
   // When a stakeholder is selected, auto-fill their name
-  // (email would come from stakeholder.email if we add it — for now use manual)
+  // (email would come from stakeholder.email if we add it â€” for now use manual)
   const selectedStkObj = stakeholders.find(s=>s.id===selectedStk);
 
   useEffect(()=>{
@@ -4535,10 +4535,10 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
     const defaultMsg = customMsg.trim() ||
       `We'd love to hear your feedback on our work together. This quick survey takes less than 60 seconds.`;
     const body = `${greeting}\n\n${defaultMsg}\n\nClick here to take the survey:\n${survey.link}\n\nThank you for your time.\n`;
-    const subject = encodeURIComponent(`Quick ${typeLabels[survey.type]} — ${survey.accountName}`);
+    const subject = encodeURIComponent(`Quick ${typeLabels[survey.type]} â€” ${survey.accountName}`);
     const bodyEnc = encodeURIComponent(body);
     window.location.href = `mailto:${recipientEmail}?subject=${subject}&body=${bodyEnc}`;
-    toast("Email client opened — review and send","success");
+    toast("Email client opened â€” review and send","success");
   };
 
   return (
@@ -4554,7 +4554,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
           <div>
             <div style={{fontWeight:700,fontSize:16}}>Send Survey</div>
             <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>
-              {survey.accountName} · {survey.type}
+              {survey.accountName} Â· {survey.type}
             </div>
           </div>
           <button onClick={onClose} className="icon-btn"
@@ -4604,14 +4604,14 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
             <div style={{flex:1,height:1,background:"var(--border)"}}/>
           </div>
 
-          {/* Stakeholder picker — only shown if account has stakeholders */}
+          {/* Stakeholder picker â€” only shown if account has stakeholders */}
           {stakeholders.length>0&&(
             <Fld label="Pick a contact from this account">
               <Slct value={selectedStk} onChange={e=>setSelectedStk(e.target.value)}>
-                <option value="">— Select a stakeholder —</option>
+                <option value="">â€” Select a stakeholder â€”</option>
                 {stakeholders.map(s=>(
                   <option key={s.id} value={s.id}>
-                    {s.name}{s.title?` · ${s.title}`:""}
+                    {s.name}{s.title?` Â· ${s.title}`:""}
                   </option>
                 ))}
               </Slct>
@@ -4619,7 +4619,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
                 <div style={{fontSize:11,color:"var(--amber)",marginTop:5,
                   display:"flex",alignItems:"center",gap:5}}>
                   <Ic n="alert" size={11} color="var(--amber)"/>
-                  No email saved for this contact — enter it below
+                  No email saved for this contact â€” enter it below
                 </div>
               )}
             </Fld>
@@ -4639,7 +4639,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
 
           <Fld label="Custom message (optional)">
             <textarea value={customMsg} onChange={e=>setCustomMsg(e.target.value)}
-              placeholder="We'd love to hear your feedback on our recent work together…"
+              placeholder="We'd love to hear your feedback on our recent work togetherâ€¦"
               style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
                 borderRadius:"var(--r)",padding:"9px 12px",color:"var(--text)",
                 fontFamily:"var(--font-display)",fontSize:13,outline:"none",
@@ -4671,7 +4671,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
   );
 };
 
-// ── Surveys page ──────────────────────────────────────────────────────────────
+// â”€â”€ Surveys page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SurveysPage = ({ accounts, session, toast }) => {
   const [surveys,     setSurveys]     = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -4695,7 +4695,7 @@ const SurveysPage = ({ accounts, session, toast }) => {
 
   const createSurvey = async (payload) => {
     const data = await callSurvey("POST", "/api/surveys", payload);
-    toast("Survey created — ready to send","success");
+    toast("Survey created â€” ready to send","success");
     await loadSurveys();
     return data;
   };
@@ -4828,7 +4828,7 @@ const SurveysPage = ({ accounts, session, toast }) => {
                         </span>
                         {survey.deadline&&(
                           <>
-                            <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
+                            <span style={{fontSize:11,color:"var(--text3)"}}>Â·</span>
                             <span style={{fontSize:11,color:new Date(survey.deadline)<new Date()?"var(--rose)":"var(--text3)"}}>
                               Due {new Date(survey.deadline).toLocaleDateString("en-US",{month:"short",day:"numeric"})}
                             </span>
@@ -4836,7 +4836,7 @@ const SurveysPage = ({ accounts, session, toast }) => {
                         )}
                         {survey.customQuestion&&(
                           <>
-                            <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
+                            <span style={{fontSize:11,color:"var(--text3)"}}>Â·</span>
                             <span style={{fontSize:11,color:"var(--text3)"}}>+1 follow-up</span>
                           </>
                         )}
@@ -4902,7 +4902,7 @@ const SurveysPage = ({ accounts, session, toast }) => {
                       background:"var(--bg3)"}}>
                       {survey.responses.length===0 ? (
                         <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"12px 0"}}>
-                          No responses yet — share the survey link to start collecting feedback.
+                          No responses yet â€” share the survey link to start collecting feedback.
                         </div>
                       ) : (
                         <>
@@ -4974,7 +4974,7 @@ const SurveysPage = ({ accounts, session, toast }) => {
   );
 };
 
-// ── Public survey response page ───────────────────────────────────────────────
+// â”€â”€ Public survey response page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const SurveyResponsePage = ({ token }) => {
   const [survey,    setSurvey]    = useState(null);
   const [loading,   setLoading]   = useState(true);
@@ -4992,7 +4992,7 @@ const SurveyResponsePage = ({ token }) => {
         if (d.error) setError(d.error);
         else setSurvey(d);
       })
-      .catch(()=>setError("Could not load survey — please check the link and try again"))
+      .catch(()=>setError("Could not load survey â€” please check the link and try again"))
       .finally(()=>setLoading(false));
   },[token]);
 
@@ -5013,7 +5013,7 @@ const SurveyResponsePage = ({ token }) => {
       if (data.error) throw new Error(data.error);
       setDone(true);
     } catch (err) {
-      setError(err.message || "Submission failed — please try again");
+      setError(err.message || "Submission failed â€” please try again");
     } finally { setSubmitting(false); }
   };
 
@@ -5101,7 +5101,7 @@ const SurveyResponsePage = ({ token }) => {
                   {score!==null&&(
                     <div style={{textAlign:"center",marginTop:10,fontSize:13,fontWeight:600,
                       color:npsColor(score),animation:"fadeUp .15s ease"}}>
-                      {npsLabel(score)} — score {score}/10
+                      {npsLabel(score)} â€” score {score}/10
                     </div>
                   )}
                 </div>
@@ -5141,7 +5141,7 @@ const SurveyResponsePage = ({ token }) => {
                     {survey.customQuestion}
                   </div>
                   <textarea value={answer} onChange={e=>setAnswer(e.target.value)}
-                    placeholder="Your answer…"
+                    placeholder="Your answerâ€¦"
                     style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
                       borderRadius:"var(--r)",padding:"10px 12px",color:"var(--text)",
                       fontFamily:"var(--font-display)",fontSize:13,outline:"none",
@@ -5163,7 +5163,7 @@ const SurveyResponsePage = ({ token }) => {
                   ? <span style={{display:"flex",alignItems:"center",gap:8,justifyContent:"center"}}>
                       <span style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",
                         borderTopColor:"white",borderRadius:"50%",display:"inline-block",
-                        animation:"spin .7s linear infinite"}}/>Submitting…
+                        animation:"spin .7s linear infinite"}}/>Submittingâ€¦
                     </span>
                   : "Submit feedback"}
               </Btn>
@@ -5195,13 +5195,13 @@ const SurveyResponsePage = ({ token }) => {
   );
 };
 
-// ─── App ──────────────────────────────────────────────────────────────────────
-// ─── API client ───────────────────────────────────────────────────────────────
+// â”€â”€â”€ App â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// â”€â”€â”€ API client â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const API_URL    = import.meta.env.VITE_API_URL    || "";
 const API_SECRET = import.meta.env.VITE_API_SECRET || "";
 
 const api = async (method, path, body, token) => {
-  if (!API_URL) return null; // no backend configured — fall back to localStorage
+  if (!API_URL) return null; // no backend configured â€” fall back to localStorage
   const res = await fetch(`${API_URL}${path}`, {
     method,
     headers: {
@@ -5218,7 +5218,7 @@ const api = async (method, path, body, token) => {
   return res.json();
 };
 
-// Session helpers — store JWT in localStorage
+// Session helpers â€” store JWT in localStorage
 const SESSION_KEY = "pulse_session_v1";
 const loadSession = () => {
   try { const s = localStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; } catch { return null; }
@@ -5230,7 +5230,7 @@ const clearSession = () => {
   try { localStorage.removeItem(SESSION_KEY); } catch {}
 };
 
-// ─── Auth screen ──────────────────────────────────────────────────────────────
+// â”€â”€â”€ Auth screen â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 const AuthScreen = ({ onAuth }) => {
   const [mode,     setMode]     = useState("login");   // login | signup
   const [email,    setEmail]    = useState("");
@@ -5263,7 +5263,7 @@ const AuthScreen = ({ onAuth }) => {
         onAuth(data);
       }
     } catch (err) {
-      setError(err.message || "Something went wrong — please try again");
+      setError(err.message || "Something went wrong â€” please try again");
     } finally {
       setLoading(false);
     }
@@ -5315,7 +5315,7 @@ const AuthScreen = ({ onAuth }) => {
                 </Fld>
                 <Fld label="Company">
                   <Inp value={company} onChange={e=>setCompany(e.target.value)}
-                    placeholder="Microsoft, Noon, Talabat…"
+                    placeholder="Microsoft, Noon, Talabatâ€¦"
                     onKeyDown={e=>e.key==="Enter"&&submit()}/>
                 </Fld>
               </>
@@ -5348,7 +5348,7 @@ const AuthScreen = ({ onAuth }) => {
               {loading
                 ? <><span style={{width:14,height:14,border:"2px solid rgba(255,255,255,0.3)",
                     borderTopColor:"white",borderRadius:"50%",display:"inline-block",
-                    animation:"spin .7s linear infinite"}}/> {mode==="login"?"Signing in…":"Creating account…"}</>
+                    animation:"spin .7s linear infinite"}}/> {mode==="login"?"Signing inâ€¦":"Creating accountâ€¦"}</>
                 : mode === "login" ? "Sign in" : "Create account"
               }
             </Btn>
@@ -5391,16 +5391,16 @@ export default function App() {
     try { const s=localStorage.getItem("pulse_tasks_v1"); return s?JSON.parse(s):[]; } catch { return []; }
   });
 
-  // ── API call helper ──────────────────────────────────────────────────────────
+  // â”€â”€ API call helper â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const call = useCallback(async (method, path, body) => {
     const token = session?.token;
     return api(method, path, body, token);
   }, [session]);
 
-  // ── Load accounts on mount / session change ──────────────────────────────────
+  // â”€â”€ Load accounts on mount / session change â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => {
     if (!API_URL) {
-      // No backend — use localStorage
+      // No backend â€” use localStorage
       setAccounts(load());
       setApiReady(true);
       return;
@@ -5417,13 +5417,13 @@ export default function App() {
         setApiReady(true);
       })
       .catch(() => {
-        // Backend unreachable — fall back to localStorage cache
+        // Backend unreachable â€” fall back to localStorage cache
         setAccounts(load());
         setApiReady(true);
       });
   }, [session, call]);
 
-  // ── Persist to localStorage whenever accounts change (offline cache) ─────────
+  // â”€â”€ Persist to localStorage whenever accounts change (offline cache) â”€â”€â”€â”€â”€â”€â”€â”€â”€
   useEffect(() => { if (apiReady) save(accounts); }, [accounts, apiReady]);
 
   useEffect(() => {
@@ -5446,15 +5446,15 @@ export default function App() {
     setTimeout(()=>setToasts(p=>p.filter(t=>t.id!==id)), 2800);
   }, []);
 
-  // ── CRUD — optimistic UI + backend sync ──────────────────────────────────────
+  // â”€â”€ CRUD â€” optimistic UI + backend sync â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const update = useCallback(async (id, patch) => {
-    // Optimistic update — UI responds instantly
+    // Optimistic update â€” UI responds instantly
     setAccounts(p=>p.map(a=>a.id===id?{...a,...patch}:a));
     setSelected(p=>p?.id===id?{...p,...patch}:p);
     // Sync to backend if available
     if (API_URL && session?.token) {
       try { await call("PATCH", `/api/accounts/${id}`, patch); }
-      catch { toast("Sync failed — changes saved locally","info"); }
+      catch { toast("Sync failed â€” changes saved locally","info"); }
     }
   }, [call, session, toast]);
 
@@ -5463,7 +5463,7 @@ export default function App() {
     setSelected(null);
     if (API_URL && session?.token) {
       try { await call("DELETE", `/api/accounts/${id}`); }
-      catch { toast("Sync failed — deletion saved locally","info"); }
+      catch { toast("Sync failed â€” deletion saved locally","info"); }
     }
   }, [call, session, toast]);
 
@@ -5477,7 +5477,7 @@ export default function App() {
         toast("Account added","success");
         return;
       } catch {
-        toast("Sync failed — account saved locally","info");
+        toast("Sync failed â€” account saved locally","info");
       }
     }
     // localStorage fallback
@@ -5495,14 +5495,14 @@ export default function App() {
         toast(`${newAccounts.length} account${newAccounts.length!==1?"s":""} imported`, "success");
         return;
       } catch {
-        toast("Sync failed — accounts saved locally","info");
+        toast("Sync failed â€” accounts saved locally","info");
       }
     }
     setAccounts(p=>[...p,...newAccounts]);
     toast(`${newAccounts.length} account${newAccounts.length!==1?"s":""} imported`, "success");
   }, [call, session, toast]);
 
-  // ── Load demo/seed data into the database ─────────────────────────────────
+  // â”€â”€ Load demo/seed data into the database â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const loadDemoData = useCallback(async () => {
     const demoAccounts = SEED.map(a => ({
       name:         a.name,
@@ -5528,7 +5528,7 @@ export default function App() {
         toast(`${demoAccounts.length} demo accounts loaded`, "success");
         return;
       } catch {
-        toast("Could not reach backend — loading locally","info");
+        toast("Could not reach backend â€” loading locally","info");
       }
     }
     setAccounts(SEED);
@@ -5576,7 +5576,7 @@ export default function App() {
       setMigrateDone(true);
       toast(`${cleaned.length} account${cleaned.length!==1?"s":""} migrated to your database`, "success");
     } catch (err) {
-      toast("Migration failed — please try again","error");
+      toast("Migration failed â€” please try again","error");
       console.error("Migration error:", err);
     } finally {
       setMigrating(false);
@@ -5609,12 +5609,12 @@ export default function App() {
   const isFiltered=filter!=="All"||planFilter!=="All"||search.trim()!=="";
   const clearFilters=()=>{ setFilter("All"); setPlanFilter("All"); setSearch(""); };
 
-  // Auth gate — if backend is configured and no session, show login screen
+  // Auth gate â€” if backend is configured and no session, show login screen
   if (API_URL && !session) {
     return <AuthScreen onAuth={s => { if(s) setSession(s); }}/>;
   }
 
-  // Survey response page — render if URL is /survey/:token
+  // Survey response page â€” render if URL is /survey/:token
   const surveyToken = window.location.pathname.match(/^\/survey\/([a-f0-9]+)$/)?.[1];
   if (surveyToken) {
     return <SurveyResponsePage token={surveyToken}/>;
@@ -5721,17 +5721,17 @@ export default function App() {
         {/* Main */}
         <div style={{flex:1,overflow:"auto",padding:"32px"}}>
 
-          {/* ── SURVEYS VIEW ── */}
+          {/* â”€â”€ SURVEYS VIEW â”€â”€ */}
           {view==="surveys"&&(
             <SurveysPage accounts={active} session={session} toast={toast}/>
           )}
 
-          {/* ── INTEGRATIONS VIEW ── */}
+          {/* â”€â”€ INTEGRATIONS VIEW â”€â”€ */}
           {view==="integrations"&&(
             <IntegrationsPage onImport={bulkImport} toast={toast}/>
           )}
 
-          {/* ── TASKS VIEW ── */}
+          {/* â”€â”€ TASKS VIEW â”€â”€ */}
           {view==="tasks"&&(
             <TasksPage
               accounts={active}
@@ -5743,7 +5743,7 @@ export default function App() {
             />
           )}
 
-          {/* ── PIPELINE VIEW ── */}
+          {/* â”€â”€ PIPELINE VIEW â”€â”€ */}
           {view==="pipeline"&&(
             <RenewalPipelinePage
               accounts={active}
@@ -5751,12 +5751,12 @@ export default function App() {
             />
           )}
 
-          {/* ── PLAYBOOKS VIEW ── */}
+          {/* â”€â”€ PLAYBOOKS VIEW â”€â”€ */}
           {view==="playbooks"&&(
             <PlaybookLibraryPage accounts={active} onUpdate={update}/>
           )}
 
-          {/* ── PORTFOLIO VIEW ── */}
+          {/* â”€â”€ PORTFOLIO VIEW â”€â”€ */}
           {view==="portfolio"&&(<>
             {!apiReady&&API_URL&&(
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",
@@ -5764,11 +5764,11 @@ export default function App() {
                 <div style={{width:32,height:32,border:"3px solid var(--border2)",
                   borderTopColor:"var(--indigo)",borderRadius:"50%",
                   animation:"spin .7s linear infinite"}}/>
-                <div style={{fontSize:13,color:"var(--text3)"}}>Loading your portfolio…</div>
+                <div style={{fontSize:13,color:"var(--text3)"}}>Loading your portfolioâ€¦</div>
               </div>
             )}
 
-            {/* Migration banner — shown when local data exists but DB is empty */}
+            {/* Migration banner â€” shown when local data exists but DB is empty */}
             {apiReady&&API_URL&&accounts.length===0&&!migrateDone&&
               localStorage.getItem("pulse_v4")&&JSON.parse(localStorage.getItem("pulse_v4")||"[]").length>0&&(
               <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
@@ -5798,7 +5798,7 @@ export default function App() {
                   {migrating
                     ? <><span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",
                         borderTopColor:"white",borderRadius:"50%",display:"inline-block",
-                        animation:"spin .7s linear infinite"}}/>Migrating…</>
+                        animation:"spin .7s linear infinite"}}/>Migratingâ€¦</>
                     : <><Ic n="upload" size={13} color="white"/>Migrate to database</>
                   }
                 </button>
@@ -5818,7 +5818,7 @@ export default function App() {
                     display:"flex",alignItems:"center",gap:7,fontFamily:"var(--font-display)",transition:"background .15s"}}
                   onMouseEnter={e=>e.currentTarget.style.background="var(--indigo-dim)"}
                   onMouseLeave={e=>e.currentTarget.style.background="var(--bg2)"}>
-                  ↑ Import CSV
+                  â†‘ Import CSV
                 </button>
                 <Btn onClick={()=>setShowAdd(true)} style={{fontSize:14,padding:"11px 22px"}}>+ Add Account</Btn>
               </div>
@@ -5848,8 +5848,8 @@ export default function App() {
                 </div>
                 <div style={{display:"flex",gap:10}}>
                   <div style={{position:"relative"}}>
-                    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--text3)",pointerEvents:"none"}}>🔍</span>
-                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search accounts…"
+                    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--text3)",pointerEvents:"none"}}>ðŸ”</span>
+                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search accountsâ€¦"
                       style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
                         padding:"8px 14px 8px 34px",color:"var(--text)",fontFamily:"var(--font-display)",
                         fontSize:13,outline:"none",width:200}}/>
@@ -5857,11 +5857,11 @@ export default function App() {
                   <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
                     style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
                       padding:"8px 12px",color:"var(--text2)",fontFamily:"var(--font-mono)",fontSize:12,outline:"none",cursor:"pointer"}}>
-                    <option value="churnRisk">Churn Risk ↑</option>
+                    <option value="churnRisk">Churn Risk â†‘</option>
                     <option value="renewal">Renewal Soon</option>
-                    <option value="health">Health ↑</option>
-                    <option value="arr">ARR ↓</option>
-                    <option value="ces">CES ↑</option>
+                    <option value="health">Health â†‘</option>
+                    <option value="arr">ARR â†“</option>
+                    <option value="ces">CES â†‘</option>
                   </select>
                 </div>
               </div>
@@ -5890,392 +5890,7 @@ export default function App() {
                     style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
                       fontFamily:"var(--font-mono)",border:"1.5px solid var(--border)",
                       background:"var(--bg2)",color:"var(--text3)"}}>
-                    Clear all ×
-                  </button>
-                )}
-              </div>
-            </div>
-
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))",gap:14}}>
-              {filtered.map((a,i)=>(
-                <Card key={a.id} account={a} index={i} onClick={()=>setSelected(a)}/>
-              ))}
-              {filtered.length===0&&(
-                <Empty isFiltered={isFiltered} onClear={clearFilters} onAdd={()=>setShowAdd(true)} onLoadDemo={loadDemoData}/>
-              )}
-            </div>
-          </>)}
-        </div>
-
-        {/* Detail panel backdrop */}
-        {selected&&(
-          <div onClick={()=>setSelected(null)}
-            style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.15)",zIndex:499,
-              backdropFilter:"blur(1px)"}}/>
-        )}
-
-        {selected&&<Detail account={selected} onClose={()=>setSelected(null)} onUpdate={update} onDelete={del} toast={toast}
-          manualTasks={manualTasks} onAddManual={addManualTask} onToggleManual={toggleManualTask} onDeleteManual={deleteManualTask}/>}
-        {showAdd &&<AccountForm onClose={()=>setShowAdd(false)} onSave={add} toast={toast}/>}
-        {showBulk&&<BulkUpload onClose={()=>setShowBulk(false)} onImport={bulkImport}
-          existingNames={active.map(a=>a.name.toLowerCase().trim())} toast={toast}/>}
-      </div>
-
-      <ToastBar toasts={toasts}/>
-    </>
-  );
-}
-      const localAccounts = JSON.parse(raw);
-      if (!Array.isArray(localAccounts) || localAccounts.length === 0) {
-        toast("No accounts found in local data","info");
-        setMigrating(false);
-        return;
-      }
-
-      // Strip frontend-only fields and reshape for the API
-      const cleaned = localAccounts.map(a => ({
-        name:          a.name,
-        industry:      a.industry || "",
-        plan:          a.plan || "Starter",
-        arr:           a.arr || 0,
-        renewalDate:   a.renewalDate || null,
-        nps:           a.nps || 50,
-        ces:           a.ces || 3.5,
-        productUsage:  a.productUsage || 60,
-        openTickets:   a.openTickets || 0,
-        lastContact:   a.lastContact || null,
-        nextAction:    a.nextAction || "",
-        notes:         a.notes || "",
-        prepNotes:     a.prepNotes || "",
-        source:        "manual",
-      }));
-
-      await call("POST", "/api/accounts/bulk", { accounts: cleaned });
-
-      // Reload from backend
-      const data = await call("GET", "/api/accounts");
-      if (data?.accounts) setAccounts(data.accounts);
-
-      // Clear old localStorage data so banner doesn't reappear
-      localStorage.removeItem("pulse_v4");
-      setMigrateDone(true);
-      toast(`${cleaned.length} account${cleaned.length!==1?"s":""} migrated to your database`, "success");
-    } catch (err) {
-      toast("Migration failed — please try again","error");
-      console.error("Migration error:", err);
-    } finally {
-      setMigrating(false);
-    }
-  }, [call, toast]);
-
-  const active = accounts.filter(a=>!a.archived);
-
-  // Counts for filter pills
-  const stageCounts = Object.fromEntries(["All","Healthy","Stable","Needs Attention","At Risk"].map(s=>[s,s==="All"?active.length:active.filter(a=>a.stage===s).length]));
-  const planCounts  = Object.fromEntries(["All","Starter","Growth","Enterprise"].map(p=>[p,p==="All"?active.length:active.filter(a=>a.plan===p).length]));
-
-  // Badge counts
-  const playbookAlerts = active.filter(a=>getTriggeredPlaybooks(a).length>0&&!a.activePlaybookId).length;
-  const allAutoTasks   = generateAutoTasks(active);
-  const taskAlerts     = [...allAutoTasks,...manualTasks].filter(t=>!t.done&&t.dueDate<=todayStr()).length;
-
-  const filtered = active
-    .filter(a=>filter==="All"||a.stage===filter)
-    .filter(a=>planFilter==="All"||a.plan===planFilter)
-    .filter(a=>a.name.toLowerCase().includes(search.toLowerCase())||a.industry.toLowerCase().includes(search.toLowerCase()))
-    .sort((a,b)=>
-      sortBy==="churnRisk"?b.churnRisk-a.churnRisk:
-      sortBy==="arr"      ?b.arr-a.arr:
-      sortBy==="ces"      ?a.ces-b.ces:
-      sortBy==="health"   ?a.healthScore-b.healthScore:
-      sortBy==="renewal"  ?new Date(a.renewalDate)-new Date(b.renewalDate):0
-    );
-
-  const isFiltered=filter!=="All"||planFilter!=="All"||search.trim()!=="";
-  const clearFilters=()=>{ setFilter("All"); setPlanFilter("All"); setSearch(""); };
-
-  // Auth gate — if backend is configured and no session, show login screen
-  if (API_URL && !session) {
-    return <AuthScreen onAuth={s => { if(s) setSession(s); }}/>;
-  }
-
-  // Survey response page — render if URL is /survey/:token
-  const surveyToken = window.location.pathname.match(/^\/survey\/([a-f0-9]+)$/)?.[1];
-  if (surveyToken) {
-    return <SurveyResponsePage token={surveyToken}/>;
-  }
-
-  const logout = () => {
-    clearSession();
-    setSession(null);
-    setAccounts([]); // clear data from memory on logout
-  };
-
-  const NAV = [
-    { id:"portfolio",    icon:"portfolio",    label:"Portfolio",        active:true  },
-    { id:"tasks",        icon:"tasks",        label:"Tasks",            active:true, badge:taskAlerts>0?taskAlerts:null },
-    { id:"pipeline",     icon:"pipeline",     label:"Renewal Pipeline", active:true  },
-    { id:"playbooks",    icon:"playbooks",    label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
-    { id:"surveys",      icon:"survey",       label:"Surveys",          active:true  },
-    { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
-    { id:"briefing",     icon:"briefing",     label:"Daily Briefing",   active:false, tip:"Phase 4" },
-  ];
-
-  return (
-    <>
-      <style>{STYLES}</style>
-      <div style={{minHeight:"100vh",display:"flex",background:"var(--bg)"}}>
-
-        {/* Sidebar */}
-        <div style={{width:220,background:"var(--bg2)",borderRight:"1px solid var(--border)",
-          display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh"}}>
-          <div style={{padding:"20px 16px 18px",borderBottom:"1px solid var(--border)"}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:32,height:32,borderRadius:"var(--r)",background:"var(--indigo)",display:"flex",
-                alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px var(--indigo-glow)",flexShrink:0}}>
-                <span style={{color:"white",fontSize:14,fontWeight:800,letterSpacing:"-.02em"}}>P</span>
-              </div>
-              <span style={{fontWeight:800,fontSize:17,letterSpacing:"-.03em",color:"var(--text)"}}>Pulse</span>
-            </div>
-          </div>
-
-          <div style={{padding:"12px 8px",flex:1}}>
-            {NAV.map(n=>(
-              <div key={n.id}
-                title={n.tip||""}
-                onClick={n.active?()=>{setView(n.id);setSelected(null);}:undefined}
-                className={n.active?"nav-item":""}
-                style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                  padding:"9px 10px",borderRadius:"var(--r)",marginBottom:2,
-                  background:view===n.id?"var(--indigo-dim)":"none",
-                  cursor:n.active?"pointer":"not-allowed",opacity:n.active?1:0.4}}>
-                <div style={{display:"flex",alignItems:"center",gap:9}}>
-                  <Ic n={n.id} size={15} color={view===n.id?"var(--indigo)":"var(--text3)"}/>
-                  <span style={{fontSize:13,color:view===n.id?"var(--indigo)":"var(--text2)",fontWeight:view===n.id?600:400}}>{n.label}</span>
-                </div>
-                {n.badge&&(
-                  <span style={{fontSize:10,fontFamily:"var(--font-mono)",color:"white",
-                    background:"var(--rose)",padding:"1px 7px",borderRadius:99,fontWeight:700,
-                    minWidth:18,textAlign:"center"}}>
-                    {n.badge}
-                  </span>
-                )}
-                {n.tip&&!n.badge&&(
-                  <span style={{fontSize:9,fontFamily:"var(--font-mono)",color:"var(--text3)",
-                    background:"var(--bg4)",padding:"2px 6px",borderRadius:"var(--r-xs)",letterSpacing:".04em"}}>
-                    {n.tip}
-                  </span>
-                )}
-              </div>
-            ))}
-          </div>
-
-          <div style={{padding:"14px 16px",borderTop:"1px solid var(--border)"}}>
-            {session?.user && (
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,
-                padding:"8px 10px",background:"var(--bg3)",borderRadius:"var(--r)"}}>
-                <Avatar name={session.user.fullName||session.user.email} size={28}/>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{fontSize:12,fontWeight:600,overflow:"hidden",
-                    textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                    {session.user.fullName||session.user.email}
-                  </div>
-                  {session.user.company&&(
-                    <div style={{fontSize:10,color:"var(--text3)",overflow:"hidden",
-                      textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                      {session.user.company}
-                    </div>
-                  )}
-                </div>
-                <button onClick={logout} className="icon-btn"
-                  title="Sign out"
-                  style={{background:"none",border:"none",cursor:"pointer",
-                    padding:4,borderRadius:"var(--r-xs)",flexShrink:0}}>
-                  <Ic n="arrow_right" size={13} color="var(--text3)"/>
-                </button>
-              </div>
-            )}
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{fontSize:11,color:"var(--text3)",fontWeight:500}}>Build progress</span>
-              <span style={{fontSize:11,color:"var(--indigo)",fontFamily:"var(--font-mono)",fontWeight:600}}>3 / 6</span>
-            </div>
-            <Bar value={50} thin/>
-          </div>
-        </div>
-
-        {/* Main */}
-        <div style={{flex:1,overflow:"auto",padding:"32px"}}>
-
-          {/* ── SURVEYS VIEW ── */}
-          {view==="surveys"&&(
-            <SurveysPage accounts={active} session={session} toast={toast}/>
-          )}
-
-          {/* ── INTEGRATIONS VIEW ── */}
-          {view==="integrations"&&(
-            <IntegrationsPage onImport={bulkImport} toast={toast}/>
-          )}
-
-          {/* ── TASKS VIEW ── */}
-          {view==="tasks"&&(
-            <TasksPage
-              accounts={active}
-              manualTasks={manualTasks}
-              onAddManual={addManualTask}
-              onToggleManual={toggleManualTask}
-              onDeleteManual={deleteManualTask}
-              onAccountClick={a=>{setSelected(a);setView("portfolio");}}
-            />
-          )}
-
-          {/* ── PIPELINE VIEW ── */}
-          {view==="pipeline"&&(
-            <RenewalPipelinePage
-              accounts={active}
-              onAccountClick={a=>{setSelected(a);setView("portfolio");}}
-            />
-          )}
-
-          {/* ── PLAYBOOKS VIEW ── */}
-          {view==="playbooks"&&(
-            <PlaybookLibraryPage accounts={active} onUpdate={update}/>
-          )}
-
-          {/* ── PORTFOLIO VIEW ── */}
-          {view==="portfolio"&&(<>
-            {!apiReady&&API_URL&&(
-              <div style={{display:"flex",alignItems:"center",justifyContent:"center",
-                height:320,flexDirection:"column",gap:16}}>
-                <div style={{width:32,height:32,border:"3px solid var(--border2)",
-                  borderTopColor:"var(--indigo)",borderRadius:"50%",
-                  animation:"spin .7s linear infinite"}}/>
-                <div style={{fontSize:13,color:"var(--text3)"}}>Loading your portfolio…</div>
-              </div>
-            )}
-
-            {/* Migration banner — shown when local data exists but DB is empty */}
-            {apiReady&&API_URL&&accounts.length===0&&!migrateDone&&
-              localStorage.getItem("pulse_v4")&&JSON.parse(localStorage.getItem("pulse_v4")||"[]").length>0&&(
-              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
-                borderRadius:"var(--r-lg)",padding:"18px 22px",marginBottom:24,
-                display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,
-                animation:"fadeUp .2s ease"}}>
-                <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
-                  <Ic n="info" size={18} color="var(--indigo)" style={{flexShrink:0,marginTop:1}}/>
-                  <div>
-                    <div style={{fontWeight:700,fontSize:14,color:"var(--indigo)",marginBottom:3}}>
-                      You have local data that hasn't been migrated yet
-                    </div>
-                    <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>
-                      We found {JSON.parse(localStorage.getItem("pulse_v4")||"[]").length} account
-                      {JSON.parse(localStorage.getItem("pulse_v4")||"[]").length!==1?"s":""} saved 
-                      in your browser from before the database was connected. 
-                      Click to move them to your account permanently.
-                    </div>
-                  </div>
-                </div>
-                <button onClick={migrateLocalData} disabled={migrating}
-                  style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,
-                    background:"var(--indigo)",color:"white",border:"none",
-                    borderRadius:"var(--r)",padding:"10px 20px",fontWeight:600,
-                    fontSize:13,cursor:"pointer",fontFamily:"var(--font-display)",
-                    boxShadow:"0 2px 8px var(--indigo-glow)",whiteSpace:"nowrap"}}>
-                  {migrating
-                    ? <><span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",
-                        borderTopColor:"white",borderRadius:"50%",display:"inline-block",
-                        animation:"spin .7s linear infinite"}}/>Migrating…</>
-                    : <><Ic n="upload" size={13} color="white"/>Migrate to database</>
-                  }
-                </button>
-              </div>
-            )}
-            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
-              <div>
-                <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Account Portfolio</h1>
-                <div style={{fontSize:13,color:"var(--text3)"}}>
-                  {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}
-                </div>
-              </div>
-              <div style={{display:"flex",gap:10}}>
-                <button onClick={()=>setShowBulk(true)}
-                  style={{background:"var(--bg2)",color:"var(--indigo)",border:"1.5px solid rgba(67,97,238,0.3)",
-                    borderRadius:"var(--r)",padding:"10px 18px",fontWeight:700,fontSize:14,cursor:"pointer",
-                    display:"flex",alignItems:"center",gap:7,fontFamily:"var(--font-display)",transition:"background .15s"}}
-                  onMouseEnter={e=>e.currentTarget.style.background="var(--indigo-dim)"}
-                  onMouseLeave={e=>e.currentTarget.style.background="var(--bg2)"}>
-                  ↑ Import CSV
-                </button>
-                <Btn onClick={()=>setShowAdd(true)} style={{fontSize:14,padding:"11px 22px"}}>+ Add Account</Btn>
-              </div>
-            </div>
-
-            <Stats accounts={filtered} isFiltered={isFiltered}/>
-
-            {/* Filters */}
-            <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
-                <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                  <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginRight:4}}>Stage</span>
-                  {["All","At Risk","Needs Attention","Stable","Healthy"].map(f=>{
-                    const cfg=STAGE_CFG[f],active2=filter===f,count=stageCounts[f]??0;
-                    return (
-                      <button key={f} onClick={()=>setFilter(f)} className="pill-btn"
-                        style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
-                          fontFamily:"var(--font-mono)",fontWeight:active2?600:400,
-                          display:"flex",alignItems:"center",gap:5,
-                          border:`1.5px solid ${active2?(cfg?.color||"var(--indigo)"):"var(--border)"}`,
-                          background:active2?(cfg?.bg||"var(--indigo-dim)"):"var(--bg2)",
-                          color:active2?(cfg?.color||"var(--indigo)"):"var(--text2)"}}>
-                        {f}<span style={{fontSize:10,opacity:0.7}}>({count})</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                <div style={{display:"flex",gap:10}}>
-                  <div style={{position:"relative"}}>
-                    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--text3)",pointerEvents:"none"}}>🔍</span>
-                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search accounts…"
-                      style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
-                        padding:"8px 14px 8px 34px",color:"var(--text)",fontFamily:"var(--font-display)",
-                        fontSize:13,outline:"none",width:200}}/>
-                  </div>
-                  <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
-                    style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
-                      padding:"8px 12px",color:"var(--text2)",fontFamily:"var(--font-mono)",fontSize:12,outline:"none",cursor:"pointer"}}>
-                    <option value="churnRisk">Churn Risk ↑</option>
-                    <option value="renewal">Renewal Soon</option>
-                    <option value="health">Health ↑</option>
-                    <option value="arr">ARR ↓</option>
-                    <option value="ces">CES ↑</option>
-                  </select>
-                </div>
-              </div>
-              <div style={{display:"flex",gap:6,alignItems:"center"}}>
-                <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginRight:4}}>Plan</span>
-                {[
-                  {label:"All",color:"var(--indigo)",bg:"var(--indigo-dim)"},
-                  {label:"Starter",color:"var(--sky)",bg:"var(--sky-dim)"},
-                  {label:"Growth",color:"var(--amber)",bg:"var(--amber-dim)"},
-                  {label:"Enterprise",color:"var(--emerald)",bg:"var(--emerald-dim)"},
-                ].map(({label,color,bg})=>{
-                  const active2=planFilter===label, count=planCounts[label]??0;
-                  return (
-                    <button key={label} onClick={()=>setPlanFilter(label)} className="pill-btn"
-                      style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
-                        fontFamily:"var(--font-mono)",fontWeight:active2?600:400,
-                        display:"flex",alignItems:"center",gap:5,
-                        border:`1.5px solid ${active2?color:"var(--border)"}`,
-                        background:active2?bg:"var(--bg2)",color:active2?color:"var(--text2)"}}>
-                      {label}<span style={{fontSize:10,opacity:0.7}}>({count})</span>
-                    </button>
-                  );
-                })}
-                {isFiltered&&(
-                  <button onClick={clearFilters} className="pill-btn"
-                    style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
-                      fontFamily:"var(--font-mono)",border:"1.5px solid var(--border)",
-                      background:"var(--bg2)",color:"var(--text3)"}}>
-                    Clear all ×
+                    Clear all Ã—
                   </button>
                 )}
               </div>
