@@ -1283,15 +1283,17 @@ const StakeholderModal = ({ account, onClose, onUpdate, toast }) => {
                       </div>
                     </div>
                     <div style={{display:"flex",gap:4,flexShrink:0}} onClick={e=>e.stopPropagation()}>
-                      <button onClick={()=>startEdit(s)} className="icon-btn"
-                        style={{background:"none",border:"none",cursor:"pointer",
-                          padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}>
-                        <Ic n="edit" size={13} color="var(--indigo)"/>
+                      <button onClick={()=>startEdit(s)}
+                        style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.3)",cursor:"pointer",
+                          padding:"3px 8px",borderRadius:"var(--r-xs)",fontSize:11,fontWeight:600,
+                          color:"var(--indigo)",fontFamily:"var(--font-display)"}}>
+                        Edit
                       </button>
-                      <button onClick={()=>remove(s.id)} className="icon-btn"
-                        style={{background:"none",border:"none",cursor:"pointer",
-                          padding:"4px",borderRadius:"var(--r-xs)",display:"flex",alignItems:"center"}}>
-                        <Ic n="close" size={13} color="var(--rose)"/>
+                      <button onClick={()=>remove(s.id)}
+                        style={{background:"var(--rose-dim)",border:"none",cursor:"pointer",
+                          padding:"3px 8px",borderRadius:"var(--r-xs)",fontSize:11,fontWeight:600,
+                          color:"var(--rose)",fontFamily:"var(--font-display)"}}>
+                        Ã—
                       </button>
                     </div>
                   </div>
