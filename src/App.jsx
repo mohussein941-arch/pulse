@@ -5925,3 +5925,388 @@ export default function App() {
     </>
   );
 }
+      const localAccounts = JSON.parse(raw);
+      if (!Array.isArray(localAccounts) || localAccounts.length === 0) {
+        toast("No accounts found in local data","info");
+        setMigrating(false);
+        return;
+      }
+
+      // Strip frontend-only fields and reshape for the API
+      const cleaned = localAccounts.map(a => ({
+        name:          a.name,
+        industry:      a.industry || "",
+        plan:          a.plan || "Starter",
+        arr:           a.arr || 0,
+        renewalDate:   a.renewalDate || null,
+        nps:           a.nps || 50,
+        ces:           a.ces || 3.5,
+        productUsage:  a.productUsage || 60,
+        openTickets:   a.openTickets || 0,
+        lastContact:   a.lastContact || null,
+        nextAction:    a.nextAction || "",
+        notes:         a.notes || "",
+        prepNotes:     a.prepNotes || "",
+        source:        "manual",
+      }));
+
+      await call("POST", "/api/accounts/bulk", { accounts: cleaned });
+
+      // Reload from backend
+      const data = await call("GET", "/api/accounts");
+      if (data?.accounts) setAccounts(data.accounts);
+
+      // Clear old localStorage data so banner doesn't reappear
+      localStorage.removeItem("pulse_v4");
+      setMigrateDone(true);
+      toast(`${cleaned.length} account${cleaned.length!==1?"s":""} migrated to your database`, "success");
+    } catch (err) {
+      toast("Migration failed — please try again","error");
+      console.error("Migration error:", err);
+    } finally {
+      setMigrating(false);
+    }
+  }, [call, toast]);
+
+  const active = accounts.filter(a=>!a.archived);
+
+  // Counts for filter pills
+  const stageCounts = Object.fromEntries(["All","Healthy","Stable","Needs Attention","At Risk"].map(s=>[s,s==="All"?active.length:active.filter(a=>a.stage===s).length]));
+  const planCounts  = Object.fromEntries(["All","Starter","Growth","Enterprise"].map(p=>[p,p==="All"?active.length:active.filter(a=>a.plan===p).length]));
+
+  // Badge counts
+  const playbookAlerts = active.filter(a=>getTriggeredPlaybooks(a).length>0&&!a.activePlaybookId).length;
+  const allAutoTasks   = generateAutoTasks(active);
+  const taskAlerts     = [...allAutoTasks,...manualTasks].filter(t=>!t.done&&t.dueDate<=todayStr()).length;
+
+  const filtered = active
+    .filter(a=>filter==="All"||a.stage===filter)
+    .filter(a=>planFilter==="All"||a.plan===planFilter)
+    .filter(a=>a.name.toLowerCase().includes(search.toLowerCase())||a.industry.toLowerCase().includes(search.toLowerCase()))
+    .sort((a,b)=>
+      sortBy==="churnRisk"?b.churnRisk-a.churnRisk:
+      sortBy==="arr"      ?b.arr-a.arr:
+      sortBy==="ces"      ?a.ces-b.ces:
+      sortBy==="health"   ?a.healthScore-b.healthScore:
+      sortBy==="renewal"  ?new Date(a.renewalDate)-new Date(b.renewalDate):0
+    );
+
+  const isFiltered=filter!=="All"||planFilter!=="All"||search.trim()!=="";
+  const clearFilters=()=>{ setFilter("All"); setPlanFilter("All"); setSearch(""); };
+
+  // Auth gate — if backend is configured and no session, show login screen
+  if (API_URL && !session) {
+    return <AuthScreen onAuth={s => { if(s) setSession(s); }}/>;
+  }
+
+  // Survey response page — render if URL is /survey/:token
+  const surveyToken = window.location.pathname.match(/^\/survey\/([a-f0-9]+)$/)?.[1];
+  if (surveyToken) {
+    return <SurveyResponsePage token={surveyToken}/>;
+  }
+
+  const logout = () => {
+    clearSession();
+    setSession(null);
+    setAccounts([]); // clear data from memory on logout
+  };
+
+  const NAV = [
+    { id:"portfolio",    icon:"portfolio",    label:"Portfolio",        active:true  },
+    { id:"tasks",        icon:"tasks",        label:"Tasks",            active:true, badge:taskAlerts>0?taskAlerts:null },
+    { id:"pipeline",     icon:"pipeline",     label:"Renewal Pipeline", active:true  },
+    { id:"playbooks",    icon:"playbooks",    label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
+    { id:"surveys",      icon:"survey",       label:"Surveys",          active:true  },
+    { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
+    { id:"briefing",     icon:"briefing",     label:"Daily Briefing",   active:false, tip:"Phase 4" },
+  ];
+
+  return (
+    <>
+      <style>{STYLES}</style>
+      <div style={{minHeight:"100vh",display:"flex",background:"var(--bg)"}}>
+
+        {/* Sidebar */}
+        <div style={{width:220,background:"var(--bg2)",borderRight:"1px solid var(--border)",
+          display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh"}}>
+          <div style={{padding:"20px 16px 18px",borderBottom:"1px solid var(--border)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:32,height:32,borderRadius:"var(--r)",background:"var(--indigo)",display:"flex",
+                alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px var(--indigo-glow)",flexShrink:0}}>
+                <span style={{color:"white",fontSize:14,fontWeight:800,letterSpacing:"-.02em"}}>P</span>
+              </div>
+              <span style={{fontWeight:800,fontSize:17,letterSpacing:"-.03em",color:"var(--text)"}}>Pulse</span>
+            </div>
+          </div>
+
+          <div style={{padding:"12px 8px",flex:1}}>
+            {NAV.map(n=>(
+              <div key={n.id}
+                title={n.tip||""}
+                onClick={n.active?()=>{setView(n.id);setSelected(null);}:undefined}
+                className={n.active?"nav-item":""}
+                style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                  padding:"9px 10px",borderRadius:"var(--r)",marginBottom:2,
+                  background:view===n.id?"var(--indigo-dim)":"none",
+                  cursor:n.active?"pointer":"not-allowed",opacity:n.active?1:0.4}}>
+                <div style={{display:"flex",alignItems:"center",gap:9}}>
+                  <Ic n={n.id} size={15} color={view===n.id?"var(--indigo)":"var(--text3)"}/>
+                  <span style={{fontSize:13,color:view===n.id?"var(--indigo)":"var(--text2)",fontWeight:view===n.id?600:400}}>{n.label}</span>
+                </div>
+                {n.badge&&(
+                  <span style={{fontSize:10,fontFamily:"var(--font-mono)",color:"white",
+                    background:"var(--rose)",padding:"1px 7px",borderRadius:99,fontWeight:700,
+                    minWidth:18,textAlign:"center"}}>
+                    {n.badge}
+                  </span>
+                )}
+                {n.tip&&!n.badge&&(
+                  <span style={{fontSize:9,fontFamily:"var(--font-mono)",color:"var(--text3)",
+                    background:"var(--bg4)",padding:"2px 6px",borderRadius:"var(--r-xs)",letterSpacing:".04em"}}>
+                    {n.tip}
+                  </span>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div style={{padding:"14px 16px",borderTop:"1px solid var(--border)"}}>
+            {session?.user && (
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,
+                padding:"8px 10px",background:"var(--bg3)",borderRadius:"var(--r)"}}>
+                <Avatar name={session.user.fullName||session.user.email} size={28}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontSize:12,fontWeight:600,overflow:"hidden",
+                    textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    {session.user.fullName||session.user.email}
+                  </div>
+                  {session.user.company&&(
+                    <div style={{fontSize:10,color:"var(--text3)",overflow:"hidden",
+                      textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {session.user.company}
+                    </div>
+                  )}
+                </div>
+                <button onClick={logout} className="icon-btn"
+                  title="Sign out"
+                  style={{background:"none",border:"none",cursor:"pointer",
+                    padding:4,borderRadius:"var(--r-xs)",flexShrink:0}}>
+                  <Ic n="arrow_right" size={13} color="var(--text3)"/>
+                </button>
+              </div>
+            )}
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <span style={{fontSize:11,color:"var(--text3)",fontWeight:500}}>Build progress</span>
+              <span style={{fontSize:11,color:"var(--indigo)",fontFamily:"var(--font-mono)",fontWeight:600}}>3 / 6</span>
+            </div>
+            <Bar value={50} thin/>
+          </div>
+        </div>
+
+        {/* Main */}
+        <div style={{flex:1,overflow:"auto",padding:"32px"}}>
+
+          {/* ── SURVEYS VIEW ── */}
+          {view==="surveys"&&(
+            <SurveysPage accounts={active} session={session} toast={toast}/>
+          )}
+
+          {/* ── INTEGRATIONS VIEW ── */}
+          {view==="integrations"&&(
+            <IntegrationsPage onImport={bulkImport} toast={toast}/>
+          )}
+
+          {/* ── TASKS VIEW ── */}
+          {view==="tasks"&&(
+            <TasksPage
+              accounts={active}
+              manualTasks={manualTasks}
+              onAddManual={addManualTask}
+              onToggleManual={toggleManualTask}
+              onDeleteManual={deleteManualTask}
+              onAccountClick={a=>{setSelected(a);setView("portfolio");}}
+            />
+          )}
+
+          {/* ── PIPELINE VIEW ── */}
+          {view==="pipeline"&&(
+            <RenewalPipelinePage
+              accounts={active}
+              onAccountClick={a=>{setSelected(a);setView("portfolio");}}
+            />
+          )}
+
+          {/* ── PLAYBOOKS VIEW ── */}
+          {view==="playbooks"&&(
+            <PlaybookLibraryPage accounts={active} onUpdate={update}/>
+          )}
+
+          {/* ── PORTFOLIO VIEW ── */}
+          {view==="portfolio"&&(<>
+            {!apiReady&&API_URL&&(
+              <div style={{display:"flex",alignItems:"center",justifyContent:"center",
+                height:320,flexDirection:"column",gap:16}}>
+                <div style={{width:32,height:32,border:"3px solid var(--border2)",
+                  borderTopColor:"var(--indigo)",borderRadius:"50%",
+                  animation:"spin .7s linear infinite"}}/>
+                <div style={{fontSize:13,color:"var(--text3)"}}>Loading your portfolio…</div>
+              </div>
+            )}
+
+            {/* Migration banner — shown when local data exists but DB is empty */}
+            {apiReady&&API_URL&&accounts.length===0&&!migrateDone&&
+              localStorage.getItem("pulse_v4")&&JSON.parse(localStorage.getItem("pulse_v4")||"[]").length>0&&(
+              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
+                borderRadius:"var(--r-lg)",padding:"18px 22px",marginBottom:24,
+                display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,
+                animation:"fadeUp .2s ease"}}>
+                <div style={{display:"flex",gap:12,alignItems:"flex-start"}}>
+                  <Ic n="info" size={18} color="var(--indigo)" style={{flexShrink:0,marginTop:1}}/>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:14,color:"var(--indigo)",marginBottom:3}}>
+                      You have local data that hasn't been migrated yet
+                    </div>
+                    <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>
+                      We found {JSON.parse(localStorage.getItem("pulse_v4")||"[]").length} account
+                      {JSON.parse(localStorage.getItem("pulse_v4")||"[]").length!==1?"s":""} saved 
+                      in your browser from before the database was connected. 
+                      Click to move them to your account permanently.
+                    </div>
+                  </div>
+                </div>
+                <button onClick={migrateLocalData} disabled={migrating}
+                  style={{display:"flex",alignItems:"center",gap:7,flexShrink:0,
+                    background:"var(--indigo)",color:"white",border:"none",
+                    borderRadius:"var(--r)",padding:"10px 20px",fontWeight:600,
+                    fontSize:13,cursor:"pointer",fontFamily:"var(--font-display)",
+                    boxShadow:"0 2px 8px var(--indigo-glow)",whiteSpace:"nowrap"}}>
+                  {migrating
+                    ? <><span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.3)",
+                        borderTopColor:"white",borderRadius:"50%",display:"inline-block",
+                        animation:"spin .7s linear infinite"}}/>Migrating…</>
+                    : <><Ic n="upload" size={13} color="white"/>Migrate to database</>
+                  }
+                </button>
+              </div>
+            )}
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+              <div>
+                <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Account Portfolio</h1>
+                <div style={{fontSize:13,color:"var(--text3)"}}>
+                  {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}
+                </div>
+              </div>
+              <div style={{display:"flex",gap:10}}>
+                <button onClick={()=>setShowBulk(true)}
+                  style={{background:"var(--bg2)",color:"var(--indigo)",border:"1.5px solid rgba(67,97,238,0.3)",
+                    borderRadius:"var(--r)",padding:"10px 18px",fontWeight:700,fontSize:14,cursor:"pointer",
+                    display:"flex",alignItems:"center",gap:7,fontFamily:"var(--font-display)",transition:"background .15s"}}
+                  onMouseEnter={e=>e.currentTarget.style.background="var(--indigo-dim)"}
+                  onMouseLeave={e=>e.currentTarget.style.background="var(--bg2)"}>
+                  ↑ Import CSV
+                </button>
+                <Btn onClick={()=>setShowAdd(true)} style={{fontSize:14,padding:"11px 22px"}}>+ Add Account</Btn>
+              </div>
+            </div>
+
+            <Stats accounts={filtered} isFiltered={isFiltered}/>
+
+            {/* Filters */}
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,flexWrap:"wrap"}}>
+                <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                  <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginRight:4}}>Stage</span>
+                  {["All","At Risk","Needs Attention","Stable","Healthy"].map(f=>{
+                    const cfg=STAGE_CFG[f],active2=filter===f,count=stageCounts[f]??0;
+                    return (
+                      <button key={f} onClick={()=>setFilter(f)} className="pill-btn"
+                        style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
+                          fontFamily:"var(--font-mono)",fontWeight:active2?600:400,
+                          display:"flex",alignItems:"center",gap:5,
+                          border:`1.5px solid ${active2?(cfg?.color||"var(--indigo)"):"var(--border)"}`,
+                          background:active2?(cfg?.bg||"var(--indigo-dim)"):"var(--bg2)",
+                          color:active2?(cfg?.color||"var(--indigo)"):"var(--text2)"}}>
+                        {f}<span style={{fontSize:10,opacity:0.7}}>({count})</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                <div style={{display:"flex",gap:10}}>
+                  <div style={{position:"relative"}}>
+                    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--text3)",pointerEvents:"none"}}>🔍</span>
+                    <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search accounts…"
+                      style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+                        padding:"8px 14px 8px 34px",color:"var(--text)",fontFamily:"var(--font-display)",
+                        fontSize:13,outline:"none",width:200}}/>
+                  </div>
+                  <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
+                    style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+                      padding:"8px 12px",color:"var(--text2)",fontFamily:"var(--font-mono)",fontSize:12,outline:"none",cursor:"pointer"}}>
+                    <option value="churnRisk">Churn Risk ↑</option>
+                    <option value="renewal">Renewal Soon</option>
+                    <option value="health">Health ↑</option>
+                    <option value="arr">ARR ↓</option>
+                    <option value="ces">CES ↑</option>
+                  </select>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6,alignItems:"center"}}>
+                <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginRight:4}}>Plan</span>
+                {[
+                  {label:"All",color:"var(--indigo)",bg:"var(--indigo-dim)"},
+                  {label:"Starter",color:"var(--sky)",bg:"var(--sky-dim)"},
+                  {label:"Growth",color:"var(--amber)",bg:"var(--amber-dim)"},
+                  {label:"Enterprise",color:"var(--emerald)",bg:"var(--emerald-dim)"},
+                ].map(({label,color,bg})=>{
+                  const active2=planFilter===label, count=planCounts[label]??0;
+                  return (
+                    <button key={label} onClick={()=>setPlanFilter(label)} className="pill-btn"
+                      style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
+                        fontFamily:"var(--font-mono)",fontWeight:active2?600:400,
+                        display:"flex",alignItems:"center",gap:5,
+                        border:`1.5px solid ${active2?color:"var(--border)"}`,
+                        background:active2?bg:"var(--bg2)",color:active2?color:"var(--text2)"}}>
+                      {label}<span style={{fontSize:10,opacity:0.7}}>({count})</span>
+                    </button>
+                  );
+                })}
+                {isFiltered&&(
+                  <button onClick={clearFilters} className="pill-btn"
+                    style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
+                      fontFamily:"var(--font-mono)",border:"1.5px solid var(--border)",
+                      background:"var(--bg2)",color:"var(--text3)"}}>
+                    Clear all ×
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(340px,1fr))",gap:14}}>
+              {filtered.map((a,i)=>(
+                <Card key={a.id} account={a} index={i} onClick={()=>setSelected(a)}/>
+              ))}
+              {filtered.length===0&&(
+                <Empty isFiltered={isFiltered} onClear={clearFilters} onAdd={()=>setShowAdd(true)} onLoadDemo={loadDemoData}/>
+              )}
+            </div>
+          </>)}
+        </div>
+
+        {/* Detail panel backdrop */}
+        {selected&&(
+          <div onClick={()=>setSelected(null)}
+            style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.15)",zIndex:499,
+              backdropFilter:"blur(1px)"}}/>
+        )}
+
+        {selected&&<Detail account={selected} onClose={()=>setSelected(null)} onUpdate={update} onDelete={del} toast={toast}
+          manualTasks={manualTasks} onAddManual={addManualTask} onToggleManual={toggleManualTask} onDeleteManual={deleteManualTask}/>}
+        {showAdd &&<AccountForm onClose={()=>setShowAdd(false)} onSave={add} toast={toast}/>}
+        {showBulk&&<BulkUpload onClose={()=>setShowBulk(false)} onImport={bulkImport}
+          existingNames={active.map(a=>a.name.toLowerCase().trim())} toast={toast}/>}
+      </div>
+
+      <ToastBar toasts={toasts}/>
+    </>
+  );
+}
