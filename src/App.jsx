@@ -5478,7 +5478,7 @@ const AuthScreen = ({ onAuth }) => {
   );
 };
 
-const EmailSettingsPage = () => {
+const EmailSettingsPage = ({ session }) => {
   const [emailAccounts, setEmailAccounts] = useState([]);
   const [loading,       setLoading]       = useState(true);
   const [connecting,    setConnecting]    = useState(null);
