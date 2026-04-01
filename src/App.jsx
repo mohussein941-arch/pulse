@@ -6090,7 +6090,7 @@ export default function App() {
           )}
 
           {/* ── INTEGRATIONS VIEW ── */}
-          {view==="settings"&&(<EmailSettingsPage />)}
+          {view==="settings"&&(<EmailSettingsPage session={session} />)}
           {view==="integrations"&&(
             <IntegrationsPage onImport={bulkImport} toast={toast}/>
           )}
