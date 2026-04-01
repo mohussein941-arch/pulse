@@ -4514,7 +4514,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
   useEffect(() => {
     if (!API_URL) { setLoadingAccs(false); return; }
     fetch(`${API_URL}/api/email/accounts`, {
-      Authorization: `Bearer ${session?.token||""}`
+      "x-pulse-secret": API_SECRET
     })
       .then(r => r.json())
       .then(data => {
@@ -4581,7 +4581,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          Authorization: `Bearer ${session?.token||""}`,
+          "x-pulse-secret": API_SECRET,
         },
         body: JSON.stringify({
           accountId: selectedAccId,
@@ -5312,7 +5312,7 @@ const api = async (method, path, body, token) => {
     method,
     headers: {
       "Content-Type":   "application/json",
-      Authorization: `Bearer ${session?.token||""}`,
+      "x-pulse-secret": API_SECRET,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -5494,7 +5494,7 @@ const EmailSettingsPage = ({ session }) => {
     if (!API_URL) { setLoading(false); return; }
     try {
       const res = await fetch(`${API_URL}/api/email/accounts`, {
-        headers: { Authorization: `Bearer ${session?.token||""}` },
+        headers: { "x-pulse-secret": API_SECRET },
       });
       const data = await res.json();
       setEmailAccounts(data.accounts || []);
@@ -5531,7 +5531,7 @@ const EmailSettingsPage = ({ session }) => {
     const popup = window.open("", "connect_gmail",
   "width=520,height=640,scrollbars=yes,resizable=yes");
 const res = await fetch(`${API_URL}/api/email/gmail/auth`, {
-  headers: { Authorization: `Bearer ${session?.token||""}`, 'x-user-id': session?.user?.id || '' },
+  headers: { "x-pulse-secret": API_SECRET, 'x-user-id': session?.user?.id || '' },
 });
 const { url } = await res.json();
 popup.location.href = url;
@@ -5553,7 +5553,7 @@ popup.location.href = url;
     try {
       await fetch(`${API_URL}/api/email/accounts/${id}/set-primary`, {
         method: "PATCH",
-        headers: { Authorization: `Bearer ${session?.token||""}` },
+        headers: { "x-pulse-secret": API_SECRET },
       });
       await fetchAccounts();
       showPageToast("Primary account updated");
@@ -5570,7 +5570,7 @@ popup.location.href = url;
     try {
       await fetch(`${API_URL}/api/email/accounts/${id}`, {
         method: "DELETE",
-        headers: { Authorization: `Bearer ${session?.token||""}` },
+        headers: { "x-pulse-secret": API_SECRET },
       });
       await fetchAccounts();
       showPageToast("Account disconnected");
