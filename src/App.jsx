@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback } from "react";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -4487,64 +4487,126 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
   );
 };
 
-// ── Send survey email modal ───────────────────────────────────────────────────
+// ── REPLACEMENT: OAuth-powered SurveySendModal ────────────────────────────────
+// Find the existing SurveySendModal in App.jsx and replace the ENTIRE component
+// with this version. It starts at:
+//   const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
+// and ends before:
+//   // ── Surveys page ──
+
 const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
-  const [copied,       setCopied]       = useState(false);
-  const [selectedStk,  setSelectedStk]  = useState("");
-  const [manualEmail,  setManualEmail]  = useState("");
-  const [manualName,   setManualName]   = useState("");
-  const [customMsg,    setCustomMsg]    = useState("");
+  const [emailAccounts,  setEmailAccounts]  = useState([]);
+  const [selectedAccId,  setSelectedAccId]  = useState(null);
+  const [recipients,     setRecipients]     = useState("");
+  const [subject,        setSubject]        = useState(`You're invited: ${survey?.accountName || "Survey"}`);
+  const [sending,        setSending]        = useState(false);
+  const [results,        setResults]        = useState(null);
+  const [loadingAccs,    setLoadingAccs]    = useState(true);
+  const [copied,         setCopied]         = useState(false);
 
-  useEffect(()=>{
-    const h=e=>e.key==="Escape"&&onClose();
-    window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
-  },[onClose]);
+  useEffect(() => {
+    const h = e => e.key === "Escape" && onClose();
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose]);
 
-  // Find the account linked to this survey and get its stakeholders
-  const linkedAccount = accounts.find(a=>a.id===survey.accountId);
-  const stakeholders  = linkedAccount?.stakeholders||[];
+  // Load connected email accounts
+  useEffect(() => {
+    if (!API_URL) { setLoadingAccs(false); return; }
+    fetch(`${API_URL}/api/email/accounts`, {
+      headers: { "x-pulse-secret": API_SECRET },
+    })
+      .then(r => r.json())
+      .then(data => {
+        const accs = data.accounts || [];
+        setEmailAccounts(accs);
+        const primary = accs.find(a => a.is_primary) || accs[0];
+        if (primary) setSelectedAccId(primary.id);
+      })
+      .catch(() => toast("Could not load email accounts", "error"))
+      .finally(() => setLoadingAccs(false));
+  }, []);
 
-  // When a stakeholder is selected, auto-fill their name
-  // (email would come from stakeholder.email if we add it — for now use manual)
-  const selectedStkObj = stakeholders.find(s=>s.id===selectedStk);
-
-  useEffect(()=>{
-    if (selectedStkObj) {
-      setManualName(selectedStkObj.name);
-      setManualEmail(selectedStkObj.email||"");
-    }
-  },[selectedStk]);
-
-  const recipientEmail = manualEmail.trim();
-  const recipientName  = manualName.trim() || (selectedStkObj?.name||"");
-
-  const typeLabels = {
-    NPS:  "Net Promoter Score survey",
-    CES:  "Customer Effort Score survey",
-    CSAT: "Customer Satisfaction survey",
-  };
+  const parsedRecipients = recipients
+    .split(/[\n,;]+/)
+    .map(e => e.trim())
+    .filter(e => e.includes("@"));
 
   const copyLink = () => {
-    navigator.clipboard.writeText(survey.link).then(()=>{
-      setCopied(true); setTimeout(()=>setCopied(false),2000);
+    navigator.clipboard.writeText(survey.link).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
     });
   };
 
-  // Opens the user's own email client with everything pre-filled
-  const openInMailClient = () => {
-    if (!recipientEmail) { toast("Enter or select a recipient email","error"); return; }
-    const greeting   = recipientName ? `Hi ${recipientName},` : "Hi,";
-    const defaultMsg = customMsg.trim() ||
-      `We'd love to hear your feedback on our work together. This quick survey takes less than 60 seconds.`;
-    const body = `${greeting}\n\n${defaultMsg}\n\nClick here to take the survey:\n${survey.link}\n\nThank you for your time.\n`;
-    const subject = encodeURIComponent(`Quick ${typeLabels[survey.type]} — ${survey.accountName}`);
-    const bodyEnc = encodeURIComponent(body);
-    window.location.href = `mailto:${recipientEmail}?subject=${subject}&body=${bodyEnc}`;
-    toast("Email client opened — review and send","success");
+  const surveyUrl = survey.link || `${window.location.origin}/survey/${survey.id}`;
+
+  const buildHtmlBody = () => `<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F9FAFB;font-family:-apple-system,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="padding:40px 20px">
+    <tr><td align="center">
+      <table width="560" cellpadding="0" cellspacing="0" style="background:white;border-radius:12px;border:1px solid #E5E7EB;overflow:hidden">
+        <tr><td style="background:#111827;padding:28px 36px">
+          <div style="color:white;font-size:20px;font-weight:700">Pulse</div>
+          <div style="color:#9CA3AF;font-size:13px;margin-top:4px">Customer Survey</div>
+        </td></tr>
+        <tr><td style="padding:36px">
+          <h1 style="font-size:22px;font-weight:700;color:#111827;margin:0 0 12px">${survey.type} Survey — ${survey.accountName}</h1>
+          <p style="font-size:15px;color:#4B5563;line-height:1.7;margin:0 0 24px">
+            Your feedback helps us serve you better. This survey takes less than 60 seconds.
+          </p>
+          <a href="${surveyUrl}" style="display:inline-block;background:#111827;color:white;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none">
+            Take the Survey →
+          </a>
+        </td></tr>
+        <tr><td style="padding:20px 36px;border-top:1px solid #F3F4F6">
+          <p style="font-size:12px;color:#9CA3AF;margin:0">
+            You received this because your team uses Pulse for customer feedback.
+          </p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body>
+</html>`;
+
+  const handleSend = async () => {
+    if (!selectedAccId) { toast("Select a sending account", "error"); return; }
+    if (parsedRecipients.length === 0) { toast("Add at least one recipient", "error"); return; }
+    setSending(true);
+    try {
+      const res = await fetch(`${API_URL}/api/email/send`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-pulse-secret": API_SECRET,
+        },
+        body: JSON.stringify({
+          accountId: selectedAccId,
+          to: parsedRecipients,
+          subject,
+          htmlBody: buildHtmlBody(),
+          surveyId: survey.id,
+        }),
+      });
+      const data = await res.json();
+      setResults(data.results || []);
+      const sent = (data.results || []).filter(r => r.status === "sent").length;
+      toast(`${sent} email${sent !== 1 ? "s" : ""} sent`, "success");
+    } catch {
+      toast("Send failed — try again", "error");
+    } finally {
+      setSending(false);
+    }
   };
 
+  const PROVIDER_COLORS = { gmail: "#EA4335", outlook: "#0078D4" };
+  const PROVIDER_LABELS = { gmail: "Gmail", outlook: "Outlook" };
+
   return (
-    <div onClick={e=>e.target===e.currentTarget&&onClose()}
+    <div onClick={e => e.target === e.currentTarget && onClose()}
       style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",backdropFilter:"blur(6px)",
         display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
       <div style={{background:"var(--bg2)",borderRadius:"var(--r-2xl)",width:"100%",maxWidth:520,
@@ -4559,7 +4621,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
               {survey.accountName} · {survey.type}
             </div>
           </div>
-          <button onClick={onClose} className="icon-btn"
+          <button onClick={onClose}
             style={{background:"var(--bg3)",border:"none",width:32,height:32,
               borderRadius:"var(--r-sm)",display:"flex",alignItems:"center",
               justifyContent:"center",cursor:"pointer"}}>
@@ -4569,104 +4631,146 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
 
         <div style={{padding:24}}>
 
-          {/* Copy link */}
-          <div style={{marginBottom:20}}>
-            <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
-              textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>
-              Survey link
-            </div>
-            <div style={{display:"flex",gap:8}}>
-              <div style={{flex:1,background:"var(--bg3)",border:"1.5px solid var(--border)",
-                borderRadius:"var(--r)",padding:"9px 12px",fontSize:12,
-                color:"var(--text3)",fontFamily:"var(--font-mono)",
-                overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                {survey.link}
-              </div>
-              <button onClick={copyLink}
-                style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,
-                  background:copied?"var(--emerald)":"var(--bg3)",
-                  color:copied?"white":"var(--text2)",
-                  border:`1.5px solid ${copied?"var(--emerald)":"var(--border)"}`,
-                  borderRadius:"var(--r)",padding:"9px 14px",fontWeight:600,
-                  fontSize:12,cursor:"pointer",fontFamily:"var(--font-display)",
-                  transition:"all .2s"}}>
-                <Ic n={copied?"check":"copy"} size={13} color={copied?"white":"var(--text2)"}/>
-                {copied?"Copied":"Copy"}
-              </button>
-            </div>
-            <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>
-              Paste into WhatsApp, LinkedIn, or any message.
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
-            <div style={{flex:1,height:1,background:"var(--border)"}}/>
-            <span style={{fontSize:11,color:"var(--text3)",fontWeight:500}}>or send from your email</span>
-            <div style={{flex:1,height:1,background:"var(--border)"}}/>
-          </div>
-
-          {/* Stakeholder picker — only shown if account has stakeholders */}
-          {stakeholders.length>0&&(
-            <Fld label="Pick a contact from this account">
-              <Slct value={selectedStk} onChange={e=>setSelectedStk(e.target.value)}>
-                <option value="">— Select a stakeholder —</option>
-                {stakeholders.map(s=>(
-                  <option key={s.id} value={s.id}>
-                    {s.name}{s.title?` · ${s.title}`:""}
-                  </option>
-                ))}
-              </Slct>
-              {selectedStkObj&&!selectedStkObj.email&&(
-                <div style={{fontSize:11,color:"var(--amber)",marginTop:5,
-                  display:"flex",alignItems:"center",gap:5}}>
-                  <Ic n="alert" size={11} color="var(--amber)"/>
-                  No email saved for this contact — enter it below
+          {/* Results view */}
+          {results ? (
+            <div>
+              <div style={{textAlign:"center",marginBottom:20}}>
+                <div style={{fontSize:32,marginBottom:8}}>
+                  {results.every(r => r.status === "sent") ? "🎉" : "⚠️"}
                 </div>
-              )}
-            </Fld>
-          )}
-
-          <Fld label="Recipient email">
-            <Inp type="email" value={manualEmail}
-              onChange={e=>setManualEmail(e.target.value)}
-              placeholder="customer@company.com"/>
-          </Fld>
-
-          <Fld label="Recipient name (optional)">
-            <Inp value={manualName}
-              onChange={e=>setManualName(e.target.value)}
-              placeholder="Ahmed Al-Mansouri"/>
-          </Fld>
-
-          <Fld label="Custom message (optional)">
-            <textarea value={customMsg} onChange={e=>setCustomMsg(e.target.value)}
-              placeholder="We'd love to hear your feedback on our recent work together…"
-              style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
-                borderRadius:"var(--r)",padding:"9px 12px",color:"var(--text)",
-                fontFamily:"var(--font-display)",fontSize:13,outline:"none",
-                resize:"vertical",minHeight:72,lineHeight:1.6}}/>
-          </Fld>
-
-          {/* Info note */}
-          <div style={{display:"flex",gap:8,alignItems:"flex-start",padding:"10px 12px",
-            background:"var(--indigo-dim)",borderRadius:"var(--r)",marginBottom:16,
-            border:"1.5px solid rgba(67,97,238,0.15)"}}>
-            <Ic n="info" size={14} color="var(--indigo)" style={{flexShrink:0,marginTop:1}}/>
-            <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>
-              Clicking <strong>Open in email</strong> will open your Gmail, Outlook, or default 
-              mail app with everything pre-filled. The email sends from <strong>your own address</strong>.
+                <div style={{fontWeight:700,fontSize:16}}>
+                  {results.filter(r => r.status === "sent").length} sent
+                  {results.filter(r => r.status === "failed").length > 0 &&
+                    ` · ${results.filter(r => r.status === "failed").length} failed`}
+                </div>
+              </div>
+              <div style={{border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+                overflow:"hidden",marginBottom:20}}>
+                {results.map((r, i) => (
+                  <div key={i} style={{display:"flex",justifyContent:"space-between",
+                    alignItems:"center",padding:"10px 14px",
+                    borderBottom:i<results.length-1?"1px solid var(--border)":"none",
+                    background:"var(--bg2)"}}>
+                    <span style={{fontSize:13,color:"var(--text2)"}}>{r.email}</span>
+                    <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:4,
+                      color:r.status==="sent"?"var(--emerald)":"var(--rose)",
+                      background:r.status==="sent"?"var(--emerald-dim)":"var(--rose-dim)"}}>
+                      {r.status === "sent" ? "✓ Sent" : "✕ Failed"}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <Btn onClick={onClose} style={{width:"100%"}}>Done</Btn>
             </div>
-          </div>
+          ) : (
+            <>
+              {/* Copy link */}
+              <div style={{marginBottom:20}}>
+                <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
+                  textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>Survey link</div>
+                <div style={{display:"flex",gap:8}}>
+                  <div style={{flex:1,background:"var(--bg3)",border:"1.5px solid var(--border)",
+                    borderRadius:"var(--r)",padding:"9px 12px",fontSize:12,
+                    color:"var(--text3)",fontFamily:"var(--font-mono)",
+                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    {surveyUrl}
+                  </div>
+                  <button onClick={copyLink}
+                    style={{display:"flex",alignItems:"center",gap:6,flexShrink:0,
+                      background:copied?"var(--emerald)":"var(--bg3)",
+                      color:copied?"white":"var(--text2)",
+                      border:`1.5px solid ${copied?"var(--emerald)":"var(--border)"}`,
+                      borderRadius:"var(--r)",padding:"9px 14px",fontWeight:600,
+                      fontSize:12,cursor:"pointer",fontFamily:"var(--font-display)",
+                      transition:"all .2s"}}>
+                    <Ic n={copied?"check":"copy"} size={13} color={copied?"white":"var(--text2)"}/>
+                    {copied?"Copied":"Copy"}
+                  </button>
+                </div>
+              </div>
 
-          <div style={{display:"flex",gap:10}}>
-            <Btn variant="ghost" onClick={onClose} style={{flex:1}}>Cancel</Btn>
-            <Btn onClick={openInMailClient} style={{flex:2}}>
-              <span style={{display:"flex",alignItems:"center",gap:7,justifyContent:"center"}}>
-                <Ic n="note" size={13} color="white"/>Open in email
-              </span>
-            </Btn>
-          </div>
+              {/* Divider */}
+              <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+                <div style={{flex:1,height:1,background:"var(--border)"}}/>
+                <span style={{fontSize:11,color:"var(--text3)"}}>or send via email</span>
+                <div style={{flex:1,height:1,background:"var(--border)"}}/>
+              </div>
+
+              {/* Email account selector */}
+              <Fld label="Send from">
+                {loadingAccs ? (
+                  <div style={{fontSize:13,color:"var(--text3)",padding:"9px 0"}}>Loading accounts…</div>
+                ) : emailAccounts.length === 0 ? (
+                  <div style={{padding:"12px 14px",background:"var(--amber-dim)",
+                    border:"1px solid rgba(217,119,6,0.2)",borderRadius:"var(--r)",
+                    fontSize:13,color:"var(--amber)"}}>
+                    ⚠️ No email accounts connected.{" "}
+                    <button onClick={onClose}
+                      style={{background:"none",border:"none",color:"var(--indigo)",
+                        fontWeight:600,cursor:"pointer",fontSize:13}}>
+                      Go to Email Settings
+                    </button>
+                  </div>
+                ) : (
+                  <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                    {emailAccounts.map(acc => (
+                      <button key={acc.id} onClick={() => setSelectedAccId(acc.id)}
+                        style={{display:"flex",alignItems:"center",gap:10,
+                          padding:"9px 12px",borderRadius:"var(--r)",
+                          border:`1.5px solid ${selectedAccId===acc.id?"var(--indigo)":"var(--border)"}`,
+                          background:selectedAccId===acc.id?"var(--indigo-dim)":"var(--bg3)",
+                          cursor:"pointer",textAlign:"left"}}>
+                        <div style={{width:8,height:8,borderRadius:"50%",flexShrink:0,
+                          background:PROVIDER_COLORS[acc.provider]||"var(--indigo)"}}/>
+                        <span style={{fontSize:13,fontWeight:500,color:"var(--text)",flex:1}}>
+                          {acc.email}
+                        </span>
+                        <span style={{fontSize:11,color:"var(--text3)"}}>
+                          {PROVIDER_LABELS[acc.provider]||acc.provider}
+                        </span>
+                        {acc.is_primary && (
+                          <span style={{fontSize:10,background:"var(--indigo-dim)",
+                            color:"var(--indigo)",padding:"1px 6px",borderRadius:4,fontWeight:600}}>
+                            Primary
+                          </span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </Fld>
+
+              {/* Subject */}
+              <Fld label="Subject">
+                <Inp value={subject} onChange={e => setSubject(e.target.value)}
+                  placeholder="Email subject"/>
+              </Fld>
+
+              {/* Recipients */}
+              <Fld label={`Recipients${parsedRecipients.length > 0 ? ` (${parsedRecipients.length})` : ""}`}>
+                <textarea value={recipients} onChange={e => setRecipients(e.target.value)}
+                  placeholder={"customer@company.com\nanother@example.com"}
+                  style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
+                    borderRadius:"var(--r)",padding:"9px 12px",color:"var(--text)",
+                    fontFamily:"var(--font-display)",fontSize:13,outline:"none",
+                    resize:"vertical",minHeight:80,lineHeight:1.6,boxSizing:"border-box"}}/>
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:4}}>
+                  Separate with commas, semicolons, or new lines
+                </div>
+              </Fld>
+
+              <div style={{display:"flex",gap:10,marginTop:4}}>
+                <Btn variant="ghost" onClick={onClose} style={{flex:1}}>Cancel</Btn>
+                <Btn onClick={handleSend}
+                  disabled={sending || emailAccounts.length === 0}
+                  style={{flex:2,opacity:sending||emailAccounts.length===0?0.6:1}}>
+                  {sending
+                    ? "Sending…"
+                    : `Send to ${parsedRecipients.length || "…"} recipient${parsedRecipients.length !== 1 ? "s" : ""}`}
+                </Btn>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -5374,6 +5478,262 @@ const AuthScreen = ({ onAuth }) => {
   );
 };
 
+const EmailSettingsPage = () => {
+  const [emailAccounts, setEmailAccounts] = useState([]);
+  const [loading,       setLoading]       = useState(true);
+  const [connecting,    setConnecting]    = useState(null);
+  const [actionLoading, setActionLoading] = useState(null);
+  const [pageToast,     setPageToast]     = useState(null);
+
+  const showPageToast = (msg, type = "success") => {
+    setPageToast({ msg, type });
+    setTimeout(() => setPageToast(null), 3000);
+  };
+
+  const fetchAccounts = useCallback(async () => {
+    if (!API_URL) { setLoading(false); return; }
+    try {
+      const res = await fetch(`${API_URL}/api/email/accounts`, {
+        headers: { "x-pulse-secret": API_SECRET },
+      });
+      const data = await res.json();
+      setEmailAccounts(data.accounts || []);
+    } catch {
+      showPageToast("Failed to load accounts", "error");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchAccounts();
+    // Re-fetch when OAuth popup closes
+    const handleMessage = e => {
+      if (e.data?.type === "OAUTH_SUCCESS") fetchAccounts();
+    };
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, [fetchAccounts]);
+
+  // Re-fetch if URL has ?connected= (popup redirect)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected")) {
+      fetchAccounts();
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [fetchAccounts]);
+
+  const connectGmail = async () => {
+    if (!API_URL) { showPageToast("Backend not configured", "error"); return; }
+    setConnecting("gmail");
+    try {
+      const res = await fetch(`${API_URL}/api/email/gmail/auth`, {
+        headers: { "x-pulse-secret": API_SECRET },
+      });
+      const { url } = await res.json();
+      const popup = window.open(url, "connect_gmail",
+        "width=520,height=640,scrollbars=yes,resizable=yes");
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          setConnecting(null);
+          fetchAccounts();
+        }
+      }, 500);
+    } catch {
+      showPageToast("Failed to start Gmail connection", "error");
+      setConnecting(null);
+    }
+  };
+
+  const setPrimary = async (id) => {
+    setActionLoading(id + "_primary");
+    try {
+      await fetch(`${API_URL}/api/email/accounts/${id}/set-primary`, {
+        method: "PATCH",
+        headers: { "x-pulse-secret": API_SECRET },
+      });
+      await fetchAccounts();
+      showPageToast("Primary account updated");
+    } catch {
+      showPageToast("Failed to update", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const disconnect = async (id, email) => {
+    if (!confirm(`Disconnect ${email}?`)) return;
+    setActionLoading(id + "_disconnect");
+    try {
+      await fetch(`${API_URL}/api/email/accounts/${id}`, {
+        method: "DELETE",
+        headers: { "x-pulse-secret": API_SECRET },
+      });
+      await fetchAccounts();
+      showPageToast("Account disconnected");
+    } catch {
+      showPageToast("Failed to disconnect", "error");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const hasGmail = emailAccounts.some(a => a.provider === "gmail");
+
+  return (
+    <div style={{animation:"fadeUp .2s ease",maxWidth:640}}>
+      <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Email Settings</h1>
+      <p style={{fontSize:13,color:"var(--text3)",marginBottom:28,lineHeight:1.6}}>
+        Connect your Gmail account to send surveys directly from your own address.
+        Recipients will see your name and email — not a generic noreply.
+      </p>
+
+      {/* Connect Gmail card */}
+      <div style={{background:"var(--bg2)",border:`1.5px solid ${hasGmail?"rgba(234,67,53,0.25)":"var(--border)"}`,
+        borderRadius:"var(--r-lg)",padding:"18px 20px",marginBottom:12,
+        background:hasGmail?"rgba(234,67,53,0.04)":"var(--bg2)",
+        display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:40,height:40,borderRadius:"var(--r)",
+            border:"1.5px solid",borderColor:hasGmail?"rgba(234,67,53,0.3)":"var(--border)",
+            display:"flex",alignItems:"center",justifyContent:"center",background:"white"}}>
+            <svg viewBox="0 0 48 48" width="22" height="22">
+              <path fill="#EA4335" d="M6 9a3 3 0 013-3h30a3 3 0 013 3v3L24 23 6 12V9z"/>
+              <path fill="#34A853" d="M42 12L24 23 6 12v27a3 3 0 003 3h30a3 3 0 003-3V12z"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{fontWeight:600,fontSize:14}}>Gmail</div>
+            <div style={{fontSize:12,color:"var(--text3)",marginTop:1}}>
+              {hasGmail
+                ? `${emailAccounts.filter(a=>a.provider==="gmail").length} account connected`
+                : "Send surveys from your Gmail inbox"}
+            </div>
+          </div>
+        </div>
+        <button onClick={connectGmail} disabled={!!connecting}
+          style={{padding:"8px 16px",borderRadius:"var(--r-sm)",fontSize:13,fontWeight:600,
+            border:`1.5px solid ${hasGmail?"rgba(234,67,53,0.3)":"#EA4335"}`,
+            background:hasGmail?"white":"#EA4335",
+            color:hasGmail?"#EA4335":"white",cursor:"pointer",
+            opacity:connecting?"gmail"===connecting?0.7:1:1,
+            transition:"all .15s",whiteSpace:"nowrap",fontFamily:"var(--font-display)"}}>
+          {connecting==="gmail" ? "Opening…" : hasGmail ? "+ Add another" : "Connect Gmail"}
+        </button>
+      </div>
+
+      {/* Connected accounts */}
+      {emailAccounts.length > 0 && (
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
+            textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>
+            Connected accounts
+          </div>
+          <div style={{border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",overflow:"hidden"}}>
+            {loading ? (
+              <div style={{padding:"20px",textAlign:"center",color:"var(--text3)",fontSize:13}}>
+                Loading…
+              </div>
+            ) : emailAccounts.map((acc, i) => (
+              <div key={acc.id} style={{display:"flex",alignItems:"center",
+                justifyContent:"space-between",padding:"12px 16px",
+                borderBottom:i<emailAccounts.length-1?"1px solid var(--border)":"none",
+                background:"var(--bg2)",gap:12}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+                  <div style={{width:32,height:32,borderRadius:"var(--r-sm)",
+                    background:"rgba(234,67,53,0.08)",
+                    border:"1.5px solid rgba(234,67,53,0.2)",
+                    display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <svg viewBox="0 0 48 48" width="16" height="16">
+                      <path fill="#EA4335" d="M6 9a3 3 0 013-3h30a3 3 0 013 3v3L24 23 6 12V9z"/>
+                      <path fill="#34A853" d="M42 12L24 23 6 12v27a3 3 0 003 3h30a3 3 0 003-3V12z"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>
+                      {acc.email}
+                    </div>
+                    <div style={{fontSize:11,color:"var(--text3)",display:"flex",
+                      alignItems:"center",gap:6,marginTop:1}}>
+                      Gmail
+                      {acc.is_primary && (
+                        <span style={{background:"var(--indigo-dim)",color:"var(--indigo)",
+                          border:"1px solid rgba(67,97,238,0.2)",borderRadius:4,
+                          fontSize:9,fontWeight:700,padding:"1px 6px"}}>
+                          PRIMARY
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div style={{display:"flex",gap:8,flexShrink:0}}>
+                  {!acc.is_primary && (
+                    <button onClick={() => setPrimary(acc.id)}
+                      disabled={actionLoading===acc.id+"_primary"}
+                      style={{padding:"5px 12px",borderRadius:"var(--r-sm)",
+                        border:"1px solid var(--border)",background:"var(--bg3)",
+                        color:"var(--text2)",fontSize:12,fontWeight:500,cursor:"pointer",
+                        fontFamily:"var(--font-display)"}}>
+                      {actionLoading===acc.id+"_primary" ? "Setting…" : "Set primary"}
+                    </button>
+                  )}
+                  <button onClick={() => disconnect(acc.id, acc.email)}
+                    disabled={actionLoading===acc.id+"_disconnect"}
+                    style={{padding:"5px 12px",borderRadius:"var(--r-sm)",
+                      border:"1px solid rgba(225,29,72,0.2)",background:"var(--rose-dim)",
+                      color:"var(--rose)",fontSize:12,fontWeight:500,cursor:"pointer",
+                      fontFamily:"var(--font-display)"}}>
+                    {actionLoading===acc.id+"_disconnect" ? "…" : "Disconnect"}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state */}
+      {!loading && emailAccounts.length === 0 && (
+        <div style={{textAlign:"center",padding:"40px 20px",
+          borderRadius:"var(--r-lg)",border:"1.5px dashed var(--border)",marginBottom:24}}>
+          <div style={{fontSize:32,marginBottom:10}}>✉️</div>
+          <div style={{fontSize:14,fontWeight:600,color:"var(--text2)",marginBottom:6}}>
+            No email accounts connected
+          </div>
+          <div style={{fontSize:13,color:"var(--text3)"}}>
+            Connect Gmail above to start sending surveys from your own address.
+          </div>
+        </div>
+      )}
+
+      {/* Info box */}
+      <div style={{display:"flex",gap:12,padding:"14px 16px",borderRadius:"var(--r-lg)",
+        background:"var(--bg3)",border:"1.5px solid var(--border)"}}>
+        <div style={{fontSize:18,flexShrink:0}}>🔒</div>
+        <div>
+          <div style={{fontSize:13,fontWeight:600,marginBottom:4}}>How it works</div>
+          <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.7}}>
+            Pulse uses OAuth 2.0 — we never store your password. Access is limited to sending
+            emails only. Revoke access at any time from your Google account settings.
+          </div>
+        </div>
+      </div>
+
+      {/* Toast */}
+      {pageToast && (
+        <div style={{position:"fixed",bottom:24,right:24,
+          padding:"10px 18px",borderRadius:"var(--r)",fontSize:13,fontWeight:500,
+          boxShadow:"var(--shadow-lg)",zIndex:9999,
+          background:pageToast.type==="error"?"#FEE2E2":"#DCFCE7",
+          color:pageToast.type==="error"?"#991B1B":"#166534"}}>
+          {pageToast.type==="error" ? "⚠️" : "✓"} {pageToast.msg}
+        </div>
+      )}
+    </div>
+  );
+};
 export default function App() {
   const [session,      setSession]      = useState(loadSession);
   const [accounts,     setAccounts]     = useState([]);
@@ -5635,6 +5995,7 @@ export default function App() {
     { id:"playbooks",    icon:"playbooks",    label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
     { id:"surveys",      icon:"survey",       label:"Surveys",          active:true  },
     { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
+    { id:"settings", icon:"shield", label:"Email Settings", active:true },
     { id:"briefing",     icon:"briefing",     label:"Daily Briefing",   active:false, tip:"Phase 4" },
   ];
 
@@ -5729,6 +6090,7 @@ export default function App() {
           )}
 
           {/* ── INTEGRATIONS VIEW ── */}
+          {view==="settings"&&(<EmailSettingsPage />)}
           {view==="integrations"&&(
             <IntegrationsPage onImport={bulkImport} toast={toast}/>
           )}
