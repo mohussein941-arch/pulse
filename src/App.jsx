@@ -5528,12 +5528,13 @@ const EmailSettingsPage = ({ session }) => {
     if (!API_URL) { showPageToast("Backend not configured", "error"); return; }
     setConnecting("gmail");
     try {
-      const res = await fetch(`${API_URL}/api/email/gmail/auth`, {
-        headers: { Authorization: `Bearer ${session?.token||""}` },
-      });
-      const { url } = await res.json();
-      const popup = window.open(url, "connect_gmail",
-        "width=520,height=640,scrollbars=yes,resizable=yes");
+    const popup = window.open("", "connect_gmail",
+  "width=520,height=640,scrollbars=yes,resizable=yes");
+const res = await fetch(`${API_URL}/api/email/gmail/auth`, {
+  headers: { Authorization: `Bearer ${session?.token||""}` },
+});
+const { url } = await res.json();
+popup.location.href = url;
       const timer = setInterval(() => {
         if (popup.closed) {
           clearInterval(timer);
