@@ -5531,7 +5531,7 @@ const EmailSettingsPage = ({ session }) => {
     const popup = window.open("", "connect_gmail",
   "width=520,height=640,scrollbars=yes,resizable=yes");
 const res = await fetch(`${API_URL}/api/email/gmail/auth`, {
-  headers: { Authorization: `Bearer ${session?.token||""}` },
+  headers: { Authorization: `Bearer ${session?.token||""}`, 'x-user-id': session?.user?.id || '' },
 });
 const { url } = await res.json();
 popup.location.href = url;
