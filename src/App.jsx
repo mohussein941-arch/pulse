@@ -4494,7 +4494,7 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
 // and ends before:
 //   // ── Surveys page ──
 
-const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
+const SurveySendModal = ({ survey, accounts, onClose, toast, session, onGoToSettings }) => {
   const [emailAccounts,  setEmailAccounts]  = useState([]);
   const [selectedAccId,  setSelectedAccId]  = useState(null);
   const [recipients,     setRecipients]     = useState("");
@@ -4514,7 +4514,10 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
   useEffect(() => {
     if (!API_URL) { setLoadingAccs(false); return; }
     fetch(`${API_URL}/api/email/accounts`, {
-      "x-pulse-secret": API_SECRET
+      headers: {
+        "x-pulse-secret": API_SECRET,
+        ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+      },
     })
       .then(r => r.json())
       .then(data => {
@@ -4541,6 +4544,10 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
 
   const surveyUrl = survey.link || `${window.location.origin}/survey/${survey.id}`;
 
+  const waLink = WHATSAPP_NUMBER
+    ? `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(`Hi! I'm ready to share my feedback. ${survey.token}`)}`
+    : null;
+
   const buildHtmlBody = () => `<!DOCTYPE html>
 <html>
 <head><meta charset="utf-8"></head>
@@ -4560,6 +4567,12 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
           <a href="${surveyUrl}" style="display:inline-block;background:#111827;color:white;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none">
             Take the Survey →
           </a>
+          ${waLink ? `
+          <div style="margin-top:16px">
+            <a href="${waLink}" style="display:inline-block;background:#25D366;color:white;padding:14px 28px;border-radius:8px;font-size:14px;font-weight:600;text-decoration:none">
+              💬 Reply via WhatsApp
+            </a>
+          </div>` : ''}
         </td></tr>
         <tr><td style="padding:20px 36px;border-top:1px solid #F3F4F6">
           <p style="font-size:12px;color:#9CA3AF;margin:0">
@@ -4582,6 +4595,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
         headers: {
           "Content-Type": "application/json",
           "x-pulse-secret": API_SECRET,
+          ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
         body: JSON.stringify({
           accountId: selectedAccId,
@@ -4705,7 +4719,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
                     border:"1px solid rgba(217,119,6,0.2)",borderRadius:"var(--r)",
                     fontSize:13,color:"var(--amber)"}}>
                     ⚠️ No email accounts connected.{" "}
-                    <button onClick={onClose}
+                    <button onClick={()=>{ onClose(); onGoToSettings?.(); }}
                       style={{background:"none",border:"none",color:"var(--indigo)",
                         fontWeight:600,cursor:"pointer",fontSize:13}}>
                       Go to Email Settings
@@ -4778,7 +4792,7 @@ const SurveySendModal = ({ survey, accounts, onClose, toast }) => {
 };
 
 // ── Surveys page ──────────────────────────────────────────────────────────────
-const SurveysPage = ({ accounts, session, toast }) => {
+const SurveysPage = ({ accounts, session, toast, onGoToSettings }) => {
   const [surveys,     setSurveys]     = useState([]);
   const [loading,     setLoading]     = useState(true);
   const [showCreate,  setShowCreate]  = useState(false);
@@ -5075,7 +5089,7 @@ const SurveysPage = ({ accounts, session, toast }) => {
 
       {showCreate&&<SurveyCreateModal accounts={accounts} onClose={()=>setShowCreate(false)}
         onCreate={createSurvey} toast={toast}/>}
-      {showSend&&<SurveySendModal survey={showSend} accounts={accounts} onClose={()=>setShowSend(null)} toast={toast}/>}
+      {showSend&&<SurveySendModal survey={showSend} accounts={accounts} onClose={()=>setShowSend(null)} toast={toast} session={session} onGoToSettings={onGoToSettings}/>}
     </div>
   );
 };
@@ -5303,8 +5317,9 @@ const SurveyResponsePage = ({ token }) => {
 
 // ─── App ──────────────────────────────────────────────────────────────────────
 // ─── API client ───────────────────────────────────────────────────────────────
-const API_URL    = import.meta.env.VITE_API_URL    || "";
-const API_SECRET = import.meta.env.VITE_API_SECRET || "";
+const API_URL          = import.meta.env.VITE_API_URL          || "";
+const API_SECRET       = import.meta.env.VITE_API_SECRET       || "";
+const WHATSAPP_NUMBER  = import.meta.env.VITE_WHATSAPP_NUMBER  || "";
 
 const api = async (method, path, body, token) => {
   if (!API_URL) return null; // no backend configured — fall back to localStorage
@@ -6099,7 +6114,7 @@ export default function App() {
 
           {/* ── SURVEYS VIEW ── */}
           {view==="surveys"&&(
-            <SurveysPage accounts={active} session={session} toast={toast}/>
+            <SurveysPage accounts={active} session={session} toast={toast} onGoToSettings={()=>setView("settings")}/>
           )}
 
           {/* ── INTEGRATIONS VIEW ── */}
