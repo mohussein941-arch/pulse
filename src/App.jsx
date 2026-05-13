@@ -1471,9 +1471,11 @@ const LogCES = ({ account, onClose, onUpdate, toast }) => {
 };
 
 // ─── Call / Meeting Prep Sheet ────────────────────────────────────────────────
-const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
-  const [notes, setNotes] = useState(account.prepNotes||"");
-  const [copied, setCopied] = useState(false);
+const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
+  const [notes,     setNotes]     = useState(account.prepNotes||"");
+  const [copied,    setCopied]    = useState(false);
+  const [aiBrief,   setAiBrief]   = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
 
   useEffect(()=>{
     const h=e=>e.key==="Escape"&&onClose();
@@ -1499,6 +1501,17 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
     onSaveNotes(account.id, notes);
     toast("Meeting notes saved","success");
     onClose();
+  };
+
+  const generateAiBrief = async () => {
+    if (!call) return;
+    setAiLoading(true);
+    try {
+      const data = await call("POST", `/api/ai/brief/${account.id}`);
+      setAiBrief(data.brief);
+    } catch (e) {
+      toast(e.status === 402 ? "Add your AI key in Settings → AI to use this feature" : "Failed to generate brief", "error");
+    } finally { setAiLoading(false); }
   };
 
   const copyBrief = () => {
@@ -1763,6 +1776,34 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
             </div>
           </div>
 
+          {/* AI Brief */}
+          <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:aiBrief?14:0}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em"}}>AI Brief</div>
+                <span style={{fontSize:10,background:"var(--indigo-dim)",color:"var(--indigo)",padding:"1px 7px",borderRadius:99,fontWeight:600}}>Beta</span>
+              </div>
+              <button onClick={generateAiBrief} disabled={aiLoading}
+                style={{display:"flex",alignItems:"center",gap:6,background:"var(--indigo)",color:"white",
+                  border:"none",borderRadius:"var(--r)",padding:"6px 14px",fontSize:12,fontWeight:600,
+                  cursor:aiLoading?"not-allowed":"pointer",opacity:aiLoading?0.7:1,transition:"opacity .15s"}}>
+                {aiLoading
+                  ? <><div style={{width:11,height:11,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"white",borderRadius:"50%",animation:"spin .7s linear infinite"}}/> Generating…</>
+                  : <>{aiBrief ? "Regenerate" : "Generate with AI"}</>}
+              </button>
+            </div>
+            {aiBrief && (
+              <div style={{fontSize:13,color:"var(--text)",lineHeight:1.75,whiteSpace:"pre-wrap",
+                fontFamily:"var(--font-display)"}}>
+                {aiBrief.split(/\*\*(.*?)\*\*/g).map((part, i) =>
+                  i % 2 === 1
+                    ? <strong key={i} style={{color:"var(--text)",display:"block",marginTop:i>1?12:0,marginBottom:4}}>{part}</strong>
+                    : <span key={i}>{part}</span>
+                )}
+              </div>
+            )}
+          </div>
+
           {/* Notes */}
           <div>
             <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
@@ -1845,12 +1886,36 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
     {key:"activity",   label:"Activity"},
     {key:"onboarding", label:"Onboarding"},
     {key:"health",     label:"Health & Playbook"},
+    {key:"ai",         label:"Ask AI"},
   ];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
   const tabHasAlert = {
     activity:   taskAlertCount > 0 || days > 14,
     onboarding: false,
     health:     account.healthScore < 55 || (triggeredPbs.length > 0 && !account.activePlaybookId),
+    ai:         false,
+  };
+
+  const [aiMessages, setAiMessages] = useState([]);
+  const [aiQuestion, setAiQuestion] = useState("");
+  const [aiChatLoading, setAiChatLoading] = useState(false);
+
+  const askAI = async () => {
+    const q = aiQuestion.trim();
+    if (!q || aiChatLoading) return;
+    setAiQuestion("");
+    const history = aiMessages.map(m => ({ role: m.role, content: m.content }));
+    setAiMessages(p => [...p, { role:"user", content:q }]);
+    setAiChatLoading(true);
+    try {
+      const data = await call("POST", `/api/ai/chat/${account.id}`, { question: q, history });
+      setAiMessages(p => [...p, { role:"assistant", content: data.answer }]);
+    } catch (e) {
+      const msg = e.status === 402
+        ? "Add your AI key in Settings → AI to use this feature."
+        : "Failed to get answer. Try again.";
+      setAiMessages(p => [...p, { role:"assistant", content: msg }]);
+    } finally { setAiChatLoading(false); }
   };
 
   return (
@@ -2105,6 +2170,62 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
             <OnboardingTab account={account} call={call} toast={toast}/>
           )}
 
+          {/* ASK AI TAB */}
+          {tab==="ai"&&(
+            <div style={{display:"flex",flexDirection:"column",height:"100%",minHeight:400}}>
+              <div style={{fontSize:12,color:"var(--text3)",marginBottom:16,lineHeight:1.6}}>
+                Ask anything about this account. Claude answers from the full account history.
+              </div>
+              <div style={{flex:1,overflowY:"auto",display:"flex",flexDirection:"column",gap:12,marginBottom:16,minHeight:200}}>
+                {aiMessages.length===0&&(
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    {["What's the biggest churn risk right now?","When did we last connect and what was discussed?","What are the open action items?","Is this account on track for renewal?"].map(q=>(
+                      <button key={q} onClick={()=>{setAiQuestion(q);}}
+                        style={{textAlign:"left",background:"var(--bg3)",border:"1.5px solid var(--border)",
+                          borderRadius:"var(--r)",padding:"10px 14px",fontSize:13,color:"var(--text2)",
+                          cursor:"pointer",fontFamily:"var(--font-display)",transition:"border-color .12s"}}
+                        onMouseEnter={e=>e.currentTarget.style.borderColor="var(--indigo)"}
+                        onMouseLeave={e=>e.currentTarget.style.borderColor="var(--border)"}>
+                        {q}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {aiMessages.map((m,i)=>(
+                  <div key={i} style={{display:"flex",justifyContent:m.role==="user"?"flex-end":"flex-start"}}>
+                    <div style={{maxWidth:"85%",background:m.role==="user"?"var(--indigo)":"var(--bg3)",
+                      color:m.role==="user"?"white":"var(--text)",
+                      border:m.role==="user"?"none":"1.5px solid var(--border)",
+                      borderRadius:"var(--r-lg)",padding:"10px 14px",fontSize:13,lineHeight:1.65}}>
+                      {m.content}
+                    </div>
+                  </div>
+                ))}
+                {aiChatLoading&&(
+                  <div style={{display:"flex",gap:6,alignItems:"center",padding:"8px 0"}}>
+                    <div style={{width:8,height:8,borderRadius:"50%",background:"var(--indigo)",animation:"pulse 1s ease infinite"}}/>
+                    <div style={{fontSize:12,color:"var(--text3)"}}>Thinking…</div>
+                  </div>
+                )}
+              </div>
+              <div style={{display:"flex",gap:8}}>
+                <input value={aiQuestion} onChange={e=>setAiQuestion(e.target.value)}
+                  onKeyDown={e=>e.key==="Enter"&&!e.shiftKey&&askAI()}
+                  placeholder="Ask anything about this account…"
+                  style={{flex:1,background:"var(--bg3)",border:"1.5px solid var(--border)",
+                    borderRadius:"var(--r)",padding:"10px 14px",fontSize:13,color:"var(--text)",
+                    fontFamily:"var(--font-display)",outline:"none"}}/>
+                <button onClick={askAI} disabled={aiChatLoading||!aiQuestion.trim()}
+                  style={{background:"var(--indigo)",color:"white",border:"none",
+                    borderRadius:"var(--r)",padding:"10px 18px",fontSize:13,fontWeight:600,
+                    cursor:aiChatLoading||!aiQuestion.trim()?"not-allowed":"pointer",
+                    opacity:aiChatLoading||!aiQuestion.trim()?0.6:1,transition:"opacity .15s"}}>
+                  Ask
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* HEALTH & PLAYBOOK TAB */}
           {tab==="health"&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
@@ -2231,7 +2352,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
       {showCES &&<LogCES account={account} onClose={()=>setShowCES(false)} onUpdate={onUpdate} toast={toast}/>}
       {showPortal&&<PortalModal account={account} call={call} toast={toast} onClose={()=>setShowPortal(false)}/>}
       {showPrep&&<CallPrepModal account={account} onClose={()=>setShowPrep(false)}
-        onSaveNotes={(id,notes)=>onUpdate(id,{prepNotes:notes})} toast={toast}/>}
+        onSaveNotes={(id,notes)=>onUpdate(id,{prepNotes:notes})} toast={toast} call={call}/>}
       {showDel &&<Confirm msg={`Permanently delete "${account.name}"? This cannot be undone.`}
         onConfirm={()=>{onDelete(account.id);setShowDel(false);toast("Account deleted","info");}}
         onCancel={()=>setShowDel(false)}/>}
@@ -7227,6 +7348,124 @@ const TIMEZONES = [
   {value:"UTC",          label:"UTC"},
 ];
 
+const AISettings = ({ call, toast }) => {
+  const [config,   setConfig]   = useState(undefined); // undefined = loading
+  const [editing,  setEditing]  = useState(false);
+  const [provider, setProvider] = useState("anthropic");
+  const [apiKey,   setApiKey]   = useState("");
+  const [saving,   setSaving]   = useState(false);
+  const [testing,  setTesting]  = useState(false);
+
+  useEffect(() => {
+    call("GET", "/api/ai/config")
+      .then(d => { setConfig(d); if (d?.provider) setProvider(d.provider); })
+      .catch(() => setConfig(null));
+  }, [call]);
+
+  const save = async () => {
+    if (!apiKey.trim()) return;
+    setSaving(true);
+    try {
+      const d = await call("PATCH", "/api/ai/config", { provider, api_key: apiKey.trim() });
+      setConfig(d);
+      setEditing(false);
+      setApiKey("");
+      toast("AI key saved","success");
+    } catch (e) { toast(e.message||"Failed to save","error"); }
+    finally { setSaving(false); }
+  };
+
+  const test = async () => {
+    setTesting(true);
+    try {
+      await call("POST", "/api/ai/test");
+      toast("Connection successful ✓","success");
+    } catch { toast("Connection failed — check your key","error"); }
+    finally { setTesting(false); }
+  };
+
+  const remove = async () => {
+    await call("DELETE", "/api/ai/config");
+    setConfig(null);
+    setEditing(false);
+    toast("AI key removed","info");
+  };
+
+  const rowStyle = {background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"16px 20px"};
+  const lblStyle = {fontSize:12,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8,display:"block"};
+  const inputStyle = {width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+    padding:"9px 13px",fontSize:13,color:"var(--text)",fontFamily:"var(--font-display)",outline:"none",boxSizing:"border-box"};
+  const smBtn = (bg,color)=>({background:bg,color,border:"none",borderRadius:"var(--r)",padding:"7px 14px",
+    fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--font-display)"});
+
+  if (config === undefined) return <div style={{fontSize:13,color:"var(--text3)"}}>Loading…</div>;
+
+  if (config?.configured && !editing) return (
+    <div style={rowStyle}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <div>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
+            <div style={{width:8,height:8,borderRadius:"50%",background:"var(--emerald)"}}/>
+            <div style={{fontWeight:700,fontSize:14}}>AI Connected</div>
+          </div>
+          <div style={{fontSize:12,color:"var(--text3)"}}>
+            {config.provider==="anthropic"?"Anthropic (Claude)":"OpenAI"} · {config.model} · {config.api_key_mask}
+          </div>
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={test} disabled={testing} style={smBtn("var(--bg3)","var(--text2)")}>
+            {testing?"Testing…":"Test"}
+          </button>
+          <button onClick={()=>setEditing(true)} style={smBtn("var(--bg3)","var(--text2)")}>Change key</button>
+          <button onClick={remove} style={smBtn("transparent","var(--rose)")}>Remove</button>
+        </div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{...rowStyle,display:"flex",flexDirection:"column",gap:16}}>
+      <div>
+        <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Connect AI Provider</div>
+        <div style={{fontSize:12,color:"var(--text3)"}}>Your key is encrypted at rest and never shared. Bring your own key — you pay your provider directly.</div>
+      </div>
+
+      <div>
+        <span style={lblStyle}>Provider</span>
+        <div style={{display:"flex",gap:8}}>
+          {[{v:"anthropic",l:"Anthropic (Claude)"},{v:"openai",l:"OpenAI (GPT)"}].map(({v,l})=>(
+            <button key={v} onClick={()=>setProvider(v)}
+              style={{...smBtn(provider===v?"var(--indigo-dim)":"var(--bg3)",provider===v?"var(--indigo)":"var(--text2)"),
+                border:`1.5px solid ${provider===v?"var(--indigo)":"var(--border)"}`,padding:"8px 18px"}}>
+              {l}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <span style={lblStyle}>API Key</span>
+        <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
+          placeholder={provider==="anthropic"?"sk-ant-api03-…":"sk-proj-…"}
+          style={inputStyle}/>
+        <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>
+          {provider==="anthropic"
+            ? "Get your key at console.anthropic.com → API Keys"
+            : "Get your key at platform.openai.com → API Keys"}
+        </div>
+      </div>
+
+      <div style={{display:"flex",gap:8}}>
+        <button onClick={save} disabled={saving||!apiKey.trim()}
+          style={{...smBtn("var(--indigo)","white"),padding:"9px 20px",opacity:saving||!apiKey.trim()?0.6:1}}>
+          {saving?"Saving…":"Save key"}
+        </button>
+        {editing&&<button onClick={()=>{setEditing(false);setApiKey("");}} style={smBtn("var(--bg3)","var(--text2)")}>Cancel</button>}
+      </div>
+    </div>
+  );
+};
+
 const BriefingSettings = ({ call, toast, hasGmail }) => {
   const [cfg, setCfg] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -7351,15 +7590,33 @@ const SIGNAL_LABELS = {
 };
 
 const BriefingPage = ({ call, toast, onAccountClick }) => {
-  const [items,   setItems]   = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [items,     setItems]     = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [aiSummary, setAiSummary] = useState(null);
+  const [aiSumLoading, setAiSumLoading] = useState(false);
+
+  const loadAiSummary = useCallback(async (briefingItems) => {
+    const actionable = briefingItems.filter(i => i.status === "pending" && i.category !== "win");
+    if (actionable.length === 0) return;
+    setAiSumLoading(true);
+    try {
+      const data = await call("POST", "/api/ai/briefing-summary", { items: briefingItems });
+      if (data?.summary) setAiSummary(data.summary);
+    } catch { /* no AI key configured — silently skip */ }
+    finally { setAiSumLoading(false); }
+  }, [call]);
 
   const load = useCallback(() => {
     setLoading(true);
     call("GET", "/api/briefing/today")
-      .then(data => { setItems(Array.isArray(data) ? data : []); setLoading(false); })
+      .then(data => {
+        const items = Array.isArray(data) ? data : [];
+        setItems(items);
+        setLoading(false);
+        loadAiSummary(items);
+      })
       .catch(() => setLoading(false));
-  }, [call]);
+  }, [call, loadAiSummary]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -7454,6 +7711,24 @@ const BriefingPage = ({ call, toast, onAccountClick }) => {
           borderRadius:"var(--r)",padding:"8px 16px",fontSize:12,fontWeight:600,
           color:"var(--text2)",cursor:"pointer"}}>Refresh</button>
       </div>
+
+      {/* AI Summary */}
+      {(aiSummary || aiSumLoading) && (
+        <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
+          borderRadius:"var(--r-lg)",padding:"16px 20px",marginBottom:8,display:"flex",gap:12,alignItems:"flex-start"}}>
+          <div style={{width:28,height:28,borderRadius:"var(--r-sm)",background:"var(--indigo)",
+            display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
+            <span style={{fontSize:14}}>✦</span>
+          </div>
+          <div style={{flex:1}}>
+            <div style={{fontSize:11,fontWeight:700,color:"var(--indigo)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:4}}>AI Summary</div>
+            {aiSumLoading
+              ? <div style={{fontSize:13,color:"var(--text3)"}}>Analysing your portfolio…</div>
+              : <div style={{fontSize:13,color:"var(--text)",lineHeight:1.7}}>{aiSummary}</div>
+            }
+          </div>
+        </div>
+      )}
 
       {allClear && wins.length===0 && (
         <div style={{background:"var(--emerald-dim)",border:"1.5px solid rgba(5,150,105,0.2)",
@@ -7983,6 +8258,8 @@ export default function App() {
               <EmailSettingsPage session={session}/>
               <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Daily Briefing</div>
               <BriefingSettings call={call} toast={toast} hasGmail={!!session}/>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>AI</div>
+              <AISettings call={call} toast={toast}/>
             </div>
           )}
           {view==="integrations"&&(
