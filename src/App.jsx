@@ -1784,7 +1784,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
 };
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
-const Detail = ({ account, onClose, onUpdate, onDelete, toast, session, initialTab="overview", manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
+const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab="overview", manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
   const [showStk,setShowStk]     = useState(false);
   const [showEdit,setShowEdit]   = useState(false);
   const [showDel,setShowDel]     = useState(false);
@@ -2214,7 +2214,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, session, initialT
           )}
 
           {tab==="onboarding"&&(
-            <OnboardingTab account={account} session={session} toast={toast}/>
+            <OnboardingTab account={account} call={call} toast={toast}/>
           )}
 
         </div>
@@ -5341,8 +5341,11 @@ const api = async (method, path, body, token) => {
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || "API error");
+    const error = new Error(err.error || "API error");
+    error.status = res.status;
+    throw error;
   }
+  if (res.status === 204) return null;
   return res.json();
 };
 
@@ -5822,60 +5825,44 @@ function nextPhaseKey(currentKey, phases) {
 }
 
 // ─── OnboardingTab ────────────────────────────────────────────────────────────
-const OnboardingTab = ({ account, session, toast }) => {
-  const API     = import.meta.env.VITE_API_URL;
-  const headers = {
-    "x-pulse-secret": import.meta.env.VITE_API_SECRET,
-    "Authorization":  `Bearer ${session?.token}`,
-    "Content-Type":   "application/json",
-  };
-
+const OnboardingTab = ({ account, call, toast }) => {
   const [plan,     setPlan]     = useState(null);
   const [tasks,    setTasks]    = useState([]);
   const [needs,    setNeeds]    = useState([]);
   const [loading,  setLoading]  = useState(true);
-  const [showHO,   setShowHO]   = useState(false);  // handover card expanded
+  const [showHO,   setShowHO]   = useState(false);
   const [hoDraft,  setHoDraft]  = useState({});
   const [editHO,   setEditHO]   = useState(false);
   const [taskForm, setTaskForm] = useState({show:false, owner:"csm", title:"", due_date:""});
   const [needForm, setNeedForm] = useState({show:false, category:"business", description:"", priority:"medium"});
 
   const fetchAll = useCallback(async () => {
-    if (!API || !session?.token) return;
-    const r = await fetch(`${API}/api/onboarding/account/${account.id}`, { headers });
-    if (r.ok) {
-      const d = await r.json();
+    try {
+      const d = await call("GET", `/api/onboarding/account/${account.id}`);
       setPlan(d.plan);
       setTasks(d.tasks || []);
       setNeeds(d.needs || []);
       if (d.plan) setHoDraft(d.plan.handover_data || {});
-    }
-    setLoading(false);
-  }, [API, session?.token, account.id]);
+    } catch {} finally { setLoading(false); }
+  }, [call, account.id]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
   const activatePlan = async () => {
-    const r = await fetch(`${API}/api/onboarding/plan`, {
-      method: "POST", headers,
-      body: JSON.stringify({ account_id: account.id }),
-    });
-    if (r.ok) { toast?.("Onboarding plan created", "success"); fetchAll(); }
-    else toast?.("Failed to create plan", "error");
+    try {
+      await call("POST", "/api/onboarding/plan", { account_id: account.id });
+      toast?.("Onboarding plan created", "success"); fetchAll();
+    } catch { toast?.("Failed to create plan", "error"); }
   };
 
   const closePlan = async () => {
     if (!window.confirm("Close this onboarding plan? It will be archived but kept as a reference.")) return;
-    await fetch(`${API}/api/onboarding/plan/${plan.id}`, {
-      method: "PATCH", headers, body: JSON.stringify({ status: "closed" }),
-    });
+    try { await call("PATCH", `/api/onboarding/plan/${plan.id}`, { status: "closed" }); } catch {}
     toast?.("Plan closed", "info"); fetchAll();
   };
 
   const saveHandover = async () => {
-    await fetch(`${API}/api/onboarding/plan/${plan.id}`, {
-      method: "PATCH", headers, body: JSON.stringify({ handover_data: hoDraft }),
-    });
+    try { await call("PATCH", `/api/onboarding/plan/${plan.id}`, { handover_data: hoDraft }); } catch {}
     setPlan(p => ({ ...p, handover_data: hoDraft }));
     setEditHO(false); toast?.("Handover saved", "success");
   };
@@ -5886,10 +5873,7 @@ const OnboardingTab = ({ account, session, toast }) => {
     const next   = nextPhaseKey(phaseKey, phases);
     const body   = { phases, ...(next ? { current_phase: next } : {}) };
     if (!next) body.go_live_actual = phaseKey === "go_live" ? today : plan.go_live_actual;
-    const r = await fetch(`${API}/api/onboarding/plan/${plan.id}`, {
-      method: "PATCH", headers, body: JSON.stringify(body),
-    });
-    if (r.ok) { const d = await r.json(); setPlan(d); }
+    try { const d = await call("PATCH", `/api/onboarding/plan/${plan.id}`, body); setPlan(d); } catch {}
   };
 
   const togglePhaseNA = async phaseKey => {
@@ -5900,55 +5884,48 @@ const OnboardingTab = ({ account, session, toast }) => {
     if (nowNA && current === phaseKey) {
       current = nextPhaseKey(phaseKey, phases) || plan.current_phase;
     }
-    const r = await fetch(`${API}/api/onboarding/plan/${plan.id}`, {
-      method: "PATCH", headers, body: JSON.stringify({ phases, current_phase: current }),
-    });
-    if (r.ok) { const d = await r.json(); setPlan(d); }
+    try { const d = await call("PATCH", `/api/onboarding/plan/${plan.id}`, { phases, current_phase: current }); setPlan(d); } catch {}
   };
 
   const cycleTaskStatus = async task => {
-    const idx    = TASK_STATUSES.indexOf(task.status);
-    const next   = TASK_STATUSES[(idx + 1) % TASK_STATUSES.length];
-    const r = await fetch(`${API}/api/onboarding/tasks/${task.id}`, {
-      method: "PATCH", headers, body: JSON.stringify({ status: next }),
-    });
-    if (r.ok) setTasks(ts => ts.map(t => t.id === task.id ? { ...t, status: next } : t));
+    const idx  = TASK_STATUSES.indexOf(task.status);
+    const next = TASK_STATUSES[(idx + 1) % TASK_STATUSES.length];
+    try {
+      await call("PATCH", `/api/onboarding/tasks/${task.id}`, { status: next });
+      setTasks(ts => ts.map(t => t.id === task.id ? { ...t, status: next } : t));
+    } catch {}
   };
 
   const addTask = async () => {
     if (!taskForm.title.trim()) return;
-    const r = await fetch(`${API}/api/onboarding/tasks`, {
-      method: "POST", headers,
-      body: JSON.stringify({ plan_id: plan.id, account_id: account.id, title: taskForm.title, owner: taskForm.owner, due_date: taskForm.due_date || null }),
-    });
-    if (r.ok) { const d = await r.json(); setTasks(ts => [...ts, d]); setTaskForm(f => ({...f, show:false, title:"", due_date:""})); toast?.("Task added","success"); }
+    try {
+      const d = await call("POST", "/api/onboarding/tasks", { plan_id: plan.id, account_id: account.id, title: taskForm.title, owner: taskForm.owner, due_date: taskForm.due_date || null });
+      setTasks(ts => [...ts, d]); setTaskForm(f => ({...f, show:false, title:"", due_date:""})); toast?.("Task added","success");
+    } catch { toast?.("Failed to add task","error"); }
   };
 
   const deleteTask = async id => {
-    await fetch(`${API}/api/onboarding/tasks/${id}`, { method:"DELETE", headers });
+    try { await call("DELETE", `/api/onboarding/tasks/${id}`); } catch {}
     setTasks(ts => ts.filter(t => t.id !== id));
   };
 
   const addNeed = async () => {
     if (!needForm.description.trim()) return;
-    const r = await fetch(`${API}/api/onboarding/needs`, {
-      method: "POST", headers,
-      body: JSON.stringify({ account_id: account.id, ...needForm }),
-    });
-    if (r.ok) { const d = await r.json(); setNeeds(ns => [d, ...ns]); setNeedForm(f => ({...f, show:false, description:""})); toast?.("Need logged","success"); }
+    try {
+      const d = await call("POST", "/api/onboarding/needs", { account_id: account.id, ...needForm });
+      setNeeds(ns => [d, ...ns]); setNeedForm(f => ({...f, show:false, description:""})); toast?.("Need logged","success");
+    } catch {}
   };
 
   const cycleNeedStatus = async need => {
     const idx  = NEED_STATS.indexOf(need.status);
     const next = NEED_STATS[(idx + 1) % NEED_STATS.length];
-    await fetch(`${API}/api/onboarding/needs/${need.id}`, {
-      method: "PATCH", headers, body: JSON.stringify({ status: next }),
-    });
+    try { await call("PATCH", `/api/onboarding/needs/${need.id}`, { status: next }); } catch {}
     setNeeds(ns => ns.map(n => n.id === need.id ? { ...n, status: next } : n));
   };
 
   const deleteNeed = async id => {
-    await fetch(`${API}/api/onboarding/needs/${id}`, { method:"DELETE", headers });
+    try { await call("DELETE", `/api/onboarding/needs/${id}`); } catch {}
     setNeeds(ns => ns.filter(n => n.id !== id));
   };
 
@@ -6293,22 +6270,15 @@ const OnboardingTab = ({ account, session, toast }) => {
 };
 
 // ─── OnboardingPage (hub) ─────────────────────────────────────────────────────
-const OnboardingPage = ({ session, toast, accounts = [], onAccountClick }) => {
-  const API     = import.meta.env.VITE_API_URL;
-  const headers = {
-    "x-pulse-secret": import.meta.env.VITE_API_SECRET,
-    "Authorization":  `Bearer ${session?.token}`,
-  };
-
+const OnboardingPage = ({ call, toast, accounts = [], onAccountClick }) => {
   const [plans,   setPlans]   = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!API || !session?.token) return;
-    fetch(`${API}/api/onboarding/all`, { headers })
-      .then(r => r.json()).then(d => { setPlans(Array.isArray(d) ? d : []); setLoading(false); })
+    call("GET", "/api/onboarding/all")
+      .then(d => { setPlans(Array.isArray(d) ? d : []); setLoading(false); })
       .catch(() => setLoading(false));
-  }, [API, session?.token]);
+  }, [call]);
 
   const PHASE_COLOR = {
     handover:"var(--text3)", kickoff:"var(--sky)", configuration:"var(--indigo)",
@@ -6448,14 +6418,7 @@ function timeAgo(iso) {
   return `${Math.floor(s/86400)}d ago`;
 }
 
-const AutomationPage = ({ session, toast, accounts = [] }) => {
-  const API = import.meta.env.VITE_API_URL;
-  const headers = {
-    "x-pulse-secret": import.meta.env.VITE_API_SECRET,
-    "Authorization": `Bearer ${session?.token}`,
-    "Content-Type": "application/json",
-  };
-
+const AutomationPage = ({ call, toast, accounts = [] }) => {
   const [rules,    setRules]    = useState([]);
   const [log,      setLog]      = useState([]);
   const [loading,  setLoading]  = useState(true);
@@ -6476,15 +6439,15 @@ const AutomationPage = ({ session, toast, accounts = [] }) => {
   const [form, setForm] = useState(blankForm());
 
   const fetchAll = useCallback(async () => {
-    if (!API || !session?.token) return;
-    const [r1, r2] = await Promise.all([
-      fetch(`${API}/api/automation/rules`, { headers }),
-      fetch(`${API}/api/automation/log`,   { headers }),
-    ]);
-    if (r1.ok) setRules(await r1.json());
-    if (r2.ok) setLog(await r2.json());
-    setLoading(false);
-  }, [API, session?.token]);
+    try {
+      const [rules, log] = await Promise.all([
+        call("GET", "/api/automation/rules"),
+        call("GET", "/api/automation/log"),
+      ]);
+      setRules(rules || []);
+      setLog(log || []);
+    } catch {} finally { setLoading(false); }
+  }, [call]);
 
   useEffect(() => { fetchAll(); }, [fetchAll]);
 
@@ -6551,26 +6514,24 @@ const AutomationPage = ({ session, toast, accounts = [] }) => {
     }
 
     const body = { name: form.name.trim(), trigger_type: form.trigger_type, trigger_config, action_type: form.action_type, action_config, account_id, segment_config };
-    const url    = editing ? `${API}/api/automation/rules/${editing.id}` : `${API}/api/automation/rules`;
+    const path   = editing ? `/api/automation/rules/${editing.id}` : `/api/automation/rules`;
     const method = editing ? "PATCH" : "POST";
-    const res = await fetch(url, { method, headers, body: JSON.stringify(body) });
-    if (!res.ok) { toast?.("Failed to save rule", "error"); return; }
-    toast?.(editing ? "Rule updated" : "Rule created", "success");
-    setShowForm(false);
-    fetchAll();
+    try {
+      await call(method, path, body);
+      toast?.(editing ? "Rule updated" : "Rule created", "success");
+      setShowForm(false);
+      fetchAll();
+    } catch { toast?.("Failed to save rule", "error"); }
   };
 
   const deleteRule = async id => {
     if (!window.confirm("Delete this rule?")) return;
-    await fetch(`${API}/api/automation/rules/${id}`, { method: "DELETE", headers });
+    try { await call("DELETE", `/api/automation/rules/${id}`); } catch {}
     fetchAll();
   };
 
   const toggleRule = async rule => {
-    await fetch(`${API}/api/automation/rules/${rule.id}`, {
-      method: "PATCH", headers,
-      body: JSON.stringify({ enabled: !rule.enabled }),
-    });
+    try { await call("PATCH", `/api/automation/rules/${rule.id}`, { enabled: !rule.enabled }); } catch {}
     fetchAll();
   };
 
@@ -6858,10 +6819,37 @@ export default function App() {
     try { const s=localStorage.getItem("pulse_tasks_v1"); return s?JSON.parse(s):[]; } catch { return []; }
   });
 
-  // ── API call helper ──────────────────────────────────────────────────────────
+  // ── API call helper with auto token refresh ───────────────────────────────────
   const call = useCallback(async (method, path, body) => {
-    const token = session?.token;
-    return api(method, path, body, token);
+    let s = session;
+    // Proactively refresh if the token expires within the next 60 seconds
+    if (s?.expiresAt && s?.refreshToken && s.expiresAt * 1000 - Date.now() < 60_000) {
+      try {
+        const refreshed = await api("POST", "/auth/refresh", { refreshToken: s.refreshToken });
+        s = { ...s, ...refreshed };
+        saveSession(s); setSession(s);
+      } catch {
+        clearSession(); setSession(null);
+        throw new Error("Session expired — please log in again");
+      }
+    }
+    try {
+      return await api(method, path, body, s?.token);
+    } catch (err) {
+      // On 401, try a single refresh and retry — catches tokens that expired mid-session
+      if (err.status === 401 && s?.refreshToken) {
+        try {
+          const refreshed = await api("POST", "/auth/refresh", { refreshToken: s.refreshToken });
+          const ns = { ...s, ...refreshed };
+          saveSession(ns); setSession(ns);
+          return await api(method, path, body, ns.token);
+        } catch {
+          clearSession(); setSession(null);
+          throw new Error("Session expired — please log in again");
+        }
+      }
+      throw err;
+    }
   }, [session]);
 
   // ── Load accounts on mount / session change ──────────────────────────────────
@@ -7229,12 +7217,12 @@ export default function App() {
 
           {/* ── AUTOMATION VIEW ── */}
           {view==="automation"&&(
-            <AutomationPage session={session} toast={toast} accounts={active}/>
+            <AutomationPage call={call} toast={toast} accounts={active}/>
           )}
 
           {/* ── ONBOARDING VIEW ── */}
           {view==="onboarding"&&(
-            <OnboardingPage session={session} toast={toast} accounts={active}
+            <OnboardingPage call={call} toast={toast} accounts={active}
               onAccountClick={a=>{setSelected(a);setDetailTab("onboarding");}}/>
           )}
 
@@ -7396,7 +7384,7 @@ export default function App() {
               backdropFilter:"blur(1px)"}}/>
         )}
 
-        {selected&&<Detail key={selected.id} account={selected} session={session}
+        {selected&&<Detail key={selected.id} account={selected} call={call}
           initialTab={detailTab}
           onClose={()=>{setSelected(null);setDetailTab("overview");}}
           onUpdate={update} onDelete={del} toast={toast}
