@@ -420,6 +420,13 @@ const fmtMoney = n => n>=1000?`$${(n/1000).toFixed(0)}k`:`$${n}`;
 const ago      = d => Math.floor((new Date()-new Date(d))/86400000);
 const until    = d => Math.ceil((new Date(d)-new Date())/86400000);
 const todayStr = () => new Date().toISOString().split("T")[0];
+const shapeTask = (t, accounts=[]) => ({
+  id: t.id, type:"manual", auto:false, done:t.done,
+  accountId: t.accountId||null,
+  accountName: accounts.find(a=>a.id===t.accountId)?.name || "",
+  title: t.title, description: t.description||"",
+  priority: t.priority||"High", dueDate: t.dueDate||null,
+});
 const sentIcon = s => s==="Positive"?"↑":s==="Negative"?"↓":"→";
 const initials = name => name.split(" ").map(w=>w[0]).join("").slice(0,2).toUpperCase();
 const hue      = name => { let h=0; for(let c of name) h=(h*31+c.charCodeAt(0))%360; return h; };
@@ -7199,6 +7206,356 @@ const AutomationPage = ({ call, toast, accounts = [] }) => {
   );
 };
 
+// ─── Briefing Settings ────────────────────────────────────────────────────────
+const DAYS_OF_WEEK = [{d:0,label:"Sun"},{d:1,label:"Mon"},{d:2,label:"Tue"},
+  {d:3,label:"Wed"},{d:4,label:"Thu"},{d:5,label:"Fri"},{d:6,label:"Sat"}];
+
+const HOURS = Array.from({length:13},(_,i)=>i+6).map(h=>({
+  value:h, label:`${h<=12?h:h-12}:00 ${h<12?"AM":"PM"}`
+}));
+
+const TIMEZONES = [
+  {value:"Asia/Dubai",    label:"Dubai (UTC+4)"},
+  {value:"Asia/Riyadh",  label:"Riyadh (UTC+3)"},
+  {value:"Africa/Cairo", label:"Cairo (UTC+2)"},
+  {value:"Europe/London",label:"London (UTC+0/+1)"},
+  {value:"UTC",          label:"UTC"},
+];
+
+const BriefingSettings = ({ call, toast, hasGmail }) => {
+  const [cfg, setCfg] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    call("GET", "/api/briefing/settings").then(setCfg).catch(()=>{});
+  }, [call]);
+
+  const update = async patch => {
+    const next = { ...cfg, ...patch };
+    setCfg(next);
+    setSaving(true);
+    try { await call("PATCH", "/api/briefing/settings", patch); }
+    catch { toast("Failed to save settings","error"); }
+    finally { setSaving(false); }
+  };
+
+  const toggleDay = d => {
+    const days = cfg.days.includes(d) ? cfg.days.filter(x=>x!==d) : [...cfg.days, d];
+    update({ days });
+  };
+
+  if (!cfg) return <div style={{fontSize:13,color:"var(--text3)"}}>Loading…</div>;
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:20,maxWidth:480}}>
+      {/* Master toggle */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+        background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"16px 20px"}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:14}}>Daily Briefing</div>
+          <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>Get a personalised summary of your portfolio every morning</div>
+        </div>
+        <button onClick={()=>update({enabled:!cfg.enabled})}
+          style={{width:44,height:24,borderRadius:12,border:"none",cursor:"pointer",
+            background:cfg.enabled?"var(--indigo)":"var(--border2)",
+            position:"relative",transition:"background .2s",flexShrink:0}}>
+          <span style={{position:"absolute",top:3,left:cfg.enabled?22:3,width:18,height:18,
+            borderRadius:"50%",background:"white",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+        </button>
+      </div>
+
+      {cfg.enabled && (<>
+        {/* Days */}
+        <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"16px 20px"}}>
+          <div style={{fontSize:12,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:12}}>Workdays</div>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {DAYS_OF_WEEK.map(({d,label})=>{
+              const on = cfg.days.includes(d);
+              return (
+                <button key={d} onClick={()=>toggleDay(d)}
+                  style={{padding:"7px 14px",borderRadius:99,fontSize:12,fontWeight:600,cursor:"pointer",border:"1.5px solid",
+                    borderColor:on?"var(--indigo)":"var(--border)",
+                    background:on?"var(--indigo-dim)":"var(--bg3)",
+                    color:on?"var(--indigo)":"var(--text2)",transition:"all .15s"}}>
+                  {label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Time + Timezone */}
+        <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"16px 20px"}}>
+          <div style={{fontSize:12,fontWeight:700,color:"var(--text2)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:12}}>Delivery Time</div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+            <Fld label="Time">
+              <Slct value={cfg.hour} onChange={e=>update({hour:parseInt(e.target.value)})}>
+                {HOURS.map(h=><option key={h.value} value={h.value}>{h.label}</option>)}
+              </Slct>
+            </Fld>
+            <Fld label="Timezone">
+              <Slct value={cfg.timezone} onChange={e=>update({timezone:e.target.value})}>
+                {TIMEZONES.map(tz=><option key={tz.value} value={tz.value}>{tz.label}</option>)}
+              </Slct>
+            </Fld>
+          </div>
+        </div>
+
+        {/* Email delivery */}
+        <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"16px 20px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <div>
+              <div style={{fontWeight:600,fontSize:13}}>Also send by email</div>
+              <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>
+                {hasGmail ? "Deliver to your connected Gmail inbox" : "Connect Gmail in Integrations to enable"}
+              </div>
+            </div>
+            <button onClick={()=>hasGmail&&update({email_enabled:!cfg.email_enabled})}
+              style={{width:44,height:24,borderRadius:12,border:"none",
+                cursor:hasGmail?"pointer":"not-allowed",
+                background:cfg.email_enabled&&hasGmail?"var(--indigo)":"var(--border2)",
+                position:"relative",transition:"background .2s",flexShrink:0,opacity:hasGmail?1:0.5}}>
+              <span style={{position:"absolute",top:3,left:cfg.email_enabled&&hasGmail?22:3,width:18,height:18,
+                borderRadius:"50%",background:"white",transition:"left .2s",boxShadow:"0 1px 3px rgba(0,0,0,.2)"}}/>
+            </button>
+          </div>
+        </div>
+      </>)}
+
+      {saving && <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Saving…</div>}
+    </div>
+  );
+};
+
+// ─── Briefing Page ────────────────────────────────────────────────────────────
+const SIGNAL_LABELS = {
+  renewal_critical:      "Renewal Critical",
+  renewal_warning:       "Renewal Warning",
+  churn_risk_critical:   "Churn Risk",
+  health_critical:       "Health Critical",
+  health_warning:        "Health Warning",
+  no_contact_critical:   "No Contact",
+  no_contact_warning:    "No Contact",
+  low_nps:               "Low NPS",
+  task_overdue:          "Task Overdue",
+  task_due_today:        "Due Today",
+  activity_logged:       "Activity",
+  survey_positive:       "Survey Win",
+  milestone_completed:   "Milestone",
+  onboarding_phase_completed: "Onboarding",
+};
+
+const BriefingPage = ({ call, toast, onAccountClick }) => {
+  const [items,   setItems]   = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = useCallback(() => {
+    setLoading(true);
+    call("GET", "/api/briefing/today")
+      .then(data => { setItems(Array.isArray(data) ? data : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [call]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const updateItem = async (id, status, snoozeDays) => {
+    setItems(p => p.map(i => i.id===id ? {...i, status} : i)); // optimistic
+    try {
+      await call("PATCH", `/api/briefing/items/${id}`, { status, snoozeDays });
+    } catch {
+      toast("Failed to update item","error");
+      load(); // revert
+    }
+  };
+
+  if (loading) return (
+    <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:320,flexDirection:"column",gap:14}}>
+      <div style={{width:28,height:28,border:"3px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+      <div style={{fontSize:13,color:"var(--text3)"}}>Generating your briefing…</div>
+    </div>
+  );
+
+  const today = new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+
+  const actionItems  = (items||[]).filter(i=>i.category==="action" && i.status==="pending")
+    .sort((a,b)=>b.currentScore-a.currentScore);
+  const overdueItems = (items||[]).filter(i=>i.category==="task" && i.signalType==="task_overdue" && i.status==="pending");
+  const dueTodayItems= (items||[]).filter(i=>i.category==="task" && i.signalType==="task_due_today" && i.status==="pending");
+  const wins         = (items||[]).filter(i=>i.category==="win");
+  const doneItems    = (items||[]).filter(i=>i.status==="done");
+
+  const allClear = actionItems.length===0 && overdueItems.length===0 && dueTodayItems.length===0;
+
+  // Deduplicate: top signal per account
+  const seenAccounts = new Set();
+  const topItems = [];
+  for (const item of actionItems) {
+    if (!item.accountId || !seenAccounts.has(item.accountId)) {
+      if (item.accountId) seenAccounts.add(item.accountId);
+      topItems.push(item);
+    }
+  }
+
+  const urgColor = s => s>=12?"var(--rose)":s>=8?"var(--amber)":"var(--indigo)";
+
+  const ActionCard = ({item}) => (
+    <div style={{background:"var(--bg2)",border:`1.5px solid ${urgColor(item.currentScore)}33`,
+      borderLeft:`3px solid ${urgColor(item.currentScore)}`,
+      borderRadius:"var(--r)",padding:"14px 16px",marginBottom:8}}>
+      <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+            {item.accountId && (
+              <button onClick={()=>onAccountClick&&onAccountClick(item.accountId)}
+                style={{fontWeight:700,fontSize:14,background:"none",border:"none",
+                  color:"var(--text)",cursor:"pointer",padding:0,textAlign:"left"}}>
+                {item.accountId ? item.accountId : "—"}
+              </button>
+            )}
+            {item.carryDays===0
+              ? <span style={{fontSize:11,background:"var(--indigo-dim)",color:"var(--indigo)",padding:"2px 8px",borderRadius:99,fontWeight:600}}>NEW</span>
+              : <span style={{fontSize:11,background:"var(--amber-dim)",color:"var(--amber)",padding:"2px 8px",borderRadius:99,fontWeight:600}}>{item.carryDays}d carrying</span>
+            }
+            <span style={{marginLeft:"auto",fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text3)",fontWeight:600}}>{Math.round(item.currentScore)}pts</span>
+          </div>
+          <div style={{fontSize:13,color:"var(--text2)"}}>{item.signalDetail}</div>
+        </div>
+        <ItemActions item={item} onUpdate={updateItem}/>
+      </div>
+    </div>
+  );
+
+  const TaskRow = ({item, isOverdue}) => (
+    <div style={{background:"var(--bg2)",border:`1.5px solid ${isOverdue?"var(--rose)":"var(--indigo)"}22`,
+      borderLeft:`3px solid ${isOverdue?"var(--rose)":"var(--indigo)"}`,
+      borderRadius:"var(--r)",padding:"10px 14px",marginBottom:6,
+      display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
+      <div style={{flex:1,minWidth:0}}>
+        <span style={{fontSize:13,color:"var(--text2)"}}>{item.signalDetail}</span>
+        {isOverdue && <span style={{fontSize:11,color:"var(--rose)",fontWeight:600,marginLeft:8}}>OVERDUE</span>}
+      </div>
+      <ItemActions item={item} onUpdate={updateItem}/>
+    </div>
+  );
+
+  return (
+    <div style={{maxWidth:720}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+        <div>
+          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Daily Briefing</h1>
+          <div style={{fontSize:13,color:"var(--text3)"}}>{today}</div>
+        </div>
+        <button onClick={load} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+          borderRadius:"var(--r)",padding:"8px 16px",fontSize:12,fontWeight:600,
+          color:"var(--text2)",cursor:"pointer"}}>Refresh</button>
+      </div>
+
+      {allClear && wins.length===0 && (
+        <div style={{background:"var(--emerald-dim)",border:"1.5px solid rgba(5,150,105,0.2)",
+          borderRadius:"var(--r-lg)",padding:"28px",textAlign:"center",marginBottom:24}}>
+          <div style={{fontSize:28,marginBottom:10}}>✅</div>
+          <div style={{fontWeight:700,fontSize:15,color:"var(--emerald)",marginBottom:4}}>Portfolio is healthy</div>
+          <div style={{fontSize:13,color:"var(--text2)"}}>No urgent signals today. Great work.</div>
+        </div>
+      )}
+
+      {topItems.length>0&&(
+        <Section title={`${topItems.length} account${topItems.length>1?"s":""} need${topItems.length===1?"s":""} attention`}>
+          {topItems.map(i=><ActionCard key={i.id} item={i}/>)}
+        </Section>
+      )}
+
+      {overdueItems.length>0&&(
+        <Section title={`Overdue tasks (${overdueItems.length})`}>
+          {overdueItems.map(i=><TaskRow key={i.id} item={i} isOverdue={true}/>)}
+        </Section>
+      )}
+
+      {dueTodayItems.length>0&&(
+        <Section title={`Due today (${dueTodayItems.length})`}>
+          {dueTodayItems.map(i=><TaskRow key={i.id} item={i} isOverdue={false}/>)}
+        </Section>
+      )}
+
+      {wins.length>0&&(
+        <Section title="Wins">
+          {wins.map(i=>(
+            <div key={i.id} style={{display:"flex",alignItems:"center",gap:8,
+              fontSize:13,color:"var(--emerald)",padding:"6px 0",borderBottom:"1px solid var(--border)"}}>
+              <span>✓</span><span>{i.signalDetail}</span>
+            </div>
+          ))}
+        </Section>
+      )}
+
+      {doneItems.length>0&&(
+        <Section title={`Completed today (${doneItems.length})`}>
+          {doneItems.map(i=>(
+            <div key={i.id} style={{display:"flex",alignItems:"center",gap:8,
+              fontSize:13,color:"var(--text3)",padding:"6px 0",textDecoration:"line-through",
+              borderBottom:"1px solid var(--border)"}}>
+              <span style={{fontSize:10,fontFamily:"var(--font-mono)",
+                background:"var(--bg3)",padding:"1px 6px",borderRadius:4,textDecoration:"none",
+                color:"var(--text3)"}}>
+                {SIGNAL_LABELS[i.signalType]||i.signalType}
+              </span>
+              {i.signalDetail}
+            </div>
+          ))}
+        </Section>
+      )}
+    </div>
+  );
+};
+
+const Section = ({title, children}) => (
+  <div style={{marginBottom:24}}>
+    <div style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".09em",
+      color:"var(--text3)",borderBottom:"1.5px solid var(--border)",paddingBottom:8,marginBottom:12}}>
+      {title}
+    </div>
+    {children}
+  </div>
+);
+
+const ItemActions = ({item, onUpdate}) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div style={{display:"flex",gap:6,flexShrink:0,alignItems:"center",position:"relative"}}>
+      <button onClick={()=>onUpdate(item.id,"done")}
+        style={{background:"var(--emerald-dim)",border:"none",color:"var(--emerald)",
+          cursor:"pointer",padding:"5px 10px",borderRadius:"var(--r-sm)",fontSize:11,fontWeight:600}}>
+        Done
+      </button>
+      <button onClick={()=>setOpen(p=>!p)}
+        style={{background:"var(--bg3)",border:"none",color:"var(--text2)",
+          cursor:"pointer",padding:"5px 10px",borderRadius:"var(--r-sm)",fontSize:11,fontWeight:600}}>
+        ···
+      </button>
+      {open&&(
+        <div style={{position:"absolute",top:"100%",right:0,marginTop:4,background:"var(--bg2)",
+          border:"1.5px solid var(--border)",borderRadius:"var(--r)",boxShadow:"var(--shadow)",
+          zIndex:50,minWidth:140}}>
+          {[{label:"Snooze 3 days",days:3},{label:"Snooze 7 days",days:7}].map(({label,days})=>(
+            <button key={days} onClick={()=>{onUpdate(item.id,"snoozed",days);setOpen(false);}}
+              style={{display:"block",width:"100%",background:"none",border:"none",
+                padding:"9px 14px",fontSize:12,color:"var(--text2)",cursor:"pointer",textAlign:"left",
+                fontFamily:"var(--font-display)"}}>
+              {label}
+            </button>
+          ))}
+          <button onClick={()=>{onUpdate(item.id,"dismissed");setOpen(false);}}
+            style={{display:"block",width:"100%",background:"none",border:"none",
+              padding:"9px 14px",fontSize:12,color:"var(--rose)",cursor:"pointer",textAlign:"left",
+              fontFamily:"var(--font-display)"}}>
+            Dismiss
+          </button>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function App() {
   const [session,      setSession]      = useState(loadSession);
   const [accounts,     setAccounts]     = useState([]);
@@ -7215,9 +7572,7 @@ export default function App() {
   const [search,       setSearch]       = useState("");
   const [sortBy,       setSortBy]       = useState("churnRisk");
   const [toasts,       setToasts]       = useState([]);
-  const [manualTasks,  setManualTasks]  = useState(()=>{
-    try { const s=localStorage.getItem("pulse_tasks_v1"); return s?JSON.parse(s):[]; } catch { return []; }
-  });
+  const [manualTasks,  setManualTasks]  = useState([]);
 
   // ── API call helper with auto token refresh ───────────────────────────────────
   const call = useCallback(async (method, path, body) => {
@@ -7281,9 +7636,13 @@ export default function App() {
   // ── Persist to localStorage whenever accounts change (offline cache) ─────────
   useEffect(() => { if (apiReady) save(accounts); }, [accounts, apiReady]);
 
+  // ── Load tasks from API ───────────────────────────────────────────────────────
   useEffect(() => {
-    try { localStorage.setItem("pulse_tasks_v1", JSON.stringify(manualTasks)); } catch {}
-  }, [manualTasks]);
+    if (!API_URL || !session?.token) return;
+    call("GET", "/api/tasks").then(data => {
+      if (Array.isArray(data)) setManualTasks(data.map(t => shapeTask(t, accounts)));
+    }).catch(() => {});
+  }, [session, call]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const h = e => { if (e.key==="Escape"&&selected&&!showAdd&&!showBulk) setSelected(null); };
@@ -7291,9 +7650,34 @@ export default function App() {
     return () => window.removeEventListener("keydown", h);
   }, [selected, showAdd, showBulk]);
 
-  const addManualTask    = task => setManualTasks(p=>[...p,task]);
-  const toggleManualTask = id   => setManualTasks(p=>p.map(t=>t.id===id?{...t,done:!t.done}:t));
-  const deleteManualTask = id   => setManualTasks(p=>p.filter(t=>t.id!==id));
+  const addManualTask = async task => {
+    if (!API_URL) { setManualTasks(p=>[...p,task]); return; }
+    try {
+      const created = await call("POST", "/api/tasks", {
+        title: task.title, description: task.description,
+        priority: task.priority, dueDate: task.dueDate, accountId: task.accountId,
+      });
+      setManualTasks(p=>[...p, shapeTask(created, accounts)]);
+    } catch { toast("Failed to save task","error"); }
+  };
+
+  const toggleManualTask = async id => {
+    const task = manualTasks.find(t=>t.id===id);
+    if (!task) return;
+    setManualTasks(p=>p.map(t=>t.id===id?{...t,done:!t.done}:t)); // optimistic
+    if (API_URL) {
+      try { await call("PATCH", `/api/tasks/${id}`, { done: !task.done }); }
+      catch { setManualTasks(p=>p.map(t=>t.id===id?{...t,done:task.done}:t)); } // revert
+    }
+  };
+
+  const deleteManualTask = async id => {
+    setManualTasks(p=>p.filter(t=>t.id!==id)); // optimistic
+    if (API_URL) {
+      try { await call("DELETE", `/api/tasks/${id}`); }
+      catch { toast("Failed to delete task","error"); }
+    }
+  };
 
   const toast = useCallback((message, type="success") => {
     const id = Date.now();
@@ -7445,9 +7829,10 @@ export default function App() {
   const planCounts  = Object.fromEntries(["All","Starter","Growth","Enterprise"].map(p=>[p,p==="All"?active.length:active.filter(a=>a.plan===p).length]));
 
   // Badge counts
-  const playbookAlerts = active.filter(a=>getTriggeredPlaybooks(a).length>0&&!a.activePlaybookId).length;
-  const allAutoTasks   = generateAutoTasks(active);
-  const taskAlerts     = [...allAutoTasks,...manualTasks].filter(t=>!t.done&&t.dueDate<=todayStr()).length;
+  const playbookAlerts  = active.filter(a=>getTriggeredPlaybooks(a).length>0&&!a.activePlaybookId).length;
+  const allAutoTasks    = generateAutoTasks(active);
+  const taskAlerts      = [...allAutoTasks,...manualTasks].filter(t=>!t.done&&t.dueDate<=todayStr()).length;
+  const briefingAlerts  = 0; // populated after BriefingPage loads its own data
 
   const filtered = active
     .filter(a=>filter==="All"||a.stage===filter)
@@ -7492,7 +7877,7 @@ export default function App() {
     { id:"settings",    icon:"shield",      label:"Email Settings", active:true },
     { id:"automation",  icon:"automation",   label:"Automation",      active:true },
     { id:"onboarding",  icon:"onboarding",   label:"Onboarding",      active:true },
-    { id:"briefing",    icon:"briefing",     label:"Daily Briefing",  active:false, tip:"Phase 4" },
+    { id:"briefing",    icon:"briefing",     label:"Daily Briefing",  active:true  },
   ];
 
   return (
@@ -7586,7 +7971,15 @@ export default function App() {
           )}
 
           {/* ── INTEGRATIONS VIEW ── */}
-          {view==="settings"&&(<EmailSettingsPage session={session} />)}
+          {view==="settings"&&(
+            <div style={{maxWidth:600}}>
+              <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:28}}>Settings</h1>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Email</div>
+              <EmailSettingsPage session={session}/>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Daily Briefing</div>
+              <BriefingSettings call={call} toast={toast} hasGmail={!!session}/>
+            </div>
+          )}
           {view==="integrations"&&(
             <IntegrationsPage onImport={bulkImport} toast={toast}/>
           )}
@@ -7625,6 +8018,12 @@ export default function App() {
           {view==="onboarding"&&(
             <OnboardingPage call={call} toast={toast} accounts={active}
               onAccountClick={a=>{setSelected(a);setDetailTab("onboarding");}}/>
+          )}
+
+          {/* ── BRIEFING VIEW ── */}
+          {view==="briefing"&&(
+            <BriefingPage call={call} toast={toast}
+              onAccountClick={id=>{const a=active.find(x=>x.id===id);if(a){setSelected(a);setView("portfolio");}}}/>
           )}
 
           {/* ── PORTFOLIO VIEW ── */}
