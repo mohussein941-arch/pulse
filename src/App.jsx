@@ -5765,28 +5765,57 @@ popup.location.href = url;
 };
 // ─── AutomationPage ───────────────────────────────────────────────────────────
 const TRIGGER_OPTS = [
-  { value:"health_below",    label:"Health score drops below",  unit:"(0–100)",  field:"threshold", def:40 },
-  { value:"no_contact_days", label:"No contact for more than",  unit:"days",     field:"days",      def:14 },
-  { value:"renewal_days",    label:"Renewal approaching within",unit:"days",     field:"days",      def:30 },
-  { value:"nps_below",       label:"NPS drops below",           unit:"(0–100)",  field:"threshold", def:50 },
-  { value:"ces_below",       label:"CES drops below",           unit:"(1–5)",    field:"threshold", def:3  },
-  { value:"usage_below",     label:"Usage drops below",         unit:"%",        field:"threshold", def:40 },
+  { value:"health_below",      label:"Health score drops below",  unit:"(0–100)",    field:"threshold", def:40    },
+  { value:"no_contact_days",   label:"No contact for more than",  unit:"days",       field:"days",      def:14    },
+  { value:"renewal_days",      label:"Renewal approaching within",unit:"days",       field:"days",      def:30    },
+  { value:"renewal_overdue",   label:"Renewal date has passed",   unit:"",           field:null,        def:null  },
+  { value:"nps_below",         label:"NPS drops below",           unit:"(0–100)",    field:"threshold", def:50    },
+  { value:"ces_below",         label:"CES drops below",           unit:"(1–5)",      field:"threshold", def:3     },
+  { value:"usage_below",       label:"Usage drops below",         unit:"%",          field:"threshold", def:40    },
+  { value:"open_tickets_above",label:"Open tickets above",        unit:"tickets",    field:"threshold", def:5     },
+  { value:"churn_risk_above",  label:"Churn risk above",          unit:"%",          field:"threshold", def:60    },
+  { value:"arr_above",         label:"Account ARR above",         unit:"(USD)",      field:"amount",    def:10000 },
+  { value:"account_age_days",  label:"Account reaches",           unit:"days old",   field:"days",      def:30    },
+  { value:"survey_low_score",  label:"Survey response below",     unit:"(raw score)",field:"threshold", def:6     },
+];
+const STAGES = ["Healthy","Stable","Needs Attention","At Risk"];
+const PLAYBOOK_OPTS = [
+  { id:"pb-001", name:"New Account Activation"     },
+  { id:"pb-002", name:"Slow Onboarding Recovery"   },
+  { id:"pb-003", name:"Executive Sponsor Introduction"},
+  { id:"pb-004", name:"Early Warning Response"     },
+  { id:"pb-005", name:"Critical Recovery"          },
+  { id:"pb-006", name:"Silent Account Re-engagement"},
+  { id:"pb-007", name:"Renewal Preparation"        },
+  { id:"pb-008", name:"At-Risk Renewal"            },
+  { id:"pb-009", name:"Expansion Signal"           },
+  { id:"pb-010", name:"QBR Preparation & Delivery" },
+  { id:"pb-011", name:"Executive Escalation"       },
+  { id:"pb-012", name:"Champion Succession"        },
 ];
 const ACTION_OPTS = [
-  { value:"log_activity", label:"Log a note on the account",   configLabel:"Note text",  configField:"note",  def:"Attention needed — please review this account." },
-  { value:"create_task",  label:"Create a task on the account",configLabel:"Task title", configField:"title", def:"Follow up with account" },
+  { value:"log_activity",    label:"Log a note on the account",    type:"text",     configField:"note",       def:"Attention needed — please review this account." },
+  { value:"create_task",     label:"Create a task on the account", type:"text",     configField:"title",      def:"Follow up with account" },
+  { value:"activate_playbook",label:"Activate a playbook",         type:"playbook", configField:"playbook_id",def:"" },
+  { value:"update_stage",    label:"Update account stage to",      type:"stage",    configField:"stage",      def:"At Risk" },
+  { value:"email_alert",     label:"Send me an email alert",       type:"email",    configField:"body",       def:"Rule triggered for {account} — health is {health}, NPS is {nps}." },
 ];
 
 function triggerLabel(rule) {
   const opt = TRIGGER_OPTS.find(o => o.value === rule.trigger_type);
   if (!opt) return rule.trigger_type;
+  if (!opt.field) return opt.label;
   const val = rule.trigger_config?.[opt.field] ?? opt.def;
   return `${opt.label} ${val} ${opt.unit}`;
 }
 function actionLabel(rule) {
   const opt = ACTION_OPTS.find(o => o.value === rule.action_type);
   if (!opt) return rule.action_type;
-  const val = rule.action_config?.[opt.configField] ?? "";
+  const cfg = rule.action_config || {};
+  if (opt.type === "playbook") return `${opt.label}: ${cfg.playbook_name || cfg.playbook_id || ""}`;
+  if (opt.type === "stage")    return `${opt.label} "${cfg.stage || ""}"`;
+  if (opt.type === "email")    return `${opt.label}: "${cfg.subject || ""}"`;
+  const val = cfg[opt.configField] || "";
   return `${opt.label}${val ? ` — "${val}"` : ""}`;
 }
 function timeAgo(iso) {
@@ -5813,7 +5842,11 @@ const AutomationPage = ({ session, toast }) => {
 
   const blankForm = () => ({
     name: "", trigger_type: "health_below", trigger_value: 40,
-    action_type: "log_activity", action_text: "Attention needed — please review this account.",
+    action_type: "log_activity",
+    action_text: "Attention needed — please review this account.",
+    action_subject: "Pulse Alert: {account}",
+    action_playbook_id: "pb-001", action_playbook_name: "New Account Activation",
+    action_stage: "At Risk",
   });
   const [form, setForm] = useState(blankForm());
 
@@ -5836,14 +5869,18 @@ const AutomationPage = ({ session, toast }) => {
   const openNew = () => { setEditing(null); setForm(blankForm()); setShowForm(true); };
   const openEdit = rule => {
     const tOpt = TRIGGER_OPTS.find(o => o.value === rule.trigger_type) || TRIGGER_OPTS[0];
-    const aOpt = ACTION_OPTS.find(o => o.value === rule.action_type)   || ACTION_OPTS[0];
+    const cfg  = rule.action_config || {};
     setEditing(rule);
     setForm({
       name: rule.name,
-      trigger_type: rule.trigger_type,
-      trigger_value: rule.trigger_config?.[tOpt.field] ?? tOpt.def,
-      action_type: rule.action_type,
-      action_text: rule.action_config?.[aOpt.configField] ?? aOpt.def,
+      trigger_type:  rule.trigger_type,
+      trigger_value: tOpt.field ? (rule.trigger_config?.[tOpt.field] ?? tOpt.def) : null,
+      action_type:         rule.action_type,
+      action_text:         cfg.note || cfg.title || cfg.body || "",
+      action_subject:      cfg.subject || "Pulse Alert: {account}",
+      action_playbook_id:  cfg.playbook_id   || "pb-001",
+      action_playbook_name:cfg.playbook_name || "New Account Activation",
+      action_stage:        cfg.stage         || "At Risk",
     });
     setShowForm(true);
   };
@@ -5852,13 +5889,18 @@ const AutomationPage = ({ session, toast }) => {
     if (!form.name.trim()) { toast?.("Name is required", "error"); return; }
     const tOpt = TRIGGER_OPTS.find(o => o.value === form.trigger_type);
     const aOpt = ACTION_OPTS.find(o => o.value === form.action_type);
-    const body = {
-      name: form.name.trim(),
-      trigger_type:   form.trigger_type,
-      trigger_config: { [tOpt.field]: Number(form.trigger_value) },
-      action_type:    form.action_type,
-      action_config:  { [aOpt.configField]: form.action_text },
-    };
+
+    const trigger_config = tOpt.field
+      ? { [tOpt.field]: Number(form.trigger_value) }
+      : {};
+
+    let action_config = {};
+    if (aOpt.type === "text")     action_config = { [aOpt.configField]: form.action_text };
+    if (aOpt.type === "playbook") action_config = { playbook_id: form.action_playbook_id, playbook_name: form.action_playbook_name };
+    if (aOpt.type === "stage")    action_config = { stage: form.action_stage };
+    if (aOpt.type === "email")    action_config = { subject: form.action_subject, body: form.action_text };
+
+    const body = { name: form.name.trim(), trigger_type: form.trigger_type, trigger_config, action_type: form.action_type, action_config };
     const url    = editing ? `${API}/api/automation/rules/${editing.id}` : `${API}/api/automation/rules`;
     const method = editing ? "PATCH" : "POST";
     const res = await fetch(url, { method, headers, body: JSON.stringify(body) });
@@ -6018,12 +6060,14 @@ const AutomationPage = ({ session, toast }) => {
                   const opt = TRIGGER_OPTS.find(o => o.value === e.target.value);
                   setForm(f => ({...f, trigger_type: e.target.value, trigger_value: opt?.def ?? 0}));
                 }}>
-                {TRIGGER_OPTS.map(o => <option key={o.value} value={o.value}>{o.label} … {o.unit}</option>)}
+                {TRIGGER_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}{o.unit ? ` … ${o.unit}` : ""}</option>)}
               </select>
-              <input style={inputStyle} type="number" min="0" max="999"
-                placeholder={`Value ${triggerOpt.unit}`}
-                value={form.trigger_value}
-                onChange={e => setForm(f => ({...f, trigger_value: e.target.value}))}/>
+              {triggerOpt.field && (
+                <input style={inputStyle} type="number" min="0" max="999999"
+                  placeholder={`Value ${triggerOpt.unit}`}
+                  value={form.trigger_value ?? ""}
+                  onChange={e => setForm(f => ({...f, trigger_value: e.target.value}))}/>
+              )}
             </div>
 
             <div style={{marginBottom:24}}>
@@ -6035,12 +6079,41 @@ const AutomationPage = ({ session, toast }) => {
                 }}>
                 {ACTION_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
-              <input style={inputStyle} placeholder={actionOpt.configLabel}
-                value={form.action_text}
-                onChange={e => setForm(f => ({...f, action_text: e.target.value}))}/>
-              <div style={{fontSize:11,color:"var(--text3)",marginTop:5}}>
-                You can use <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;account&#125;</code>, <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;health&#125;</code>, <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;nps&#125;</code> as placeholders.
-              </div>
+
+              {actionOpt.type === "text" && (
+                <input style={inputStyle} placeholder={actionOpt.configField === "note" ? "Note text" : "Task title"}
+                  value={form.action_text}
+                  onChange={e => setForm(f => ({...f, action_text: e.target.value}))}/>
+              )}
+              {actionOpt.type === "playbook" && (
+                <select style={inputStyle} value={form.action_playbook_id}
+                  onChange={e => {
+                    const pb = PLAYBOOK_OPTS.find(p => p.id === e.target.value);
+                    setForm(f => ({...f, action_playbook_id: e.target.value, action_playbook_name: pb?.name || ""}));
+                  }}>
+                  {PLAYBOOK_OPTS.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+              )}
+              {actionOpt.type === "stage" && (
+                <select style={inputStyle} value={form.action_stage}
+                  onChange={e => setForm(f => ({...f, action_stage: e.target.value}))}>
+                  {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+              )}
+              {actionOpt.type === "email" && (<>
+                <input style={{...inputStyle,marginBottom:8}} placeholder="Email subject"
+                  value={form.action_subject}
+                  onChange={e => setForm(f => ({...f, action_subject: e.target.value}))}/>
+                <input style={inputStyle} placeholder="Email body"
+                  value={form.action_text}
+                  onChange={e => setForm(f => ({...f, action_text: e.target.value}))}/>
+              </>)}
+
+              {actionOpt.type !== "playbook" && actionOpt.type !== "stage" && (
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:5}}>
+                  Use <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;account&#125;</code> <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;health&#125;</code> <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;nps&#125;</code> <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;tickets&#125;</code> as placeholders.
+                </div>
+              )}
             </div>
 
             <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
