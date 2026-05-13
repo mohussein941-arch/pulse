@@ -3125,9 +3125,14 @@ const AccountTasksTab = ({ account, accounts, manualTasks, onAddManual, onToggle
           <div key={task.id} style={{background:"var(--bg3)",border:`1.5px solid ${task.priority==="Critical"?"rgba(225,29,72,0.2)":"var(--border)"}`,
             borderRadius:"var(--r)",padding:"12px 14px",marginBottom:8,opacity:task.done?0.55:1}}>
             <div style={{display:"flex",gap:10,alignItems:"flex-start"}}>
-              <input type="checkbox" checked={!!task.done} onChange={()=>isManual?onToggleManual(task.id):null}
-                style={{width:15,height:15,marginTop:2,accentColor:"var(--emerald)",
-                  cursor:isManual?"pointer":"default",flexShrink:0}}/>
+              {isManual
+                ? <input type="checkbox" checked={!!task.done} onChange={()=>onToggleManual(task.id)}
+                    style={{width:15,height:15,marginTop:2,accentColor:"var(--emerald)",cursor:"pointer",flexShrink:0}}/>
+                : <div style={{width:15,height:15,marginTop:2,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>
+                    <div style={{width:7,height:7,borderRadius:"50%",
+                      background:task.priority==="Critical"?"var(--rose)":task.priority==="High"?"var(--amber)":"var(--indigo)"}}/>
+                  </div>
+              }
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontSize:13,fontWeight:600,marginBottom:4,
                   textDecoration:task.done?"line-through":"none",color:task.done?"var(--text3)":"var(--text)"}}>
