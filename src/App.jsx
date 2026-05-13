@@ -5826,7 +5826,7 @@ function timeAgo(iso) {
   return `${Math.floor(s/86400)}d ago`;
 }
 
-const AutomationPage = ({ session, toast }) => {
+const AutomationPage = ({ session, toast, accounts = [] }) => {
   const API = import.meta.env.VITE_API_URL;
   const headers = {
     "x-pulse-secret": import.meta.env.VITE_API_SECRET,
@@ -5847,6 +5847,9 @@ const AutomationPage = ({ session, toast }) => {
     action_subject: "Pulse Alert: {account}",
     action_playbook_id: "pb-001", action_playbook_name: "New Account Activation",
     action_stage: "At Risk",
+    scope: "all",
+    scope_account_id: "", scope_account_name: "",
+    scope_plan: "", scope_stage: "", scope_arr_min: "",
   });
   const [form, setForm] = useState(blankForm());
 
@@ -5870,6 +5873,19 @@ const AutomationPage = ({ session, toast }) => {
   const openEdit = rule => {
     const tOpt = TRIGGER_OPTS.find(o => o.value === rule.trigger_type) || TRIGGER_OPTS[0];
     const cfg  = rule.action_config || {};
+    const seg  = rule.segment_config || {};
+    let scope = "all", scope_account_id = "", scope_account_name = "",
+        scope_plan = "", scope_stage = "", scope_arr_min = "";
+    if (rule.account_id) {
+      scope = "account";
+      scope_account_id   = rule.account_id;
+      scope_account_name = accounts.find(a => a.id === rule.account_id)?.name || "";
+    } else if (seg.plan || seg.stage || seg.arr_min) {
+      scope = "segment";
+      scope_plan    = seg.plan    || "";
+      scope_stage   = seg.stage   || "";
+      scope_arr_min = seg.arr_min || "";
+    }
     setEditing(rule);
     setForm({
       name: rule.name,
@@ -5881,6 +5897,8 @@ const AutomationPage = ({ session, toast }) => {
       action_playbook_id:  cfg.playbook_id   || "pb-001",
       action_playbook_name:cfg.playbook_name || "New Account Activation",
       action_stage:        cfg.stage         || "At Risk",
+      scope, scope_account_id, scope_account_name,
+      scope_plan, scope_stage, scope_arr_min,
     });
     setShowForm(true);
   };
@@ -5900,7 +5918,17 @@ const AutomationPage = ({ session, toast }) => {
     if (aOpt.type === "stage")    action_config = { stage: form.action_stage };
     if (aOpt.type === "email")    action_config = { subject: form.action_subject, body: form.action_text };
 
-    const body = { name: form.name.trim(), trigger_type: form.trigger_type, trigger_config, action_type: form.action_type, action_config };
+    let account_id     = null;
+    let segment_config = {};
+    if (form.scope === "account") {
+      account_id = form.scope_account_id || null;
+    } else if (form.scope === "segment") {
+      if (form.scope_plan)    segment_config.plan    = form.scope_plan;
+      if (form.scope_stage)   segment_config.stage   = form.scope_stage;
+      if (form.scope_arr_min) segment_config.arr_min = Number(form.scope_arr_min);
+    }
+
+    const body = { name: form.name.trim(), trigger_type: form.trigger_type, trigger_config, action_type: form.action_type, action_config, account_id, segment_config };
     const url    = editing ? `${API}/api/automation/rules/${editing.id}` : `${API}/api/automation/rules`;
     const method = editing ? "PATCH" : "POST";
     const res = await fetch(url, { method, headers, body: JSON.stringify(body) });
@@ -5989,6 +6017,16 @@ const AutomationPage = ({ session, toast }) => {
                   <span style={{background:"var(--indigo-dim)",color:"var(--indigo)",padding:"2px 8px",borderRadius:"var(--r-xs)",fontWeight:500}}>
                     Then: {actionLabel(rule)}
                   </span>
+                  {rule.account_id && (
+                    <span style={{background:"var(--violet-dim)",color:"var(--violet)",padding:"2px 8px",borderRadius:"var(--r-xs)",fontWeight:500}}>
+                      {accounts.find(a => a.id === rule.account_id)?.name || "Specific account"} only
+                    </span>
+                  )}
+                  {!rule.account_id && rule.segment_config && Object.values(rule.segment_config).some(Boolean) && (
+                    <span style={{background:"var(--teal-dim)",color:"var(--teal)",padding:"2px 8px",borderRadius:"var(--r-xs)",fontWeight:500}}>
+                      {[rule.segment_config.plan, rule.segment_config.stage, rule.segment_config.arr_min ? `ARR ≥ $${rule.segment_config.arr_min.toLocaleString()}` : null].filter(Boolean).join(" · ")}
+                    </span>
+                  )}
                 </div>
               </div>
 
@@ -6112,6 +6150,47 @@ const AutomationPage = ({ session, toast }) => {
               {actionOpt.type !== "playbook" && actionOpt.type !== "stage" && (
                 <div style={{fontSize:11,color:"var(--text3)",marginTop:5}}>
                   Use <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;account&#125;</code> <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;health&#125;</code> <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;nps&#125;</code> <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;tickets&#125;</code> as placeholders.
+                </div>
+              )}
+            </div>
+
+            <div style={{marginBottom:24}}>
+              <label style={labelStyle}>Apply to</label>
+              <div style={{display:"flex",gap:6,marginBottom:10}}>
+                {["all","account","segment"].map(s => (
+                  <button key={s} onClick={() => setForm(f => ({...f, scope: s}))}
+                    style={{padding:"6px 14px",borderRadius:"var(--r)",border:"1.5px solid",fontSize:12,fontWeight:500,
+                      cursor:"pointer",fontFamily:"var(--font-display)",
+                      borderColor: form.scope===s ? "var(--indigo)" : "var(--border)",
+                      background:  form.scope===s ? "var(--indigo-dim)" : "var(--bg3)",
+                      color:       form.scope===s ? "var(--indigo)" : "var(--text2)"}}>
+                    {s === "all" ? "All accounts" : s === "account" ? "Specific account" : "Segment"}
+                  </button>
+                ))}
+              </div>
+              {form.scope === "account" && (
+                <select style={inputStyle} value={form.scope_account_id}
+                  onChange={e => {
+                    const acc = accounts.find(a => a.id === e.target.value);
+                    setForm(f => ({...f, scope_account_id: e.target.value, scope_account_name: acc?.name || ""}));
+                  }}>
+                  <option value="">— Select account —</option>
+                  {accounts.map(a => <option key={a.id} value={a.id}>{a.name}</option>)}
+                </select>
+              )}
+              {form.scope === "segment" && (
+                <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                  <input style={inputStyle} placeholder="Plan (e.g. Enterprise) — leave blank for any"
+                    value={form.scope_plan}
+                    onChange={e => setForm(f => ({...f, scope_plan: e.target.value}))}/>
+                  <select style={inputStyle} value={form.scope_stage}
+                    onChange={e => setForm(f => ({...f, scope_stage: e.target.value}))}>
+                    <option value="">Stage — any</option>
+                    {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <input style={inputStyle} type="number" min="0" placeholder="Min ARR in USD — leave blank for any"
+                    value={form.scope_arr_min}
+                    onChange={e => setForm(f => ({...f, scope_arr_min: e.target.value}))}/>
                 </div>
               )}
             </div>
@@ -6526,7 +6605,7 @@ export default function App() {
 
           {/* ── AUTOMATION VIEW ── */}
           {view==="automation"&&(
-            <AutomationPage session={session} toast={toast}/>
+            <AutomationPage session={session} toast={toast} accounts={active}/>
           )}
 
           {/* ── PORTFOLIO VIEW ── */}
