@@ -1785,11 +1785,12 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
 const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab="overview", manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
-  const [showStk,setShowStk]     = useState(false);
-  const [showEdit,setShowEdit]   = useState(false);
-  const [showDel,setShowDel]     = useState(false);
-  const [showCES,setShowCES]     = useState(false);
-  const [showPrep,setShowPrep]   = useState(false);
+  const [showStk,    setShowStk]    = useState(false);
+  const [showEdit,   setShowEdit]   = useState(false);
+  const [showDel,    setShowDel]    = useState(false);
+  const [showCES,    setShowCES]    = useState(false);
+  const [showPrep,   setShowPrep]   = useState(false);
+  const [showPortal, setShowPortal] = useState(false);
   const [tab,setTab]             = useState(initialTab);
   const [logF,setLogF]           = useState({type:"Call",note:"",date:todayStr()});
   const [newMs,setNewMs]         = useState("");
@@ -1868,6 +1869,9 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
               </div>
             </div>
             <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>setShowPortal(true)} className="icon-btn"
+                style={{background:"var(--indigo-dim)",border:"none",color:"var(--indigo)",
+                  cursor:"pointer",padding:"6px 12px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600}}>Portal</button>
               <button onClick={()=>setShowEdit(true)} className="icon-btn"
                 style={{background:"var(--bg3)",border:"none",color:"var(--text2)",
                   cursor:"pointer",padding:"6px 12px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600}}>Edit</button>
@@ -2223,6 +2227,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
       {showStk &&<StakeholderModal account={account} onClose={()=>setShowStk(false)} onUpdate={onUpdate} toast={toast}/>}
       {showEdit&&<AccountForm existing={account} onClose={()=>setShowEdit(false)} onSave={upd=>{onUpdate(account.id,upd);}} toast={toast}/>}
       {showCES &&<LogCES account={account} onClose={()=>setShowCES(false)} onUpdate={onUpdate} toast={toast}/>}
+      {showPortal&&<PortalModal account={account} call={call} toast={toast} onClose={()=>setShowPortal(false)}/>}
       {showPrep&&<CallPrepModal account={account} onClose={()=>setShowPrep(false)}
         onSaveNotes={(id,notes)=>onUpdate(id,{prepNotes:notes})} toast={toast}/>}
       {showDel &&<Confirm msg={`Permanently delete "${account.name}"? This cannot be undone.`}
@@ -5824,6 +5829,406 @@ function nextPhaseKey(currentKey, phases) {
   return null;
 }
 
+// ─── Customer Portal ─────────────────────────────────────────────────────────
+// PortalPage — customer-facing, rendered at /portal/:token (no auth)
+const PortalPage = ({ token }) => {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+  const [tasks,   setTasks]   = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_URL}/portal/${token}`)
+      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error)))
+      .then(d => { setData(d); setTasks(d.tasks || []); setLoading(false); })
+      .catch(e => { setError(e || 'Something went wrong'); setLoading(false); });
+  }, [token]);
+
+  const toggleTask = async (task) => {
+    const next = task.status === 'done' ? 'not_started' : 'done';
+    setTasks(ts => ts.map(t => t.id === task.id ? { ...t, status: next } : t));
+    await fetch(`${API_URL}/portal/${token}/tasks/${task.id}`, {
+      method: 'PATCH', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: next }),
+    }).catch(() => setTasks(ts => ts.map(t => t.id === task.id ? { ...t, status: task.status } : t)));
+  };
+
+  const s = { bg: '#f8fafc', card: 'white', border: '#e2e8f0', text: '#0f172a', text2: '#475569', text3: '#94a3b8', indigo: '#4361ee', emerald: '#10b981', amber: '#f59e0b', rose: '#e11d48' };
+
+  if (loading) return (
+    <div style={{minHeight:'100vh',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <div style={{width:20,height:20,border:`2px solid ${s.border}`,borderTopColor:s.indigo,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
+    </div>
+  );
+
+  if (error || !data) return (
+    <div style={{minHeight:'100vh',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:12}}>
+      <div style={{fontSize:16,fontWeight:600,color:s.text}}>Portal not found</div>
+      <div style={{fontSize:13,color:s.text3}}>This link may have been removed or doesn't exist.</div>
+    </div>
+  );
+
+  const { config: cfg, account, csm, onboarding, activeSurvey, surveyHistory, successGoal } = data;
+  const doneTasks  = tasks.filter(t => t.status === 'done').length;
+  const totalTasks = tasks.length;
+  const renewal    = account.renewal_date ? Math.floor((new Date(account.renewal_date) - Date.now()) / 86400000) : null;
+  const stability  = account.churn_risk != null ? 100 - account.churn_risk : null;
+
+  const Card = ({ children, style }) => (
+    <div style={{ background: s.card, border: `1.5px solid ${s.border}`, borderRadius: 12, padding: 20, ...style }}>
+      {children}
+    </div>
+  );
+  const SectionLabel = ({ children }) => (
+    <div style={{ fontSize: 10, fontWeight: 700, letterSpacing: '.06em', color: s.text3, textTransform: 'uppercase', marginBottom: 14 }}>{children}</div>
+  );
+
+  // Health ring (reuse visual pattern)
+  const hColor = v => v >= 70 ? s.emerald : v >= 45 ? s.amber : s.rose;
+  const HealthRing = ({ score, size = 56 }) => {
+    const r = (size - 6) / 2, circ = 2 * Math.PI * r, fill = (score / 100) * circ;
+    return (
+      <svg width={size} height={size} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={s.border} strokeWidth={5}/>
+        <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={hColor(score)} strokeWidth={5}
+          strokeDasharray={`${fill} ${circ - fill}`} strokeLinecap="round"/>
+      </svg>
+    );
+  };
+
+  const OB_PHASE_LABELS = { handover:'Handover', kickoff:'Kickoff', configuration:'Configuration', training:'Training', go_live:'Go Live', value_realized:'Value Realized' };
+  const OB_PHASE_KEYS   = ['handover','kickoff','configuration','training','go_live','value_realized'];
+
+  return (
+    <div style={{ minHeight: '100vh', background: s.bg, fontFamily: 'Inter, system-ui, sans-serif', color: s.text }}>
+      {/* Header */}
+      <div style={{ background: 'white', borderBottom: `1px solid ${s.border}`, padding: '14px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 }}>
+        <div style={{ fontWeight: 800, fontSize: 16, color: s.text }}>{csm.company || 'Your CSM'}</div>
+        <div style={{ fontSize: 11, color: s.text3 }}>
+          {csm.full_name && <span style={{ marginRight: 6 }}>Your CSM: <strong style={{ color: s.text2 }}>{csm.full_name}</strong></span>}
+          · Powered by <span style={{ color: s.indigo, fontWeight: 600 }}>Pulse</span>
+        </div>
+      </div>
+
+      <div style={{ maxWidth: 680, margin: '0 auto', padding: '32px 20px 60px' }}>
+
+        {/* Account hero */}
+        <div style={{ marginBottom: 28, display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <div>
+            <div style={{ fontSize: 24, fontWeight: 800, letterSpacing: '-.02em', marginBottom: 4 }}>{account.name}</div>
+            <div style={{ fontSize: 13, color: s.text3 }}>Your success dashboard</div>
+          </div>
+          {cfg.show_health && account.health_score != null && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <HealthRing score={account.health_score}/>
+              <div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: hColor(account.health_score), lineHeight: 1 }}>{account.health_score}</div>
+                <div style={{ fontSize: 11, color: s.text3, marginTop: 2 }}>Health score</div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Health breakdown */}
+        {cfg.show_health && (
+          <Card style={{ marginBottom: 16 }}>
+            <SectionLabel>Account Health</SectionLabel>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              {[
+                { label: 'Satisfaction (NPS)', value: account.nps != null ? `${account.nps}/100` : '—', color: account.nps >= 50 ? s.emerald : s.amber },
+                { label: 'Ease of use (CES)',  value: account.ces != null ? `${account.ces?.toFixed(1)}/5` : '—', color: account.ces >= 3.5 ? s.emerald : s.amber },
+                { label: 'Platform adoption',  value: account.product_usage != null ? `${account.product_usage}%` : '—', color: account.product_usage >= 60 ? s.emerald : s.amber },
+                { label: 'Open support issues', value: account.open_tickets != null ? account.open_tickets : '—', color: account.open_tickets > 4 ? s.rose : s.emerald },
+              ].map(m => (
+                <div key={m.label} style={{ background: s.bg, borderRadius: 8, padding: '12px 14px' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: m.color, marginBottom: 2 }}>{m.value}</div>
+                  <div style={{ fontSize: 11, color: s.text3 }}>{m.label}</div>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Account stability (churn risk reframed) */}
+        {cfg.show_churn_risk && stability != null && (
+          <Card style={{ marginBottom: 16 }}>
+            <SectionLabel>Account Stability</SectionLabel>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 28, fontWeight: 800, color: stability >= 70 ? s.emerald : stability >= 40 ? s.amber : s.rose }}>{stability}%</div>
+                <div style={{ fontSize: 12, color: s.text2, marginTop: 4 }}>
+                  {stability >= 70 ? 'Strong — your account is in great shape' : stability >= 40 ? 'Moderate — there are a few things to address together' : 'Needs attention — let\'s work on this together'}
+                </div>
+              </div>
+              <div style={{ width: 64, height: 6, background: s.border, borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${stability}%`, background: stability >= 70 ? s.emerald : stability >= 40 ? s.amber : s.rose, borderRadius: 3 }}/>
+              </div>
+            </div>
+          </Card>
+        )}
+
+        {/* Value goals */}
+        {cfg.show_value_goals && successGoal && (
+          <Card style={{ marginBottom: 16, background: '#f0f4ff', border: `1.5px solid #c7d2fe` }}>
+            <SectionLabel>Your Success Goal</SectionLabel>
+            <div style={{ fontSize: 14, color: s.text, lineHeight: 1.65 }}>{successGoal}</div>
+          </Card>
+        )}
+
+        {/* Onboarding progress */}
+        {cfg.show_onboarding && onboarding && (
+          <Card style={{ marginBottom: 16 }}>
+            <SectionLabel>Onboarding Progress</SectionLabel>
+            <div style={{ display: 'flex', gap: 0, marginBottom: 16 }}>
+              {OB_PHASE_KEYS.map((key, i) => {
+                const ph    = (onboarding.phases || {})[key] || {};
+                const done  = !!ph.actual;
+                const skip  = ph.skipped;
+                const curr  = onboarding.current_phase === key;
+                const color = done ? s.emerald : curr ? s.indigo : s.border;
+                return (
+                  <div key={key} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                      {i > 0 && <div style={{ flex: 1, height: 2, background: done ? s.emerald : s.border }}/>}
+                      <div style={{ width: 20, height: 20, borderRadius: '50%', background: skip ? s.border : color, border: `2px solid ${skip ? s.border : color}`, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                        {done && !skip && <svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg>}
+                        {curr && !done && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }}/>}
+                      </div>
+                      {i < OB_PHASE_KEYS.length - 1 && <div style={{ flex: 1, height: 2, background: done ? s.emerald : s.border }}/>}
+                    </div>
+                    <div style={{ fontSize: 9, color: curr ? s.indigo : done ? s.emerald : s.text3, fontWeight: curr || done ? 700 : 400, textAlign: 'center', letterSpacing: '.01em' }}>
+                      {skip ? '—' : OB_PHASE_LABELS[key]}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: 12, color: s.text2, textAlign: 'center', background: s.bg, borderRadius: 6, padding: '6px 12px' }}>
+              Current phase: <strong style={{ color: s.indigo }}>{OB_PHASE_LABELS[onboarding.current_phase] || onboarding.current_phase}</strong>
+            </div>
+          </Card>
+        )}
+
+        {/* Customer tasks */}
+        {cfg.show_tasks && tasks.length > 0 && (
+          <Card style={{ marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <SectionLabel>Your Tasks</SectionLabel>
+              <span style={{ fontSize: 11, fontWeight: 600, color: doneTasks === totalTasks ? s.emerald : s.text3 }}>
+                {doneTasks}/{totalTasks} done
+              </span>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {tasks.map(task => (
+                <div key={task.id}
+                  onClick={() => toggleTask(task)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px', borderRadius: 8,
+                    background: task.status === 'done' ? '#f0fdf4' : s.bg, border: `1px solid ${task.status === 'done' ? '#bbf7d0' : s.border}`,
+                    cursor: 'pointer', transition: 'all .15s' }}>
+                  <div style={{ width: 18, height: 18, borderRadius: 4, border: `2px solid ${task.status === 'done' ? s.emerald : s.border}`,
+                    background: task.status === 'done' ? s.emerald : 'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    {task.status === 'done' && <svg width="10" height="8" viewBox="0 0 10 8"><path d="M1 4l3 3 5-6" stroke="white" strokeWidth="1.5" fill="none" strokeLinecap="round"/></svg>}
+                  </div>
+                  <span style={{ fontSize: 13, color: task.status === 'done' ? s.text3 : s.text, textDecoration: task.status === 'done' ? 'line-through' : 'none', flex: 1 }}>{task.title}</span>
+                  {task.due_date && <span style={{ fontSize: 11, color: s.text3 }}>{task.due_date}</span>}
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+        {/* Renewal */}
+        {cfg.show_renewal && account.renewal_date && (
+          <Card style={{ marginBottom: 16 }}>
+            <SectionLabel>Renewal</SectionLabel>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: renewal != null && renewal <= 60 ? s.amber : s.text }}>{account.renewal_date}</div>
+                <div style={{ fontSize: 12, color: s.text3, marginTop: 2 }}>
+                  {renewal != null ? (renewal > 0 ? `${renewal} days away` : 'Renewal date passed') : ''}
+                </div>
+              </div>
+              {renewal != null && renewal > 0 && renewal <= 90 && (
+                <div style={{ marginLeft: 'auto', background: renewal <= 30 ? '#fff1f2' : '#fffbeb', border: `1px solid ${renewal <= 30 ? '#fecdd3' : '#fef3c7'}`, borderRadius: 8, padding: '8px 14px', fontSize: 12, color: renewal <= 30 ? s.rose : s.amber, fontWeight: 600 }}>
+                  {renewal <= 30 ? 'Coming up soon' : 'Coming up'}
+                </div>
+              )}
+            </div>
+          </Card>
+        )}
+
+        {/* Survey prompt */}
+        {cfg.show_survey && activeSurvey && (
+          <Card style={{ marginBottom: 16, background: '#f0f4ff', border: '1.5px solid #c7d2fe' }}>
+            <SectionLabel>Share Your Feedback</SectionLabel>
+            <div style={{ fontSize: 14, color: s.text, marginBottom: 14, lineHeight: 1.5 }}>
+              We'd love to hear how things are going. Takes less than a minute.
+            </div>
+            <a href={`${window.location.origin}/survey/${activeSurvey.token}`}
+              style={{ display: 'inline-block', background: s.indigo, color: 'white', padding: '9px 20px',
+                borderRadius: 8, fontSize: 13, fontWeight: 600, textDecoration: 'none' }}>
+              {activeSurvey.type === 'NPS' ? 'Rate your experience →' : activeSurvey.type === 'CES' ? 'Rate your effort →' : 'Share feedback →'}
+            </a>
+          </Card>
+        )}
+
+        {/* Feedback loop */}
+        {cfg.show_feedback_loop && surveyHistory.length > 0 && (
+          <Card style={{ marginBottom: 16 }}>
+            <SectionLabel>Your Feedback History</SectionLabel>
+            <div style={{ fontSize: 12, color: s.text2, marginBottom: 12 }}>We track every response and use it to improve your experience.</div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {surveyHistory.slice(0, 5).map((r, i) => (
+                <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: s.bg, borderRadius: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', background: '#e0e7ff', color: s.indigo, borderRadius: 4 }}>{r.type}</span>
+                    <span style={{ fontSize: 13, fontWeight: 600, color: s.text }}>{r.score}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: s.text3 }}>{new Date(r.submitted_at).toLocaleDateString()}</span>
+                </div>
+              ))}
+            </div>
+          </Card>
+        )}
+
+      </div>
+    </div>
+  );
+};
+
+// PortalModal — CSM generates, configures, and shares the portal link
+const PORTAL_TOGGLES = [
+  { key: 'show_health',        label: 'Health score',        desc: 'NPS, CES, usage, tickets' },
+  { key: 'show_churn_risk',    label: 'Account stability',   desc: 'Reframed churn risk — sensitive' },
+  { key: 'show_onboarding',    label: 'Onboarding progress', desc: 'Phase track' },
+  { key: 'show_tasks',         label: 'Customer tasks',      desc: 'Interactive — they can mark done' },
+  { key: 'show_renewal',       label: 'Renewal date',        desc: 'Date + days remaining' },
+  { key: 'show_survey',        label: 'Survey prompt',       desc: 'Shows if active survey exists' },
+  { key: 'show_value_goals',   label: 'Value goals',         desc: 'Success definition from handover' },
+  { key: 'show_feedback_loop', label: 'Feedback history',    desc: 'Past survey scores' },
+];
+
+const PortalModal = ({ account, call, toast, onClose }) => {
+  const FRONTEND_URL = import.meta.env.VITE_FRONTEND_URL || window.location.origin;
+  const [link,    setLink]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [saving,  setSaving]  = useState(false);
+  const [copied,  setCopied]  = useState(false);
+
+  useEffect(() => {
+    call('GET', `/api/portal/${account.id}`)
+      .then(d => { setLink(d); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [account.id, call]);
+
+  const generate = async () => {
+    setSaving(true);
+    try {
+      const d = await call('POST', '/api/portal', { account_id: account.id });
+      setLink(d); toast?.('Portal created', 'success');
+    } catch { toast?.('Failed to create portal', 'error'); }
+    setSaving(false);
+  };
+
+  const updateConfig = async (key, value) => {
+    const newConfig = { ...link.config, [key]: value };
+    setLink(l => ({ ...l, config: newConfig }));
+    try { await call('PATCH', `/api/portal/${account.id}`, { config: newConfig }); }
+    catch { toast?.('Failed to save', 'error'); }
+  };
+
+  const revoke = async () => {
+    if (!window.confirm('Revoke portal? The customer link will stop working immediately.')) return;
+    try {
+      await call('DELETE', `/api/portal/${account.id}`);
+      setLink(null); toast?.('Portal revoked', 'info');
+    } catch { toast?.('Failed to revoke', 'error'); }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(`${FRONTEND_URL}/portal/${link.token}`);
+    setCopied(true); setTimeout(() => setCopied(false), 2000);
+  };
+
+  const DEFAULT_CONFIG = { show_health: true, show_churn_risk: false, show_onboarding: true, show_tasks: true, show_renewal: true, show_survey: true, show_value_goals: false, show_feedback_loop: false };
+  const cfg = link ? { ...DEFAULT_CONFIG, ...link.config } : DEFAULT_CONFIG;
+
+  return (
+    <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,.5)', zIndex: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+      <div style={{ background: 'var(--bg2)', border: '1px solid var(--border)', borderRadius: 'var(--r-lg)', width: '100%', maxWidth: 460, maxHeight: '90vh', overflow: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.2)' }}>
+
+        {/* Header */}
+        <div style={{ padding: '18px 20px', borderBottom: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--text)' }}>Customer Portal</div>
+            <div style={{ fontSize: 12, color: 'var(--text3)', marginTop: 2 }}>{account.name}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', fontSize: 20, color: 'var(--text3)', cursor: 'pointer', lineHeight: 1 }}>×</button>
+        </div>
+
+        <div style={{ padding: 20 }}>
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '30px 0', color: 'var(--text3)', fontSize: 13 }}>Loading…</div>
+          ) : !link ? (
+            <div style={{ textAlign: 'center', padding: '24px 0' }}>
+              <Ic n="onboarding" size={32} color="var(--border2)" style={{ marginBottom: 12 }}/>
+              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)', marginBottom: 6 }}>No portal yet</div>
+              <div style={{ fontSize: 12, color: 'var(--text3)', marginBottom: 20, lineHeight: 1.6 }}>
+                Generate a magic link to share a live dashboard with this customer.
+              </div>
+              <button onClick={generate} disabled={saving}
+                style={{ background: 'var(--indigo)', color: 'white', border: 'none', borderRadius: 'var(--r)', padding: '9px 24px', fontWeight: 600, fontSize: 13, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
+                {saving ? 'Creating…' : 'Generate Portal Link'}
+              </button>
+            </div>
+          ) : (
+            <>
+              {/* Link row */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 8 }}>Share Link</div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1, background: 'var(--bg3)', border: '1px solid var(--border)', borderRadius: 'var(--r-sm)', padding: '8px 12px', fontSize: 12, color: 'var(--text2)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {FRONTEND_URL}/portal/{link.token}
+                  </div>
+                  <button onClick={copyLink}
+                    style={{ background: copied ? 'var(--emerald)' : 'var(--indigo)', color: 'white', border: 'none', borderRadius: 'var(--r-sm)', padding: '8px 14px', fontSize: 12, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-display)', whiteSpace: 'nowrap', flexShrink: 0 }}>
+                    {copied ? '✓ Copied' : 'Copy'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 12 }}>Visible Sections</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {PORTAL_TOGGLES.map(t => (
+                    <div key={t.key} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 12px', background: 'var(--bg3)', borderRadius: 'var(--r-sm)', border: '1px solid var(--border)' }}>
+                      <div>
+                        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{t.label}</div>
+                        <div style={{ fontSize: 11, color: 'var(--text3)', marginTop: 1 }}>{t.desc}</div>
+                      </div>
+                      <button onClick={() => updateConfig(t.key, !cfg[t.key])}
+                        style={{ width: 40, height: 22, borderRadius: 11, border: 'none', cursor: 'pointer', transition: 'background .15s', background: cfg[t.key] ? 'var(--indigo)' : 'var(--border2)', position: 'relative', flexShrink: 0 }}>
+                        <div style={{ width: 16, height: 16, borderRadius: '50%', background: 'white', position: 'absolute', top: 3, left: cfg[t.key] ? 21 : 3, transition: 'left .15s', boxShadow: '0 1px 3px rgba(0,0,0,.2)' }}/>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Revoke */}
+              <button onClick={revoke}
+                style={{ width: '100%', background: 'none', border: '1.5px solid var(--border)', borderRadius: 'var(--r)', padding: '8px 16px', color: 'var(--rose)', fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'var(--font-display)' }}>
+                Revoke Portal Access
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // ─── OnboardingTab ────────────────────────────────────────────────────────────
 const OnboardingTab = ({ account, call, toast }) => {
   const [plan,     setPlan]     = useState(null);
@@ -7069,11 +7474,13 @@ export default function App() {
     return <AuthScreen onAuth={s => { if(s) setSession(s); }}/>;
   }
 
-  // Survey response page — render if URL is /survey/:token
+  // Public survey response page
   const surveyToken = window.location.pathname.match(/^\/survey\/([a-f0-9]+)$/)?.[1];
-  if (surveyToken) {
-    return <SurveyResponsePage token={surveyToken}/>;
-  }
+  if (surveyToken) return <SurveyResponsePage token={surveyToken}/>;
+
+  // Customer portal — magic link, no auth required
+  const portalToken = window.location.pathname.match(/^\/portal\/([a-f0-9]+)$/)?.[1];
+  if (portalToken) return <PortalPage token={portalToken}/>;
 
   const logout = () => {
     clearSession();
