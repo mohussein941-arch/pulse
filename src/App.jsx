@@ -7409,7 +7409,7 @@ const BriefingPage = ({ call, toast, onAccountClick }) => {
               <button onClick={()=>onAccountClick&&onAccountClick(item.accountId)}
                 style={{fontWeight:700,fontSize:14,background:"none",border:"none",
                   color:"var(--text)",cursor:"pointer",padding:0,textAlign:"left"}}>
-                {item.accountId ? item.accountId : "—"}
+                {item.accountName || item.accountId || "—"}
               </button>
             )}
             {item.carryDays===0
