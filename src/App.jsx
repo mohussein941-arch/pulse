@@ -7469,18 +7469,17 @@ export default function App() {
   const isFiltered=filter!=="All"||planFilter!=="All"||search.trim()!=="";
   const clearFilters=()=>{ setFilter("All"); setPlanFilter("All"); setSearch(""); };
 
+  // Public routes — must be checked before the auth gate
+  const surveyToken = window.location.pathname.match(/^\/survey\/([a-f0-9]+)$/)?.[1];
+  if (surveyToken) return <SurveyResponsePage token={surveyToken}/>;
+
+  const portalToken = window.location.pathname.match(/^\/portal\/([a-f0-9]+)$/)?.[1];
+  if (portalToken) return <PortalPage token={portalToken}/>;
+
   // Auth gate — if backend is configured and no session, show login screen
   if (API_URL && !session) {
     return <AuthScreen onAuth={s => { if(s) setSession(s); }}/>;
   }
-
-  // Public survey response page
-  const surveyToken = window.location.pathname.match(/^\/survey\/([a-f0-9]+)$/)?.[1];
-  if (surveyToken) return <SurveyResponsePage token={surveyToken}/>;
-
-  // Customer portal — magic link, no auth required
-  const portalToken = window.location.pathname.match(/^\/portal\/([a-f0-9]+)$/)?.[1];
-  if (portalToken) return <PortalPage token={portalToken}/>;
 
   const logout = () => {
     clearSession();
