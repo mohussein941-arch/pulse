@@ -481,7 +481,8 @@ const Ic = ({ n, size=16, color="currentColor", style={} }) => {
     dismiss:    <><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>,
     eye:        <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
     survey:     <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/><circle cx="18" cy="4" r="3"/></>,
-    automation: <><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></>,
+    automation:  <><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></>,
+    onboarding:  <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><circle cx="12" cy="12" r="3" fill="none"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -1783,13 +1784,13 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast }) => {
 };
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
-const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
+const Detail = ({ account, onClose, onUpdate, onDelete, toast, session, initialTab="overview", manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
   const [showStk,setShowStk]     = useState(false);
   const [showEdit,setShowEdit]   = useState(false);
   const [showDel,setShowDel]     = useState(false);
   const [showCES,setShowCES]     = useState(false);
   const [showPrep,setShowPrep]   = useState(false);
-  const [tab,setTab]             = useState("overview");
+  const [tab,setTab]             = useState(initialTab);
   const [logF,setLogF]           = useState({type:"Call",note:"",date:todayStr()});
   const [newMs,setNewMs]         = useState("");
   const [editGoal,setEditGoal]   = useState(false);
@@ -1832,7 +1833,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
   const saveGoal=()=>{ onUpdate(account.id,{successPlan:{...account.successPlan,goal:goalDraft}}); setEditGoal(false); toast("Goal saved","success"); };
   const saveAct=()=>{ onUpdate(account.id,{nextAction:actDraft}); setEditAct(false); toast("Next action saved","success"); };
 
-  const TABS=["Overview","Tasks","Plan","Activity","Health","Playbook"];
+  const TABS=["Overview","Tasks","Plan","Activity","Health","Playbook","Onboarding"];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
   const tabHasAlert={
     Overview: rdays>0&&rdays<=60,
@@ -1841,6 +1842,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
     Activity: days>14,
     Health: account.healthScore<55,
     Playbook: triggeredPbs.length>0&&!account.activePlaybookId,
+    Onboarding: false,
   };
   const tabKey=t=>t.toLowerCase();
 
@@ -2209,6 +2211,10 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, manualTasks=[], o
           {/* PLAYBOOK */}
           {tab==="playbook"&&(
             <ActivePlaybookTab account={account} onUpdate={onUpdate}/>
+          )}
+
+          {tab==="onboarding"&&(
+            <OnboardingTab account={account} session={session} toast={toast}/>
           )}
 
         </div>
@@ -5763,6 +5769,622 @@ popup.location.href = url;
     </div>
   );
 };
+// ─── Onboarding helpers ───────────────────────────────────────────────────────
+const OB_PHASES = [
+  { key:"handover",       label:"Handover"       },
+  { key:"kickoff",        label:"Kickoff"         },
+  { key:"configuration",  label:"Configuration"   },
+  { key:"training",       label:"Training"        },
+  { key:"go_live",        label:"Go-Live"         },
+  { key:"value_realized", label:"Value Realised"  },
+];
+const NEED_CATS    = ["technical","business","integration","training"];
+const NEED_PRIS    = ["high","medium","low"];
+const NEED_STATS   = ["identified","in_progress","resolved"];
+const TASK_STATUSES = ["not_started","in_progress","done","blocked"];
+const TASK_STATUS_CFG = {
+  not_started:{ label:"To do",      color:"var(--text3)",  bg:"var(--bg4)"         },
+  in_progress:{ label:"In progress",color:"var(--indigo)", bg:"var(--indigo-dim)"  },
+  done:       { label:"Done",       color:"var(--emerald)",bg:"var(--emerald-dim)" },
+  blocked:    { label:"Blocked",    color:"var(--rose)",   bg:"var(--rose-dim)"    },
+};
+
+function computeObHealth(plan, tasks) {
+  if (!plan) return 0;
+  const today  = new Date();
+  const phases = plan.phases || {};
+
+  const relevant = OB_PHASES.filter(p => {
+    const ph = phases[p.key] || {};
+    return !ph.skipped && ph.expected;
+  });
+  const behind = relevant.filter(p => {
+    const ph = phases[p.key] || {};
+    return !ph.actual && new Date(ph.expected) < today;
+  });
+  const timelineScore = relevant.length > 0
+    ? ((relevant.length - behind.length) / relevant.length) * 100 : 100;
+
+  const cust      = tasks.filter(t => t.owner === 'customer');
+  const custScore = cust.length > 0 ? (cust.filter(t => t.status === 'done').length / cust.length) * 100 : 100;
+  const csm       = tasks.filter(t => t.owner === 'csm');
+  const csmScore  = csm.length > 0  ? (csm.filter(t => t.status === 'done').length / csm.length) * 100  : 100;
+
+  return Math.round(custScore * 0.4 + csmScore * 0.2 + timelineScore * 0.4);
+}
+
+function nextPhaseKey(currentKey, phases) {
+  const idx  = OB_PHASES.findIndex(p => p.key === currentKey);
+  for (let i = idx + 1; i < OB_PHASES.length; i++) {
+    if (!(phases[OB_PHASES[i].key] || {}).skipped) return OB_PHASES[i].key;
+  }
+  return null;
+}
+
+// ─── OnboardingTab ────────────────────────────────────────────────────────────
+const OnboardingTab = ({ account, session, toast }) => {
+  const API     = import.meta.env.VITE_API_URL;
+  const headers = {
+    "x-pulse-secret": import.meta.env.VITE_API_SECRET,
+    "Authorization":  `Bearer ${session?.token}`,
+    "Content-Type":   "application/json",
+  };
+
+  const [plan,     setPlan]     = useState(null);
+  const [tasks,    setTasks]    = useState([]);
+  const [needs,    setNeeds]    = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [showHO,   setShowHO]   = useState(false);  // handover card expanded
+  const [hoDraft,  setHoDraft]  = useState({});
+  const [editHO,   setEditHO]   = useState(false);
+  const [taskForm, setTaskForm] = useState({show:false, owner:"csm", title:"", due_date:""});
+  const [needForm, setNeedForm] = useState({show:false, category:"business", description:"", priority:"medium"});
+
+  const fetchAll = useCallback(async () => {
+    if (!API || !session?.token) return;
+    const r = await fetch(`${API}/api/onboarding/account/${account.id}`, { headers });
+    if (r.ok) {
+      const d = await r.json();
+      setPlan(d.plan);
+      setTasks(d.tasks || []);
+      setNeeds(d.needs || []);
+      if (d.plan) setHoDraft(d.plan.handover_data || {});
+    }
+    setLoading(false);
+  }, [API, session?.token, account.id]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const activatePlan = async () => {
+    const r = await fetch(`${API}/api/onboarding/plan`, {
+      method: "POST", headers,
+      body: JSON.stringify({ account_id: account.id }),
+    });
+    if (r.ok) { toast?.("Onboarding plan created", "success"); fetchAll(); }
+    else toast?.("Failed to create plan", "error");
+  };
+
+  const closePlan = async () => {
+    if (!window.confirm("Close this onboarding plan? It will be archived but kept as a reference.")) return;
+    await fetch(`${API}/api/onboarding/plan/${plan.id}`, {
+      method: "PATCH", headers, body: JSON.stringify({ status: "closed" }),
+    });
+    toast?.("Plan closed", "info"); fetchAll();
+  };
+
+  const saveHandover = async () => {
+    await fetch(`${API}/api/onboarding/plan/${plan.id}`, {
+      method: "PATCH", headers, body: JSON.stringify({ handover_data: hoDraft }),
+    });
+    setPlan(p => ({ ...p, handover_data: hoDraft }));
+    setEditHO(false); toast?.("Handover saved", "success");
+  };
+
+  const markPhaseDone = async phaseKey => {
+    const today  = new Date().toISOString().split("T")[0];
+    const phases = { ...plan.phases, [phaseKey]: { ...(plan.phases[phaseKey] || {}), actual: today, skipped: false } };
+    const next   = nextPhaseKey(phaseKey, phases);
+    const body   = { phases, ...(next ? { current_phase: next } : {}) };
+    if (!next) body.go_live_actual = phaseKey === "go_live" ? today : plan.go_live_actual;
+    const r = await fetch(`${API}/api/onboarding/plan/${plan.id}`, {
+      method: "PATCH", headers, body: JSON.stringify(body),
+    });
+    if (r.ok) { const d = await r.json(); setPlan(d); }
+  };
+
+  const togglePhaseNA = async phaseKey => {
+    const ph     = plan.phases[phaseKey] || {};
+    const nowNA  = !ph.skipped;
+    const phases = { ...plan.phases, [phaseKey]: { ...ph, skipped: nowNA, actual: nowNA ? null : ph.actual } };
+    let current  = plan.current_phase;
+    if (nowNA && current === phaseKey) {
+      current = nextPhaseKey(phaseKey, phases) || plan.current_phase;
+    }
+    const r = await fetch(`${API}/api/onboarding/plan/${plan.id}`, {
+      method: "PATCH", headers, body: JSON.stringify({ phases, current_phase: current }),
+    });
+    if (r.ok) { const d = await r.json(); setPlan(d); }
+  };
+
+  const cycleTaskStatus = async task => {
+    const idx    = TASK_STATUSES.indexOf(task.status);
+    const next   = TASK_STATUSES[(idx + 1) % TASK_STATUSES.length];
+    const r = await fetch(`${API}/api/onboarding/tasks/${task.id}`, {
+      method: "PATCH", headers, body: JSON.stringify({ status: next }),
+    });
+    if (r.ok) setTasks(ts => ts.map(t => t.id === task.id ? { ...t, status: next } : t));
+  };
+
+  const addTask = async () => {
+    if (!taskForm.title.trim()) return;
+    const r = await fetch(`${API}/api/onboarding/tasks`, {
+      method: "POST", headers,
+      body: JSON.stringify({ plan_id: plan.id, account_id: account.id, title: taskForm.title, owner: taskForm.owner, due_date: taskForm.due_date || null }),
+    });
+    if (r.ok) { const d = await r.json(); setTasks(ts => [...ts, d]); setTaskForm(f => ({...f, show:false, title:"", due_date:""})); toast?.("Task added","success"); }
+  };
+
+  const deleteTask = async id => {
+    await fetch(`${API}/api/onboarding/tasks/${id}`, { method:"DELETE", headers });
+    setTasks(ts => ts.filter(t => t.id !== id));
+  };
+
+  const addNeed = async () => {
+    if (!needForm.description.trim()) return;
+    const r = await fetch(`${API}/api/onboarding/needs`, {
+      method: "POST", headers,
+      body: JSON.stringify({ account_id: account.id, ...needForm }),
+    });
+    if (r.ok) { const d = await r.json(); setNeeds(ns => [d, ...ns]); setNeedForm(f => ({...f, show:false, description:""})); toast?.("Need logged","success"); }
+  };
+
+  const cycleNeedStatus = async need => {
+    const idx  = NEED_STATS.indexOf(need.status);
+    const next = NEED_STATS[(idx + 1) % NEED_STATS.length];
+    await fetch(`${API}/api/onboarding/needs/${need.id}`, {
+      method: "PATCH", headers, body: JSON.stringify({ status: next }),
+    });
+    setNeeds(ns => ns.map(n => n.id === need.id ? { ...n, status: next } : n));
+  };
+
+  const deleteNeed = async id => {
+    await fetch(`${API}/api/onboarding/needs/${id}`, { method:"DELETE", headers });
+    setNeeds(ns => ns.filter(n => n.id !== id));
+  };
+
+  const inputSt = { width:"100%", padding:"7px 10px", border:"1.5px solid var(--border)",
+    borderRadius:"var(--r-sm)", fontSize:12, fontFamily:"var(--font-display)",
+    background:"var(--bg)", color:"var(--text)", outline:"none" };
+  const secHead = (label, action) => (
+    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+      <span style={{fontSize:12,fontWeight:700,color:"var(--text2)",letterSpacing:"-.01em"}}>{label}</span>
+      {action}
+    </div>
+  );
+
+  if (loading) return (
+    <div style={{display:"flex",alignItems:"center",gap:10,color:"var(--text3)",fontSize:13,padding:"20px 0"}}>
+      <div style={{width:14,height:14,border:"2px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+      Loading…
+    </div>
+  );
+
+  if (!plan) return (
+    <div style={{textAlign:"center",padding:"40px 16px"}}>
+      <Ic n="onboarding" size={36} color="var(--border2)" style={{marginBottom:12}}/>
+      <div style={{fontSize:14,fontWeight:600,color:"var(--text2)",marginBottom:6}}>No onboarding plan yet</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:20,lineHeight:1.6}}>
+        Activate to track the handover, plan tasks, and log account requirements.<br/>
+        Optional — skip if not needed for this account.
+      </div>
+      <button onClick={activatePlan}
+        style={{background:"var(--indigo)",color:"white",border:"none",borderRadius:"var(--r)",
+          padding:"9px 20px",fontWeight:600,fontSize:13,cursor:"pointer",fontFamily:"var(--font-display)",
+          boxShadow:"0 2px 8px var(--indigo-glow)"}}>
+        Start Onboarding Plan
+      </button>
+    </div>
+  );
+
+  const health    = computeObHealth(plan, tasks);
+  const custTasks = tasks.filter(t => t.owner === "customer");
+  const csmTasks  = tasks.filter(t => t.owner === "csm");
+  const phases    = plan.phases || {};
+
+  return (
+    <div style={{display:"flex",flexDirection:"column",gap:16}}>
+
+      {/* Health + close */}
+      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <Ring score={health} size={44}/>
+          <div>
+            <div style={{fontSize:11,fontWeight:600,color:"var(--text3)"}}>ONBOARDING HEALTH</div>
+            <div style={{fontSize:11,color:"var(--text3)",marginTop:1}}>
+              Customer {custTasks.filter(t=>t.status==="done").length}/{custTasks.length} · CSM {csmTasks.filter(t=>t.status==="done").length}/{csmTasks.length}
+            </div>
+          </div>
+        </div>
+        <button onClick={closePlan}
+          style={{fontSize:11,color:"var(--text3)",background:"none",border:"1px solid var(--border)",
+            borderRadius:"var(--r-sm)",padding:"4px 10px",cursor:"pointer",fontFamily:"var(--font-display)"}}>
+          Close plan
+        </button>
+      </div>
+
+      {/* Phase track */}
+      <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 14px"}}>
+        <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",marginBottom:10,letterSpacing:".04em"}}>PHASES</div>
+        <div style={{display:"flex",flexDirection:"column",gap:6}}>
+          {OB_PHASES.map((p, i) => {
+            const ph        = phases[p.key] || {};
+            const isCurrent = plan.current_phase === p.key;
+            const isDone    = !!ph.actual;
+            const isNA      = !!ph.skipped;
+            const isBehind  = !isDone && !isNA && ph.expected && new Date(ph.expected) < new Date();
+
+            const dot = isDone ? "var(--emerald)" : isNA ? "var(--text3)" : isCurrent ? "var(--indigo)" : "var(--border2)";
+            return (
+              <div key={p.key} style={{display:"flex",alignItems:"center",gap:10,opacity:isNA?0.45:1}}>
+                <div style={{width:20,height:20,borderRadius:"50%",background:dot,flexShrink:0,
+                  display:"flex",alignItems:"center",justifyContent:"center"}}>
+                  {isDone && <Ic n="check" size={10} color="white"/>}
+                  {isCurrent && !isDone && <div style={{width:7,height:7,borderRadius:"50%",background:"white"}}/>}
+                </div>
+                <div style={{flex:1,minWidth:0}}>
+                  <span style={{fontSize:12,fontWeight:isCurrent?600:400,
+                    color:isNA?"var(--text3)":isDone?"var(--emerald)":isCurrent?"var(--indigo)":"var(--text2)",
+                    textDecoration:isNA?"line-through":"none"}}>
+                    {p.label}
+                  </span>
+                  {ph.expected && !isNA && (
+                    <span style={{fontSize:10,color:isBehind?"var(--rose)":"var(--text3)",marginLeft:6}}>
+                      {isBehind?"behind · ":""}{ph.actual||ph.expected}
+                    </span>
+                  )}
+                </div>
+                <div style={{display:"flex",gap:4,flexShrink:0}}>
+                  {isCurrent && !isDone && !isNA && (
+                    <button onClick={()=>markPhaseDone(p.key)}
+                      style={{fontSize:10,padding:"2px 8px",borderRadius:"var(--r-xs)",border:"none",
+                        background:"var(--indigo)",color:"white",cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600}}>
+                      Done
+                    </button>
+                  )}
+                  <button onClick={()=>togglePhaseNA(p.key)} title={isNA?"Mark applicable":"Mark N/A"}
+                    style={{fontSize:10,padding:"2px 8px",borderRadius:"var(--r-xs)",
+                      border:"1px solid var(--border)",background:"var(--bg)",cursor:"pointer",
+                      color:"var(--text3)",fontFamily:"var(--font-display)"}}>
+                    {isNA?"↩":"N/A"}
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Sales handover card */}
+      <div style={{border:"1.5px solid var(--border)",borderRadius:"var(--r)",overflow:"hidden"}}>
+        <button onClick={()=>setShowHO(h=>!h)}
+          style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",
+            padding:"10px 14px",background:"var(--bg3)",border:"none",cursor:"pointer",fontFamily:"var(--font-display)"}}>
+          <span style={{fontSize:12,fontWeight:700,color:"var(--text2)"}}>Sales Handover</span>
+          <Ic n={showHO?"chevron_up":"chevron_down"} size={13} color="var(--text3)"/>
+        </button>
+        {showHO && (
+          <div style={{padding:14}}>
+            {editHO ? (
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[
+                  ["what_sold",           "What was sold"],
+                  ["why_bought",          "Why they bought / pain points"],
+                  ["success_definition",  "Their definition of success"],
+                  ["promises",            "Commitments made during sales"],
+                  ["red_flags",           "Red flags or concerns"],
+                  ["contacts",            "Contacts handed over"],
+                ].map(([k, label]) => (
+                  <div key={k}>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",marginBottom:3}}>{label}</div>
+                    <textarea rows={2} style={{...inputSt,resize:"vertical"}}
+                      value={hoDraft[k]||""} placeholder={label}
+                      onChange={e=>setHoDraft(d=>({...d,[k]:e.target.value}))}/>
+                  </div>
+                ))}
+                <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:4}}>
+                  <button onClick={()=>setEditHO(false)}
+                    style={{padding:"6px 14px",border:"1.5px solid var(--border)",borderRadius:"var(--r-sm)",
+                      background:"var(--bg3)",color:"var(--text2)",fontSize:12,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Cancel
+                  </button>
+                  <button onClick={saveHandover}
+                    style={{padding:"6px 14px",background:"var(--indigo)",color:"white",border:"none",
+                      borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Save
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div>
+                {[["what_sold","What was sold"],["why_bought","Why they bought"],["success_definition","Success definition"],["promises","Promises made"],["red_flags","Red flags"],["contacts","Contacts"]].map(([k,label])=>(
+                  (plan.handover_data||{})[k] ? (
+                    <div key={k} style={{marginBottom:8}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",letterSpacing:".04em",marginBottom:2}}>{label.toUpperCase()}</div>
+                      <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{(plan.handover_data||{})[k]}</div>
+                    </div>
+                  ) : null
+                ))}
+                {!Object.values(plan.handover_data||{}).some(Boolean) && (
+                  <div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic",marginBottom:8}}>No handover notes yet.</div>
+                )}
+                <button onClick={()=>{setHoDraft(plan.handover_data||{});setEditHO(true);}}
+                  style={{fontSize:11,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>
+                  {Object.values(plan.handover_data||{}).some(Boolean) ? "Edit" : "Fill in handover"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Mutual action plan */}
+      <div>
+        {secHead("Mutual Action Plan",
+          <button onClick={()=>setTaskForm(f=>({...f,show:true}))}
+            style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"var(--indigo)",
+              background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>
+            <Ic n="plus" size={11} color="var(--indigo)"/> Add task
+          </button>
+        )}
+
+        {taskForm.show && (
+          <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:12,marginBottom:10}}>
+            <div style={{display:"flex",gap:6,marginBottom:8}}>
+              {["csm","customer"].map(o=>(
+                <button key={o} onClick={()=>setTaskForm(f=>({...f,owner:o}))}
+                  style={{padding:"4px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid",fontSize:11,fontWeight:600,
+                    cursor:"pointer",fontFamily:"var(--font-display)",
+                    borderColor:taskForm.owner===o?"var(--indigo)":"var(--border)",
+                    background:taskForm.owner===o?"var(--indigo-dim)":"var(--bg)",
+                    color:taskForm.owner===o?"var(--indigo)":"var(--text2)"}}>
+                  {o === "csm" ? "CSM Task" : "Customer Task"}
+                </button>
+              ))}
+            </div>
+            <input style={{...inputSt,marginBottom:6}} placeholder="Task title" value={taskForm.title}
+              onChange={e=>setTaskForm(f=>({...f,title:e.target.value}))}
+              onKeyDown={e=>e.key==="Enter"&&addTask()}/>
+            <div style={{display:"flex",gap:6,alignItems:"center"}}>
+              <input type="date" style={{...inputSt,flex:1}} value={taskForm.due_date}
+                onChange={e=>setTaskForm(f=>({...f,due_date:e.target.value}))}/>
+              <button onClick={addTask}
+                style={{padding:"6px 14px",background:"var(--indigo)",color:"white",border:"none",
+                  borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                Add
+              </button>
+              <button onClick={()=>setTaskForm(f=>({...f,show:false,title:"",due_date:""}))}
+                style={{padding:"6px 10px",border:"1.5px solid var(--border)",borderRadius:"var(--r-sm)",
+                  background:"var(--bg)",color:"var(--text3)",fontSize:12,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        )}
+
+        {tasks.length === 0 && !taskForm.show && (
+          <div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic",padding:"8px 0"}}>No tasks yet — add the first one.</div>
+        )}
+
+        {[["csm","CSM Tasks","var(--indigo)"],["customer","Customer Tasks","var(--teal)"]].map(([owner,label,color])=>{
+          const ownerTasks = tasks.filter(t=>t.owner===owner);
+          if (!ownerTasks.length) return null;
+          return (
+            <div key={owner} style={{marginBottom:12}}>
+              <div style={{fontSize:10,fontWeight:700,color,marginBottom:6,letterSpacing:".04em"}}>{label.toUpperCase()}</div>
+              {ownerTasks.map(task=>{
+                const sc = TASK_STATUS_CFG[task.status] || TASK_STATUS_CFG.not_started;
+                return (
+                  <div key={task.id} style={{display:"flex",alignItems:"center",gap:8,
+                    padding:"7px 0",borderBottom:"1px solid var(--border)"}}>
+                    <button onClick={()=>cycleTaskStatus(task)}
+                      style={{width:16,height:16,borderRadius:"50%",flexShrink:0,border:"2px solid",
+                        borderColor:task.status==="done"?"var(--emerald)":"var(--border2)",
+                        background:task.status==="done"?"var(--emerald)":"transparent",
+                        cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                      {task.status==="done"&&<Ic n="check" size={8} color="white"/>}
+                    </button>
+                    <span style={{flex:1,fontSize:12,color:"var(--text)",
+                      textDecoration:task.status==="done"?"line-through":"none",
+                      opacity:task.status==="done"?0.5:1}}>
+                      {task.title}
+                    </span>
+                    <span style={{fontSize:10,fontWeight:600,padding:"1px 6px",borderRadius:"var(--r-xs)",
+                      color:sc.color,background:sc.bg,whiteSpace:"nowrap",cursor:"pointer"}}
+                      onClick={()=>cycleTaskStatus(task)} title="Click to cycle status">
+                      {sc.label}
+                    </span>
+                    {task.due_date && (
+                      <span style={{fontSize:10,color:"var(--text3)",whiteSpace:"nowrap"}}>{task.due_date}</span>
+                    )}
+                    <button onClick={()=>deleteTask(task.id)} style={{background:"none",border:"none",cursor:"pointer",padding:2,flexShrink:0}}>
+                      <Ic n="trash" size={11} color="var(--rose)"/>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Account needs */}
+      <div>
+        {secHead("Account Needs",
+          <button onClick={()=>setNeedForm(f=>({...f,show:true}))}
+            style={{display:"flex",alignItems:"center",gap:4,fontSize:11,color:"var(--indigo)",
+              background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>
+            <Ic n="plus" size={11} color="var(--indigo)"/> Log need
+          </button>
+        )}
+        {needForm.show && (
+          <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:12,marginBottom:10}}>
+            <div style={{display:"flex",gap:6,marginBottom:8}}>
+              <select style={{...inputSt,flex:1}} value={needForm.category}
+                onChange={e=>setNeedForm(f=>({...f,category:e.target.value}))}>
+                {NEED_CATS.map(c=><option key={c} value={c}>{c.charAt(0).toUpperCase()+c.slice(1)}</option>)}
+              </select>
+              <select style={{...inputSt,flex:1}} value={needForm.priority}
+                onChange={e=>setNeedForm(f=>({...f,priority:e.target.value}))}>
+                {NEED_PRIS.map(p=><option key={p} value={p}>{p.charAt(0).toUpperCase()+p.slice(1)}</option>)}
+              </select>
+            </div>
+            <input style={{...inputSt,marginBottom:6}} placeholder="Describe the need"
+              value={needForm.description} onChange={e=>setNeedForm(f=>({...f,description:e.target.value}))}
+              onKeyDown={e=>e.key==="Enter"&&addNeed()}/>
+            <div style={{display:"flex",gap:6,justifyContent:"flex-end"}}>
+              <button onClick={()=>setNeedForm(f=>({...f,show:false,description:""}))}
+                style={{padding:"5px 12px",border:"1.5px solid var(--border)",borderRadius:"var(--r-sm)",
+                  background:"var(--bg)",color:"var(--text2)",fontSize:11,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                Cancel
+              </button>
+              <button onClick={addNeed}
+                style={{padding:"5px 12px",background:"var(--indigo)",color:"white",border:"none",
+                  borderRadius:"var(--r-sm)",fontSize:11,fontWeight:600,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                Save
+              </button>
+            </div>
+          </div>
+        )}
+        {needs.length === 0 && !needForm.show && (
+          <div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic",padding:"8px 0"}}>No requirements logged yet.</div>
+        )}
+        {needs.map(n=>{
+          const priColor = n.priority==="high"?"var(--rose)":n.priority==="medium"?"var(--amber)":"var(--text3)";
+          const stColor  = n.status==="resolved"?"var(--emerald)":n.status==="in_progress"?"var(--indigo)":"var(--text3)";
+          return (
+            <div key={n.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"7px 0",borderBottom:"1px solid var(--border)"}}>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",gap:5,alignItems:"center",marginBottom:2,flexWrap:"wrap"}}>
+                  <span style={{fontSize:10,fontWeight:600,padding:"1px 6px",borderRadius:"var(--r-xs)",
+                    background:"var(--bg4)",color:"var(--text2)"}}>{n.category}</span>
+                  <span style={{fontSize:10,fontWeight:600,color:priColor}}>{n.priority}</span>
+                </div>
+                <div style={{fontSize:12,color:n.status==="resolved"?"var(--text3)":"var(--text)",
+                  textDecoration:n.status==="resolved"?"line-through":"none",lineHeight:1.4}}>
+                  {n.description}
+                </div>
+              </div>
+              <button onClick={()=>cycleNeedStatus(n)} title="Cycle status"
+                style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:"var(--r-xs)",
+                  border:"none",cursor:"pointer",fontFamily:"var(--font-display)",
+                  background:n.status==="resolved"?"var(--emerald-dim)":n.status==="in_progress"?"var(--indigo-dim)":"var(--bg4)",
+                  color:stColor,flexShrink:0,whiteSpace:"nowrap"}}>
+                {n.status.replace("_"," ")}
+              </button>
+              <button onClick={()=>deleteNeed(n.id)} style={{background:"none",border:"none",cursor:"pointer",padding:2,flexShrink:0}}>
+                <Ic n="trash" size={11} color="var(--rose)"/>
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ─── OnboardingPage (hub) ─────────────────────────────────────────────────────
+const OnboardingPage = ({ session, toast, accounts = [], onAccountClick }) => {
+  const API     = import.meta.env.VITE_API_URL;
+  const headers = {
+    "x-pulse-secret": import.meta.env.VITE_API_SECRET,
+    "Authorization":  `Bearer ${session?.token}`,
+  };
+
+  const [plans,   setPlans]   = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!API || !session?.token) return;
+    fetch(`${API}/api/onboarding/all`, { headers })
+      .then(r => r.json()).then(d => { setPlans(Array.isArray(d) ? d : []); setLoading(false); })
+      .catch(() => setLoading(false));
+  }, [API, session?.token]);
+
+  const PHASE_COLOR = {
+    handover:"var(--text3)", kickoff:"var(--sky)", configuration:"var(--indigo)",
+    training:"var(--violet)", go_live:"var(--amber)", value_realized:"var(--emerald)",
+  };
+
+  return (
+    <div style={{maxWidth:860,margin:"0 auto",animation:"fadeUp .2s ease"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+        <div>
+          <h1 style={{fontSize:22,fontWeight:800,letterSpacing:"-.03em",color:"var(--text)",marginBottom:4}}>Onboarding</h1>
+          <p style={{fontSize:13,color:"var(--text2)",margin:0}}>
+            {plans.length} active onboarding plan{plans.length!==1?"s":""} — open any account's Onboarding tab to manage it.
+          </p>
+        </div>
+      </div>
+
+      {loading ? (
+        <div style={{display:"flex",alignItems:"center",gap:10,color:"var(--text3)",fontSize:13,height:200,justifyContent:"center"}}>
+          <div style={{width:18,height:18,border:"2px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+          Loading…
+        </div>
+      ) : plans.length === 0 ? (
+        <div style={{textAlign:"center",padding:"56px 24px",background:"var(--bg2)",
+          border:"1.5px dashed var(--border2)",borderRadius:"var(--r-lg)",color:"var(--text3)"}}>
+          <Ic n="onboarding" size={32} color="var(--border2)" style={{marginBottom:12}}/>
+          <div style={{fontSize:14,fontWeight:600,marginBottom:6,color:"var(--text2)"}}>No active onboarding plans</div>
+          <div style={{fontSize:13}}>Open any account and go to the Onboarding tab to start a plan.</div>
+        </div>
+      ) : (
+        <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",overflow:"hidden"}}>
+          <div style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr 1fr 80px",
+            padding:"9px 16px",borderBottom:"1px solid var(--border)",
+            fontSize:10,fontWeight:700,color:"var(--text3)",letterSpacing:".04em"}}>
+            <span>ACCOUNT</span><span>PHASE</span><span>CUSTOMER TASKS</span><span>CSM TASKS</span><span>HEALTH</span>
+          </div>
+          {plans.map(p => {
+            const acc    = accounts.find(a => a.id === p.account_id);
+            const tasks  = [...Array(p.customer_total)].map((_,i)=>({ done: i < p.customer_done }));
+            const pct    = p.customer_total > 0 ? Math.round((p.customer_done / p.customer_total) * 100) : null;
+            const health = computeObHealth(p, [
+              ...Array(p.csm_done).fill({owner:"csm",status:"done"}),
+              ...Array(p.csm_total - p.csm_done).fill({owner:"csm",status:"not_started"}),
+              ...Array(p.customer_done).fill({owner:"customer",status:"done"}),
+              ...Array(p.customer_total - p.customer_done).fill({owner:"customer",status:"not_started"}),
+            ]);
+            return (
+              <div key={p.id} onClick={()=>acc&&onAccountClick(acc)}
+                className="card-hover"
+                style={{display:"grid",gridTemplateColumns:"2fr 1.2fr 1fr 1fr 80px",
+                  padding:"12px 16px",borderBottom:"1px solid var(--border)",
+                  cursor:acc?"pointer":"default",alignItems:"center"}}>
+                <div style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>
+                  {acc?.name || p.account_id}
+                </div>
+                <div>
+                  <span style={{fontSize:11,fontWeight:600,padding:"2px 8px",borderRadius:"var(--r-xs)",
+                    background:"var(--bg4)",color:PHASE_COLOR[p.current_phase]||"var(--text3)"}}>
+                    {OB_PHASES.find(x=>x.key===p.current_phase)?.label||p.current_phase}
+                  </span>
+                </div>
+                <div style={{fontSize:12,color:"var(--text2)"}}>
+                  {p.customer_done}/{p.customer_total}
+                  {pct!=null&&<span style={{marginLeft:6,fontSize:10,color:"var(--text3)"}}>{pct}%</span>}
+                </div>
+                <div style={{fontSize:12,color:"var(--text2)"}}>{p.csm_done}/{p.csm_total}</div>
+                <div><Ring score={health} size={36}/></div>
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── AutomationPage ───────────────────────────────────────────────────────────
 const TRIGGER_OPTS = [
   { value:"health_below",      label:"Health score drops below",  unit:"(0–100)",    field:"threshold", def:40    },
@@ -6226,6 +6848,7 @@ export default function App() {
   const [showAdd,      setShowAdd]      = useState(false);
   const [showBulk,     setShowBulk]     = useState(false);
   const [view,         setView]         = useState("portfolio");
+  const [detailTab,    setDetailTab]    = useState("overview");
   const [filter,       setFilter]       = useState("All");
   const [planFilter,   setPlanFilter]   = useState("All");
   const [search,       setSearch]       = useState("");
@@ -6479,6 +7102,7 @@ export default function App() {
     { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
     { id:"settings",    icon:"shield",      label:"Email Settings", active:true },
     { id:"automation",  icon:"automation",   label:"Automation",      active:true },
+    { id:"onboarding",  icon:"onboarding",   label:"Onboarding",      active:true },
     { id:"briefing",    icon:"briefing",     label:"Daily Briefing",  active:false, tip:"Phase 4" },
   ];
 
@@ -6606,6 +7230,12 @@ export default function App() {
           {/* ── AUTOMATION VIEW ── */}
           {view==="automation"&&(
             <AutomationPage session={session} toast={toast} accounts={active}/>
+          )}
+
+          {/* ── ONBOARDING VIEW ── */}
+          {view==="onboarding"&&(
+            <OnboardingPage session={session} toast={toast} accounts={active}
+              onAccountClick={a=>{setSelected(a);setDetailTab("onboarding");}}/>
           )}
 
           {/* ── PORTFOLIO VIEW ── */}
@@ -6766,7 +7396,10 @@ export default function App() {
               backdropFilter:"blur(1px)"}}/>
         )}
 
-        {selected&&<Detail account={selected} onClose={()=>setSelected(null)} onUpdate={update} onDelete={del} toast={toast}
+        {selected&&<Detail key={selected.id} account={selected} session={session}
+          initialTab={detailTab}
+          onClose={()=>{setSelected(null);setDetailTab("overview");}}
+          onUpdate={update} onDelete={del} toast={toast}
           manualTasks={manualTasks} onAddManual={addManualTask} onToggleManual={toggleManualTask} onDeleteManual={deleteManualTask}/>}
         {showAdd &&<AccountForm onClose={()=>setShowAdd(false)} onSave={add} toast={toast}/>}
         {showBulk&&<BulkUpload onClose={()=>setShowBulk(false)} onImport={bulkImport}
