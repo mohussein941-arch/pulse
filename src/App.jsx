@@ -481,6 +481,7 @@ const Ic = ({ n, size=16, color="currentColor", style={} }) => {
     dismiss:    <><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></>,
     eye:        <><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></>,
     survey:     <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/><circle cx="18" cy="4" r="3"/></>,
+    automation: <><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -5762,6 +5763,307 @@ popup.location.href = url;
     </div>
   );
 };
+// ─── AutomationPage ───────────────────────────────────────────────────────────
+const TRIGGER_OPTS = [
+  { value:"health_below",    label:"Health score drops below",  unit:"(0–100)",  field:"threshold", def:40 },
+  { value:"no_contact_days", label:"No contact for more than",  unit:"days",     field:"days",      def:14 },
+  { value:"renewal_days",    label:"Renewal approaching within",unit:"days",     field:"days",      def:30 },
+  { value:"nps_below",       label:"NPS drops below",           unit:"(0–100)",  field:"threshold", def:50 },
+  { value:"ces_below",       label:"CES drops below",           unit:"(1–5)",    field:"threshold", def:3  },
+  { value:"usage_below",     label:"Usage drops below",         unit:"%",        field:"threshold", def:40 },
+];
+const ACTION_OPTS = [
+  { value:"log_activity", label:"Log a note on the account",   configLabel:"Note text",  configField:"note",  def:"Attention needed — please review this account." },
+  { value:"create_task",  label:"Create a task on the account",configLabel:"Task title", configField:"title", def:"Follow up with account" },
+];
+
+function triggerLabel(rule) {
+  const opt = TRIGGER_OPTS.find(o => o.value === rule.trigger_type);
+  if (!opt) return rule.trigger_type;
+  const val = rule.trigger_config?.[opt.field] ?? opt.def;
+  return `${opt.label} ${val} ${opt.unit}`;
+}
+function actionLabel(rule) {
+  const opt = ACTION_OPTS.find(o => o.value === rule.action_type);
+  if (!opt) return rule.action_type;
+  const val = rule.action_config?.[opt.configField] ?? "";
+  return `${opt.label}${val ? ` — "${val}"` : ""}`;
+}
+function timeAgo(iso) {
+  const s = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+  if (s < 60) return "just now";
+  if (s < 3600) return `${Math.floor(s/60)}m ago`;
+  if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+  return `${Math.floor(s/86400)}d ago`;
+}
+
+const AutomationPage = ({ session, toast }) => {
+  const API = import.meta.env.VITE_API_URL;
+  const headers = {
+    "x-pulse-secret": import.meta.env.VITE_API_SECRET,
+    "Authorization": `Bearer ${session?.token}`,
+    "Content-Type": "application/json",
+  };
+
+  const [rules,    setRules]    = useState([]);
+  const [log,      setLog]      = useState([]);
+  const [loading,  setLoading]  = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [editing,  setEditing]  = useState(null);
+
+  const blankForm = () => ({
+    name: "", trigger_type: "health_below", trigger_value: 40,
+    action_type: "log_activity", action_text: "Attention needed — please review this account.",
+  });
+  const [form, setForm] = useState(blankForm());
+
+  const fetchAll = useCallback(async () => {
+    if (!API || !session?.token) return;
+    const [r1, r2] = await Promise.all([
+      fetch(`${API}/api/automation/rules`, { headers }),
+      fetch(`${API}/api/automation/log`,   { headers }),
+    ]);
+    if (r1.ok) setRules(await r1.json());
+    if (r2.ok) setLog(await r2.json());
+    setLoading(false);
+  }, [API, session?.token]);
+
+  useEffect(() => { fetchAll(); }, [fetchAll]);
+
+  const triggerOpt  = TRIGGER_OPTS.find(o => o.value === form.trigger_type) || TRIGGER_OPTS[0];
+  const actionOpt   = ACTION_OPTS.find(o => o.value === form.action_type)   || ACTION_OPTS[0];
+
+  const openNew = () => { setEditing(null); setForm(blankForm()); setShowForm(true); };
+  const openEdit = rule => {
+    const tOpt = TRIGGER_OPTS.find(o => o.value === rule.trigger_type) || TRIGGER_OPTS[0];
+    const aOpt = ACTION_OPTS.find(o => o.value === rule.action_type)   || ACTION_OPTS[0];
+    setEditing(rule);
+    setForm({
+      name: rule.name,
+      trigger_type: rule.trigger_type,
+      trigger_value: rule.trigger_config?.[tOpt.field] ?? tOpt.def,
+      action_type: rule.action_type,
+      action_text: rule.action_config?.[aOpt.configField] ?? aOpt.def,
+    });
+    setShowForm(true);
+  };
+
+  const saveRule = async () => {
+    if (!form.name.trim()) { toast?.("Name is required", "error"); return; }
+    const tOpt = TRIGGER_OPTS.find(o => o.value === form.trigger_type);
+    const aOpt = ACTION_OPTS.find(o => o.value === form.action_type);
+    const body = {
+      name: form.name.trim(),
+      trigger_type:   form.trigger_type,
+      trigger_config: { [tOpt.field]: Number(form.trigger_value) },
+      action_type:    form.action_type,
+      action_config:  { [aOpt.configField]: form.action_text },
+    };
+    const url    = editing ? `${API}/api/automation/rules/${editing.id}` : `${API}/api/automation/rules`;
+    const method = editing ? "PATCH" : "POST";
+    const res = await fetch(url, { method, headers, body: JSON.stringify(body) });
+    if (!res.ok) { toast?.("Failed to save rule", "error"); return; }
+    toast?.(editing ? "Rule updated" : "Rule created", "success");
+    setShowForm(false);
+    fetchAll();
+  };
+
+  const deleteRule = async id => {
+    if (!window.confirm("Delete this rule?")) return;
+    await fetch(`${API}/api/automation/rules/${id}`, { method: "DELETE", headers });
+    fetchAll();
+  };
+
+  const toggleRule = async rule => {
+    await fetch(`${API}/api/automation/rules/${rule.id}`, {
+      method: "PATCH", headers,
+      body: JSON.stringify({ enabled: !rule.enabled }),
+    });
+    fetchAll();
+  };
+
+  const inputStyle = { width:"100%",padding:"9px 12px",border:"1.5px solid var(--border)",
+    borderRadius:"var(--r-sm)",fontSize:13,fontFamily:"var(--font-display)",
+    background:"var(--bg)",color:"var(--text)",outline:"none" };
+  const labelStyle = { fontSize:12,fontWeight:600,color:"var(--text2)",marginBottom:4,display:"block" };
+
+  return (
+    <div style={{maxWidth:820,margin:"0 auto",animation:"fadeUp .2s ease"}}>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+        <div>
+          <h1 style={{fontSize:22,fontWeight:800,letterSpacing:"-.03em",color:"var(--text)",marginBottom:4}}>
+            Automation
+          </h1>
+          <p style={{fontSize:13,color:"var(--text2)",margin:0}}>
+            Rules that run hourly — Pulse acts on your accounts automatically.
+          </p>
+        </div>
+        <button onClick={openNew}
+          style={{display:"flex",alignItems:"center",gap:7,background:"var(--indigo)",color:"white",
+            border:"none",borderRadius:"var(--r)",padding:"10px 18px",fontWeight:600,fontSize:13,
+            cursor:"pointer",fontFamily:"var(--font-display)",boxShadow:"0 2px 8px var(--indigo-glow)"}}>
+          <Ic n="plus" size={13} color="white"/> New Rule
+        </button>
+      </div>
+
+      {loading ? (
+        <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:200,gap:12,color:"var(--text3)",fontSize:13}}>
+          <div style={{width:18,height:18,border:"2px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+          Loading…
+        </div>
+      ) : (
+        <>
+          {/* Rules list */}
+          {rules.length === 0 && !showForm && (
+            <div style={{textAlign:"center",padding:"48px 24px",background:"var(--bg2)",
+              border:"1.5px dashed var(--border2)",borderRadius:"var(--r-lg)",color:"var(--text3)"}}>
+              <Ic n="automation" size={32} color="var(--border2)" style={{marginBottom:12}}/>
+              <div style={{fontSize:14,fontWeight:600,marginBottom:6,color:"var(--text2)"}}>No rules yet</div>
+              <div style={{fontSize:13}}>Create your first rule to start automating account actions.</div>
+            </div>
+          )}
+
+          {rules.map(rule => (
+            <div key={rule.id} className="card-hover"
+              style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+                padding:"16px 20px",marginBottom:10,display:"flex",alignItems:"center",gap:16}}>
+              {/* Toggle */}
+              <div onClick={() => toggleRule(rule)} title={rule.enabled ? "Disable" : "Enable"}
+                style={{width:34,height:20,borderRadius:99,flexShrink:0,cursor:"pointer",
+                  background:rule.enabled?"var(--indigo)":"var(--bg4)",position:"relative",transition:"background .2s"}}>
+                <div style={{position:"absolute",top:3,left:rule.enabled?16:3,width:14,height:14,
+                  borderRadius:"50%",background:"white",transition:"left .2s",boxShadow:"var(--shadow-xs)"}}/>
+              </div>
+
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:600,fontSize:14,color:rule.enabled?"var(--text)":"var(--text3)",marginBottom:3}}>
+                  {rule.name}
+                </div>
+                <div style={{fontSize:12,color:"var(--text3)",display:"flex",gap:8,flexWrap:"wrap"}}>
+                  <span style={{background:"var(--amber-dim)",color:"var(--amber)",padding:"2px 8px",borderRadius:"var(--r-xs)",fontWeight:500}}>
+                    When: {triggerLabel(rule)}
+                  </span>
+                  <span style={{background:"var(--indigo-dim)",color:"var(--indigo)",padding:"2px 8px",borderRadius:"var(--r-xs)",fontWeight:500}}>
+                    Then: {actionLabel(rule)}
+                  </span>
+                </div>
+              </div>
+
+              <div style={{display:"flex",gap:6,flexShrink:0}}>
+                <button onClick={() => openEdit(rule)} className="icon-btn"
+                  style={{background:"var(--bg3)",border:"none",cursor:"pointer",padding:"6px 8px",borderRadius:"var(--r-sm)"}}>
+                  <Ic n="edit" size={13} color="var(--text2)"/>
+                </button>
+                <button onClick={() => deleteRule(rule.id)} className="icon-btn"
+                  style={{background:"var(--bg3)",border:"none",cursor:"pointer",padding:"6px 8px",borderRadius:"var(--r-sm)"}}>
+                  <Ic n="trash" size={13} color="var(--rose)"/>
+                </button>
+              </div>
+            </div>
+          ))}
+
+          {/* Recent log */}
+          {log.length > 0 && (
+            <div style={{marginTop:32}}>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--text2)",marginBottom:12,letterSpacing:"-.01em"}}>
+                Recent activity
+              </div>
+              {log.map(entry => (
+                <div key={entry.id}
+                  style={{display:"flex",alignItems:"flex-start",gap:12,padding:"10px 0",
+                    borderBottom:"1px solid var(--border)"}}>
+                  <div style={{width:7,height:7,borderRadius:"50%",background:"var(--indigo)",
+                    flexShrink:0,marginTop:5}}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <span style={{fontWeight:600,fontSize:13,color:"var(--text)"}}>{entry.account_name}</span>
+                    <span style={{fontSize:13,color:"var(--text2)"}}> — {entry.detail || entry.action_type}</span>
+                    <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>
+                      via <em>{entry.rule_name}</em> · {timeAgo(entry.fired_at)}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Rule form modal */}
+      {showForm && (
+        <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",zIndex:800,
+          display:"flex",alignItems:"center",justifyContent:"center",padding:20}}
+          onClick={e => e.target===e.currentTarget && setShowForm(false)}>
+          <div style={{background:"var(--bg2)",borderRadius:"var(--r-xl)",padding:28,
+            width:"100%",maxWidth:480,boxShadow:"var(--shadow-lg)",animation:"scaleIn .15s ease"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:22}}>
+              <h2 style={{fontSize:16,fontWeight:700,color:"var(--text)",margin:0}}>
+                {editing ? "Edit rule" : "New automation rule"}
+              </h2>
+              <button onClick={() => setShowForm(false)} style={{background:"none",border:"none",cursor:"pointer",padding:4}}>
+                <Ic n="close" size={16} color="var(--text3)"/>
+              </button>
+            </div>
+
+            <div style={{marginBottom:16}}>
+              <label style={labelStyle}>Rule name</label>
+              <input style={inputStyle} placeholder="e.g. Alert on low health"
+                value={form.name} onChange={e => setForm(f => ({...f, name: e.target.value}))}/>
+            </div>
+
+            <div style={{marginBottom:16}}>
+              <label style={labelStyle}>Trigger — When this condition is met…</label>
+              <select style={{...inputStyle,marginBottom:8}} value={form.trigger_type}
+                onChange={e => {
+                  const opt = TRIGGER_OPTS.find(o => o.value === e.target.value);
+                  setForm(f => ({...f, trigger_type: e.target.value, trigger_value: opt?.def ?? 0}));
+                }}>
+                {TRIGGER_OPTS.map(o => <option key={o.value} value={o.value}>{o.label} … {o.unit}</option>)}
+              </select>
+              <input style={inputStyle} type="number" min="0" max="999"
+                placeholder={`Value ${triggerOpt.unit}`}
+                value={form.trigger_value}
+                onChange={e => setForm(f => ({...f, trigger_value: e.target.value}))}/>
+            </div>
+
+            <div style={{marginBottom:24}}>
+              <label style={labelStyle}>Action — …do this automatically</label>
+              <select style={{...inputStyle,marginBottom:8}} value={form.action_type}
+                onChange={e => {
+                  const opt = ACTION_OPTS.find(o => o.value === e.target.value);
+                  setForm(f => ({...f, action_type: e.target.value, action_text: opt?.def ?? ""}));
+                }}>
+                {ACTION_OPTS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+              <input style={inputStyle} placeholder={actionOpt.configLabel}
+                value={form.action_text}
+                onChange={e => setForm(f => ({...f, action_text: e.target.value}))}/>
+              <div style={{fontSize:11,color:"var(--text3)",marginTop:5}}>
+                You can use <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;account&#125;</code>, <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;health&#125;</code>, <code style={{background:"var(--bg4)",padding:"0 4px",borderRadius:3}}>&#123;nps&#125;</code> as placeholders.
+              </div>
+            </div>
+
+            <div style={{display:"flex",gap:10,justifyContent:"flex-end"}}>
+              <button onClick={() => setShowForm(false)}
+                style={{padding:"9px 18px",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+                  background:"var(--bg3)",color:"var(--text2)",fontSize:13,fontWeight:500,
+                  cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                Cancel
+              </button>
+              <button onClick={saveRule}
+                style={{padding:"9px 20px",background:"var(--indigo)",color:"white",border:"none",
+                  borderRadius:"var(--r)",fontSize:13,fontWeight:600,cursor:"pointer",
+                  fontFamily:"var(--font-display)",boxShadow:"0 2px 8px var(--indigo-glow)"}}>
+                {editing ? "Save changes" : "Create rule"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function App() {
   const [session,      setSession]      = useState(loadSession);
   const [accounts,     setAccounts]     = useState([]);
@@ -6023,8 +6325,9 @@ export default function App() {
     { id:"playbooks",    icon:"playbooks",    label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
     { id:"surveys",      icon:"survey",       label:"Surveys",          active:true  },
     { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
-    { id:"settings", icon:"shield", label:"Email Settings", active:true },
-    { id:"briefing",     icon:"briefing",     label:"Daily Briefing",   active:false, tip:"Phase 4" },
+    { id:"settings",    icon:"shield",      label:"Email Settings", active:true },
+    { id:"automation",  icon:"automation",   label:"Automation",      active:true },
+    { id:"briefing",    icon:"briefing",     label:"Daily Briefing",  active:false, tip:"Phase 4" },
   ];
 
   return (
@@ -6146,6 +6449,11 @@ export default function App() {
           {/* ── PLAYBOOKS VIEW ── */}
           {view==="playbooks"&&(
             <PlaybookLibraryPage accounts={active} onUpdate={update}/>
+          )}
+
+          {/* ── AUTOMATION VIEW ── */}
+          {view==="automation"&&(
+            <AutomationPage session={session} toast={toast}/>
           )}
 
           {/* ── PORTFOLIO VIEW ── */}
