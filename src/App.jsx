@@ -1364,8 +1364,8 @@ const AccountForm = ({ onClose, onSave, existing, toast }) => {
     ? { name:existing.name, industry:existing.industry, plan:existing.plan, arr:existing.arr,
         renewalDate:existing.renewalDate, nps:existing.nps, ces:existing.ces,
         productUsage:existing.productUsage, openTickets:existing.openTickets,
-        notes:existing.notes, nextAction:existing.nextAction||"" }
-    : { name:"",industry:"",plan:"Starter",arr:"",renewalDate:"",nps:"",ces:"",productUsage:"",openTickets:"",notes:"",nextAction:"" };
+        notes:existing.notes, nextAction:existing.nextAction||"", domain:existing.domain||"" }
+    : { name:"",industry:"",plan:"Starter",arr:"",renewalDate:"",nps:"",ces:"",productUsage:"",openTickets:"",notes:"",nextAction:"",domain:"" };
   const [f,setF] = useState(init);
   const s = k => e => setF(p=>({...p,[k]:e.target.value}));
   const preview = calcHealth({ nps:parseInt(f.nps)||50, ces:parseFloat(f.ces)||3.5, productUsage:parseInt(f.productUsage)||60, openTickets:parseInt(f.openTickets)||0 });
@@ -1409,6 +1409,7 @@ const AccountForm = ({ onClose, onSave, existing, toast }) => {
         <Fld label="CES (1–5)"><Inp type="number" step=".1" value={f.ces} onChange={s("ces")} placeholder="3.8"/></Fld>
         <Fld label="Product Usage (%)"><Inp type="number" value={f.productUsage} onChange={s("productUsage")} placeholder="75"/></Fld>
         <Fld label="Open Tickets"><Inp type="number" value={f.openTickets} onChange={s("openTickets")} placeholder="2"/></Fld>
+        <div style={{gridColumn:"1/-1"}}><Fld label="Company Domain (e.g. acme.com — used for Gmail thread matching)"><Inp value={f.domain} onChange={s("domain")} placeholder="acme.com"/></Fld></div>
         <div style={{gridColumn:"1/-1"}}><Fld label="🎯 Next Action"><Inp value={f.nextAction} onChange={s("nextAction")} placeholder="e.g. Send renewal proposal to Sara by Jan 15"/></Fld></div>
         <div style={{gridColumn:"1/-1"}}>
           <Fld label="Notes">
@@ -1896,6 +1897,20 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
     ai:         false,
   };
 
+  const [emailThreads,    setEmailThreads]    = useState([]);
+  const [threadsLoading, setThreadsLoading] = useState(false);
+
+  useEffect(() => {
+    if (tab !== "activity") return;
+    let cancelled = false;
+    setThreadsLoading(true);
+    call("GET", `/api/email/threads/${account.id}`)
+      .then(d => { if (!cancelled) setEmailThreads(d.threads || []); })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setThreadsLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, account.id]);
+
   const [aiMessages, setAiMessages] = useState([]);
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiChatLoading, setAiChatLoading] = useState(false);
@@ -2146,22 +2161,50 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                 onToggleManual={onToggleManual}
                 onDeleteManual={onDeleteManual}
               />
-              <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {account.activityLog.length===0&&(
-                  <div style={{textAlign:"center",padding:"24px 0",color:"var(--text3)",fontFamily:"var(--font-mono)",fontSize:12}}>No activity logged yet</div>
-                )}
-                {account.activityLog.map(a=>(
-                  <div key={a.id} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                      <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
-                        color:ACT_COLORS[a.type]||"var(--text2)",background:"var(--bg3)",
-                        padding:"2px 8px",borderRadius:"var(--r-sm)"}}>{a.type}</span>
-                      <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.date}</span>
-                    </div>
-                    <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>{a.note}</div>
+              {(() => {
+                const logItems = account.activityLog.map(a => ({ _type:"log", _sort:a.date, ...a }));
+                const threadItems = emailThreads.map(t => ({
+                  _type:"email", _sort:(t.last_message_at||"").slice(0,10),
+                  id:t.id, subject:t.subject, snippet:t.snippet,
+                  lastMessageAt:t.last_message_at, lastMessageFrom:t.last_message_from,
+                  messageCount:t.message_count, isUnreadReply:t.is_unread_reply,
+                }));
+                const merged = [...logItems,...threadItems].sort((a,b)=>b._sort.localeCompare(a._sort));
+                return (
+                  <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                    {threadsLoading&&<div style={{fontSize:12,color:"var(--text3)",textAlign:"center",padding:"8px 0"}}>Loading email threads…</div>}
+                    {merged.length===0&&!threadsLoading&&(
+                      <div style={{textAlign:"center",padding:"24px 0",color:"var(--text3)",fontFamily:"var(--font-mono)",fontSize:12}}>No activity logged yet</div>
+                    )}
+                    {merged.map((item,i) => item._type==="email" ? (
+                      <div key={`email-${item.id}`} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <div style={{display:"flex",alignItems:"center",gap:7}}>
+                            <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
+                              color:"var(--indigo)",background:"var(--indigo-dim)",
+                              padding:"2px 8px",borderRadius:"var(--r-sm)"}}>Email</span>
+                            {item.isUnreadReply&&<span style={{fontSize:10,background:"var(--rose-dim)",color:"var(--rose)",padding:"1px 7px",borderRadius:"var(--r-sm)",fontWeight:700}}>Awaiting reply</span>}
+                          </div>
+                          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{(item.lastMessageAt||"").slice(0,10)}</span>
+                        </div>
+                        <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.subject||"(no subject)"}</div>
+                        {item.snippet&&<div style={{fontSize:12,color:"var(--text3)",lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{item.snippet}</div>}
+                        <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>From: {item.lastMessageFrom} · {item.messageCount} message{item.messageCount!==1?"s":""}</div>
+                      </div>
+                    ) : (
+                      <div key={item.id} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                          <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
+                            color:ACT_COLORS[item.type]||"var(--text2)",background:"var(--bg3)",
+                            padding:"2px 8px",borderRadius:"var(--r-sm)"}}>{item.type}</span>
+                          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{item.date}</span>
+                        </div>
+                        <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>{item.note}</div>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
+                );
+              })()}
             </div>
           )}
 
@@ -5751,6 +5794,29 @@ popup.location.href = url;
     }
   };
 
+  const [syncing, setSyncing] = useState(false);
+
+  const syncEmails = async () => {
+    if (!API_URL) return;
+    setSyncing(true);
+    try {
+      const res = await fetch(`${API_URL}/api/email/sync`, {
+        method: "POST",
+        headers: {
+          "x-pulse-secret": API_SECRET,
+          ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+        },
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Sync failed");
+      showPageToast(`Synced — ${data.matched} threads matched across ${data.accounts} accounts`);
+    } catch (e) {
+      showPageToast(e.message || "Sync failed", "error");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   const hasGmail = emailAccounts.some(a => a.provider === "gmail");
 
   return (
@@ -5865,6 +5931,25 @@ popup.location.href = url;
         </div>
       )}
 
+      {/* Sync now */}
+      {hasGmail && (
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+          background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+          padding:"14px 16px",marginBottom:16,gap:12}}>
+          <div>
+            <div style={{fontSize:13,fontWeight:600,marginBottom:2}}>Sync email threads</div>
+            <div style={{fontSize:12,color:"var(--text3)"}}>Match Gmail threads to your accounts. Also runs automatically every 6 hours.</div>
+          </div>
+          <button onClick={syncEmails} disabled={syncing}
+            style={{padding:"8px 16px",borderRadius:"var(--r-sm)",fontSize:13,fontWeight:600,
+              border:"1.5px solid var(--indigo)",background:"var(--indigo)",color:"white",
+              cursor:syncing?"not-allowed":"pointer",opacity:syncing?0.7:1,
+              transition:"all .15s",whiteSpace:"nowrap",fontFamily:"var(--font-display)"}}>
+            {syncing ? "Syncing…" : "Sync now"}
+          </button>
+        </div>
+      )}
+
       {/* Empty state */}
       {!loading && emailAccounts.length === 0 && (
         <div style={{textAlign:"center",padding:"40px 20px",
@@ -5958,6 +6043,126 @@ function nextPhaseKey(currentKey, phases) {
 }
 
 // ─── Customer Portal ─────────────────────────────────────────────────────────
+// ─── HandoverPage — sales-facing, rendered at /handover/:token (no auth) ──────
+const HandoverPage = ({ token }) => {
+  const [data,      setData]      = useState(null);
+  const [loading,   setLoading]   = useState(true);
+  const [error,     setError]     = useState(null);
+  const [notes,     setNotes]     = useState("");
+  const [confirmed, setConfirmed] = useState(false);
+  const [confirming,setConfirming]= useState(false);
+
+  useEffect(() => {
+    fetch(`${API_URL}/handover/${token}`)
+      .then(r => r.ok ? r.json() : r.json().then(e => Promise.reject(e.error)))
+      .then(d => { setData(d); setNotes(d.salesNotes || ""); setLoading(false);
+                   if (d.status === "confirmed") setConfirmed(true); })
+      .catch(e => { setError(e || "Link not found or expired"); setLoading(false); });
+  }, [token]);
+
+  const confirm = async () => {
+    setConfirming(true);
+    try {
+      const r = await fetch(`${API_URL}/handover/${token}/confirm`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ notes }),
+      });
+      if (r.ok) setConfirmed(true);
+    } catch {}
+    setConfirming(false);
+  };
+
+  const s = { bg:"#f8fafc", card:"white", border:"#e2e8f0", text:"#0f172a", text2:"#475569", text3:"#94a3b8", indigo:"#4361ee", emerald:"#10b981" };
+
+  if (loading) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:s.bg,fontFamily:"system-ui,sans-serif"}}>
+      <div style={{color:s.text3}}>Loading handover…</div>
+    </div>
+  );
+  if (error) return (
+    <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:s.bg,fontFamily:"system-ui,sans-serif"}}>
+      <div style={{textAlign:"center"}}>
+        <div style={{fontSize:32,marginBottom:12}}>🔗</div>
+        <div style={{fontSize:16,fontWeight:700,color:s.text,marginBottom:8}}>Link not found</div>
+        <div style={{fontSize:13,color:s.text3}}>This handover link may have expired or is invalid.</div>
+      </div>
+    </div>
+  );
+
+  const acct = data.account;
+  return (
+    <div style={{minHeight:"100vh",background:s.bg,fontFamily:"system-ui,sans-serif",padding:"40px 16px"}}>
+      <div style={{maxWidth:600,margin:"0 auto"}}>
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:12,color:s.indigo,fontWeight:700,textTransform:"uppercase",letterSpacing:".08em",marginBottom:6}}>Sales Handover</div>
+          <h1 style={{fontSize:26,fontWeight:800,color:s.text,letterSpacing:"-.03em",marginBottom:4}}>
+            {acct?.name || "Account Handover"}
+          </h1>
+          {acct && (
+            <div style={{fontSize:13,color:s.text3}}>
+              {[acct.industry, acct.plan, acct.arr ? `$${acct.arr.toLocaleString()} ARR` : null].filter(Boolean).join(" · ")}
+            </div>
+          )}
+        </div>
+
+        {/* Completeness bar */}
+        <div style={{background:s.card,border:`1.5px solid ${s.border}`,borderRadius:10,padding:"14px 16px",marginBottom:16}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+            <span style={{fontSize:12,fontWeight:600,color:s.text2}}>Handover completeness</span>
+            <span style={{fontSize:13,fontWeight:800,color:data.completeness===100?s.emerald:s.indigo}}>{data.completeness}%</span>
+          </div>
+          <div style={{height:6,background:"#e2e8f0",borderRadius:99,overflow:"hidden"}}>
+            <div style={{height:"100%",borderRadius:99,transition:"width .3s",
+              background:data.completeness===100?s.emerald:s.indigo,
+              width:`${data.completeness}%`}}/>
+          </div>
+        </div>
+
+        {/* Fields */}
+        <div style={{background:s.card,border:`1.5px solid ${s.border}`,borderRadius:10,padding:"16px",marginBottom:16}}>
+          {data.fields.map(({key,label,value}) => (
+            <div key={key} style={{marginBottom:14}}>
+              <div style={{fontSize:10,fontWeight:700,color:s.text3,letterSpacing:".06em",textTransform:"uppercase",marginBottom:4}}>{label}</div>
+              <div style={{fontSize:13,color:value?s.text:s.text3,lineHeight:1.6,fontStyle:value?"normal":"italic"}}>
+                {value || "Not provided"}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Confirm section */}
+        {confirmed ? (
+          <div style={{background:"#d1fae5",border:"1.5px solid #6ee7b7",borderRadius:10,padding:"20px",textAlign:"center"}}>
+            <div style={{fontSize:22,marginBottom:8}}>✅</div>
+            <div style={{fontSize:15,fontWeight:700,color:"#065f46",marginBottom:4}}>Handover confirmed!</div>
+            <div style={{fontSize:12,color:"#047857"}}>The CS team has been notified. You can close this tab.</div>
+          </div>
+        ) : (
+          <div style={{background:s.card,border:`1.5px solid ${s.border}`,borderRadius:10,padding:"16px"}}>
+            <div style={{fontSize:13,fontWeight:600,color:s.text,marginBottom:8}}>Your notes (optional)</div>
+            <textarea value={notes} onChange={e=>setNotes(e.target.value)}
+              placeholder="Anything the CS team should know? Additional context, special requests, concerns…"
+              rows={4}
+              style={{width:"100%",padding:"10px 12px",border:`1.5px solid ${s.border}`,borderRadius:8,
+                fontSize:13,fontFamily:"system-ui,sans-serif",color:s.text,background:s.bg,
+                outline:"none",resize:"vertical",boxSizing:"border-box"}}/>
+            <button onClick={confirm} disabled={confirming}
+              style={{marginTop:12,width:"100%",padding:"12px",background:s.indigo,color:"white",
+                border:"none",borderRadius:8,fontSize:14,fontWeight:700,cursor:confirming?"not-allowed":"pointer",
+                opacity:confirming?0.7:1,transition:"opacity .15s"}}>
+              {confirming ? "Confirming…" : "Confirm & sign off handover"}
+            </button>
+          </div>
+        )}
+
+        <div style={{textAlign:"center",marginTop:24,fontSize:11,color:s.text3}}>
+          Powered by Pulse · This link was shared by your CS team
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // PortalPage — customer-facing, rendered at /portal/:token (no auth)
 const PortalPage = ({ token }) => {
   const [data,    setData]    = useState(null);
@@ -6368,6 +6573,10 @@ const OnboardingTab = ({ account, call, toast }) => {
   const [editHO,   setEditHO]   = useState(false);
   const [taskForm, setTaskForm] = useState({show:false, owner:"csm", title:"", due_date:""});
   const [needForm, setNeedForm] = useState({show:false, category:"business", description:"", priority:"medium"});
+  const [sendHO,   setSendHO]   = useState(false);
+  const [hoEmail,  setHoEmail]  = useState("");
+  const [hoSending,setHoSending]= useState(false);
+  const [hoLink,   setHoLink]   = useState(null);
 
   const fetchAll = useCallback(async () => {
     try {
@@ -6398,6 +6607,23 @@ const OnboardingTab = ({ account, call, toast }) => {
     try { await call("PATCH", `/api/onboarding/plan/${plan.id}`, { handover_data: hoDraft }); } catch {}
     setPlan(p => ({ ...p, handover_data: hoDraft }));
     setEditHO(false); toast?.("Handover saved", "success");
+  };
+
+  const HO_FIELDS = ["what_sold","why_bought","success_definition","promises","red_flags","contacts"];
+  const hoCompleteness = plan
+    ? Math.round(HO_FIELDS.filter(k => plan.handover_data?.[k]?.trim()).length / HO_FIELDS.length * 100)
+    : 0;
+
+  const sendHandover = async () => {
+    if (!hoEmail.trim() || !plan) return;
+    setHoSending(true);
+    try {
+      const d = await call("POST", `/api/onboarding/plan/${plan.id}/send-handover`, { sales_email: hoEmail.trim() });
+      setPlan(p => ({ ...p, handover_status: "sent", handover_sales_email: hoEmail.trim() }));
+      setHoLink(d.link);
+      toast?.("Handover link generated", "success");
+    } catch { toast?.("Failed to generate link", "error"); }
+    finally { setHoSending(false); }
   };
 
   const markPhaseDone = async phaseKey => {
@@ -6576,14 +6802,86 @@ const OnboardingTab = ({ account, call, toast }) => {
 
       {/* Sales handover card */}
       <div style={{border:"1.5px solid var(--border)",borderRadius:"var(--r)",overflow:"hidden"}}>
-        <button onClick={()=>setShowHO(h=>!h)}
-          style={{width:"100%",display:"flex",justifyContent:"space-between",alignItems:"center",
-            padding:"10px 14px",background:"var(--bg3)",border:"none",cursor:"pointer",fontFamily:"var(--font-display)"}}>
-          <span style={{fontSize:12,fontWeight:700,color:"var(--text2)"}}>Sales Handover</span>
-          <Ic n={showHO?"chevron_up":"chevron_down"} size={13} color="var(--text3)"/>
-        </button>
+        <div style={{display:"flex",alignItems:"center",background:"var(--bg3)",borderBottom:showHO?"1px solid var(--border)":"none"}}>
+          <button onClick={()=>setShowHO(h=>!h)}
+            style={{flex:1,display:"flex",justifyContent:"space-between",alignItems:"center",
+              padding:"10px 14px",background:"transparent",border:"none",cursor:"pointer",fontFamily:"var(--font-display)"}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <span style={{fontSize:12,fontWeight:700,color:"var(--text2)"}}>Sales Handover</span>
+              {plan && (
+                <>
+                  <span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:"var(--r-xs)",
+                    background:hoCompleteness===100?"var(--emerald-dim)":hoCompleteness>50?"var(--amber-dim)":"var(--bg4)",
+                    color:hoCompleteness===100?"var(--emerald)":hoCompleteness>50?"var(--amber)":"var(--text3)"}}>
+                    {hoCompleteness}%
+                  </span>
+                  {plan.handover_status==="confirmed"&&<span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:"var(--r-xs)",background:"var(--emerald-dim)",color:"var(--emerald)"}}>✓ Confirmed</span>}
+                  {plan.handover_status==="sent"&&<span style={{fontSize:10,fontWeight:700,padding:"1px 7px",borderRadius:"var(--r-xs)",background:"var(--amber-dim)",color:"var(--amber)"}}>Awaiting Sales</span>}
+                </>
+              )}
+            </div>
+            <Ic n={showHO?"chevron_up":"chevron_down"} size={13} color="var(--text3)"/>
+          </button>
+          {plan && !editHO && (
+            <button onClick={e=>{e.stopPropagation();setSendHO(s=>!s);setHoLink(null);}}
+              style={{padding:"5px 12px",margin:"0 10px",borderRadius:"var(--r-sm)",fontSize:11,fontWeight:600,
+                border:"1.5px solid var(--indigo)",background:"var(--indigo-dim)",color:"var(--indigo)",
+                cursor:"pointer",fontFamily:"var(--font-display)",whiteSpace:"nowrap"}}>
+              {plan.handover_status==="confirmed"?"Resend":"Send to Sales"}
+            </button>
+          )}
+        </div>
+        {showHO && sendHO && (
+          <div style={{padding:14,borderBottom:"1px solid var(--border)",background:"var(--indigo-dim)"}}>
+            {hoLink ? (
+              <div>
+                <div style={{fontSize:12,fontWeight:600,color:"var(--indigo)",marginBottom:6}}>Magic link ready — copy and send to sales</div>
+                <div style={{display:"flex",gap:6}}>
+                  <input readOnly value={hoLink}
+                    style={{flex:1,padding:"7px 10px",border:"1.5px solid var(--indigo)",borderRadius:"var(--r-sm)",
+                      fontSize:12,fontFamily:"var(--font-mono)",background:"white",color:"var(--text)",outline:"none"}}/>
+                  <button onClick={()=>{navigator.clipboard.writeText(hoLink);toast?.("Link copied","success");}}
+                    style={{padding:"6px 12px",background:"var(--indigo)",color:"white",border:"none",
+                      borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Copy
+                  </button>
+                </div>
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>
+                  Sales rep visits this link — no Pulse account needed. They can review the handover and confirm.
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div style={{fontSize:12,fontWeight:600,color:"var(--indigo)",marginBottom:8}}>Generate a handover link for the sales rep</div>
+                <div style={{display:"flex",gap:6}}>
+                  <input value={hoEmail} onChange={e=>setHoEmail(e.target.value)}
+                    placeholder="sales.rep@company.com" type="email"
+                    style={{flex:1,padding:"7px 10px",border:"1.5px solid var(--indigo)",borderRadius:"var(--r-sm)",
+                      fontSize:12,fontFamily:"var(--font-display)",background:"white",color:"var(--text)",outline:"none"}}/>
+                  <button onClick={sendHandover} disabled={hoSending||!hoEmail.trim()}
+                    style={{padding:"6px 14px",background:"var(--indigo)",color:"white",border:"none",
+                      borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600,cursor:"pointer",
+                      opacity:hoSending?0.7:1,fontFamily:"var(--font-display)"}}>
+                    {hoSending?"Generating…":"Generate link"}
+                  </button>
+                </div>
+                {plan?.handover_sales_email && (
+                  <div style={{fontSize:11,color:"var(--text3)",marginTop:5}}>
+                    Previously sent to: {plan.handover_sales_email}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {showHO && (
           <div style={{padding:14}}>
+            {plan?.handover_status==="confirmed"&&plan?.handover_sales_notes&&(
+              <div style={{background:"var(--emerald-dim)",border:"1.5px solid rgba(16,185,129,.2)",borderRadius:"var(--r-sm)",padding:"10px 12px",marginBottom:12}}>
+                <div style={{fontSize:10,fontWeight:700,color:"var(--emerald)",letterSpacing:".04em",marginBottom:4}}>SALES REP NOTES</div>
+                <div style={{fontSize:12,color:"var(--text)",lineHeight:1.5}}>{plan.handover_sales_notes}</div>
+              </div>
+            )}
             {editHO ? (
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
                 {[
@@ -8135,6 +8433,9 @@ export default function App() {
 
   const portalToken = window.location.pathname.match(/^\/portal\/([a-f0-9]+)$/)?.[1];
   if (portalToken) return <PortalPage token={portalToken}/>;
+
+  const handoverToken = window.location.pathname.match(/^\/handover\/([a-f0-9]+)$/)?.[1];
+  if (handoverToken) return <HandoverPage token={handoverToken}/>;
 
   // Auth gate — if backend is configured and no session, show login screen
   if (API_URL && !session) {

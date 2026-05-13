@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm run *)",
+      "Read(//c/Users/My Lap/pulse-backend/**)",
+      "Bash(node -e \"require\\('./src/server'\\)\")"
+    ]
+  }
+}
