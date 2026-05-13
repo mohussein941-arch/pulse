@@ -1834,33 +1834,56 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const saveGoal=()=>{ onUpdate(account.id,{successPlan:{...account.successPlan,goal:goalDraft}}); setEditGoal(false); toast("Goal saved","success"); };
   const saveAct=()=>{ onUpdate(account.id,{nextAction:actDraft}); setEditAct(false); toast("Next action saved","success"); };
 
-  const TABS=["Overview","Tasks","Plan","Activity","Health","Playbook","Onboarding"];
+  const TABS = [
+    {key:"activity",   label:"Activity"},
+    {key:"onboarding", label:"Onboarding"},
+    {key:"health",     label:"Health & Playbook"},
+  ];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
-  const tabHasAlert={
-    Overview: rdays>0&&rdays<=60,
-    Tasks: taskAlertCount>0,
-    Plan: totalMs>0&&planPct<100,
-    Activity: days>14,
-    Health: account.healthScore<55,
-    Playbook: triggeredPbs.length>0&&!account.activePlaybookId,
-    Onboarding: false,
+  const tabHasAlert = {
+    activity:   taskAlertCount > 0 || days > 14,
+    onboarding: false,
+    health:     account.healthScore < 55 || (triggeredPbs.length > 0 && !account.activePlaybookId),
   };
-  const tabKey=t=>t.toLowerCase();
 
   return (
     <>
-      <div style={{position:"fixed",right:0,top:0,bottom:0,width:448,
-        background:"var(--bg2)",borderLeft:"1px solid var(--border)",zIndex:500,
-        overflow:"auto",boxShadow:"-12px 0 40px rgba(15,23,42,0.1)",animation:"slideRight .25s ease"}}>
+      <div style={{display:"flex",gap:28,alignItems:"flex-start"}}>
 
-        <div style={{padding:"18px 24px",borderBottom:"1px solid var(--border)",
-          position:"sticky",top:0,background:"var(--bg2)",zIndex:1}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
-            <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <Avatar name={account.name} size={38}/>
+        {/* ── LEFT COLUMN ─────────────────────────────────────────────────────── */}
+        <div style={{width:284,flexShrink:0,position:"sticky",top:0,alignSelf:"flex-start",display:"flex",flexDirection:"column",gap:12}}>
+
+          {/* Back + action buttons */}
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <button onClick={onClose}
+              style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",
+                color:"var(--text2)",cursor:"pointer",fontWeight:600,fontSize:13,
+                padding:"6px 0",fontFamily:"var(--font-display)"}}>
+              ← Back
+            </button>
+            <div style={{display:"flex",gap:6}}>
+              <button onClick={()=>setShowPortal(true)}
+                style={{background:"var(--indigo-dim)",border:"none",color:"var(--indigo)",
+                  cursor:"pointer",padding:"6px 12px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600}}>Portal</button>
+              <button onClick={()=>setShowEdit(true)}
+                style={{background:"var(--bg3)",border:"none",color:"var(--text2)",
+                  cursor:"pointer",padding:"6px 12px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600}}>Edit</button>
+              <button onClick={()=>setShowDel(true)}
+                style={{background:"var(--rose-dim)",border:"none",color:"var(--rose)",
+                  cursor:"pointer",padding:"6px 10px",borderRadius:"var(--r-sm)",display:"flex",alignItems:"center"}}>
+                <Ic n="trash" size={14} color="var(--rose)"/></button>
+            </div>
+          </div>
+
+          {/* Account card */}
+          <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:20}}>
+
+            {/* Avatar + name */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+              <Avatar name={account.name} size={44}/>
               <div>
-                <div style={{fontWeight:800,fontSize:16,lineHeight:1.2}}>{account.name}</div>
-                <div style={{display:"flex",gap:6,alignItems:"center",marginTop:3}}>
+                <div style={{fontWeight:800,fontSize:17,lineHeight:1.2}}>{account.name}</div>
+                <div style={{display:"flex",gap:5,alignItems:"center",marginTop:4,flexWrap:"wrap"}}>
                   <span style={{fontSize:11,color:"var(--text3)"}}>{account.industry}</span>
                   <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
                   <span style={{fontSize:11,color:"var(--text3)"}}>{account.plan}</span>
@@ -1868,177 +1891,114 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                 </div>
               </div>
             </div>
-            <div style={{display:"flex",gap:6}}>
-              <button onClick={()=>setShowPortal(true)} className="icon-btn"
-                style={{background:"var(--indigo-dim)",border:"none",color:"var(--indigo)",
-                  cursor:"pointer",padding:"6px 12px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600}}>Portal</button>
-              <button onClick={()=>setShowEdit(true)} className="icon-btn"
-                style={{background:"var(--bg3)",border:"none",color:"var(--text2)",
-                  cursor:"pointer",padding:"6px 12px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600}}>Edit</button>
-              <button onClick={()=>setShowDel(true)} className="icon-btn"
-                style={{background:"var(--rose-dim)",border:"none",color:"var(--rose)",
-                  cursor:"pointer",padding:"6px 10px",borderRadius:"var(--r-sm)",display:"flex",alignItems:"center",gap:4}}><Ic n="trash" size={14} color="var(--rose)"/></button>
-              <button onClick={onClose} className="icon-btn"
-                style={{background:"var(--bg3)",border:"none",color:"var(--text2)",
-                  cursor:"pointer",width:32,height:32,borderRadius:"var(--r-sm)",fontSize:18,
-                  display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+
+            {/* Health + Churn */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+              <div style={{textAlign:"center",background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 8px"}}>
+                <Ring score={account.healthScore} size={44}/>
+                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginTop:6,letterSpacing:".07em"}}>Health</div>
+              </div>
+              <div style={{textAlign:"center",background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 8px"}}>
+                <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:22,
+                  color:account.churnRisk>=60?"var(--rose)":account.churnRisk>=35?"var(--amber)":"var(--emerald)"}}>
+                  {account.churnRisk}%
+                </div>
+                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginTop:6,letterSpacing:".07em"}}>Churn Risk</div>
+              </div>
             </div>
-          </div>
 
-          {/* Next action */}
-          <div style={{background:account.nextAction?"var(--violet-dim)":"var(--bg3)",
-            border:`1.5px solid ${account.nextAction?"rgba(124,58,237,0.2)":"var(--border)"}`,
-            borderRadius:"var(--r)",padding:"10px 14px",marginBottom:12}}>
-            {editAct?(
-              <div style={{display:"flex",gap:8}}>
-                <Inp value={actDraft} onChange={e=>setActDraft(e.target.value)}
-                  onKeyDown={e=>{if(e.key==="Enter")saveAct();if(e.key==="Escape")setEditAct(false);}}
-                  placeholder="What's the next action?" style={{fontSize:13,padding:"7px 10px"}}/>
-                <Btn onClick={saveAct} style={{padding:"7px 14px",fontSize:12}}>Save</Btn>
+            {/* Stats grid */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+              <div style={{gridColumn:"1/-1",background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                <span style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".07em"}}>ARR</span>
+                <span style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:16,color:"var(--indigo)"}}>{fmtMoney(account.arr)}</span>
               </div>
-            ):(
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
-                  <Ic n="target" size={14} color="var(--violet)" style={{flexShrink:0}}/>
-                  <span style={{fontSize:13,color:account.nextAction?"var(--violet)":"var(--text3)",
-                    fontWeight:account.nextAction?600:400,
-                    overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
-                    {account.nextAction||"No next action — click to add"}
-                  </span>
-                </div>
-                <button onClick={()=>{setActDraft(account.nextAction||"");setEditAct(true);}}
-                  style={{background:"none",border:"none",color:"var(--indigo)",fontSize:11,
-                    cursor:"pointer",fontWeight:600,flexShrink:0}}>Edit</button>
-              </div>
-            )}
-          </div>
-
-          {/* Prep Call button */}
-          <button onClick={()=>setShowPrep(true)}
-            style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:7,
-              background:"var(--bg3)",color:"var(--text2)",border:"1.5px solid var(--border)",
-              borderRadius:"var(--r)",padding:"8px 16px",fontWeight:600,fontSize:12,cursor:"pointer",
-              fontFamily:"var(--font-display)",transition:"background .12s,border-color .12s",marginBottom:4}}
-            onMouseEnter={e=>{e.currentTarget.style.background="var(--bg4)";e.currentTarget.style.borderColor="var(--border2)";}}
-            onMouseLeave={e=>{e.currentTarget.style.background="var(--bg3)";e.currentTarget.style.borderColor="var(--border)";}}>
-            <Ic n="prep" size={13} color="var(--text2)"/>
-            Pre-Call Brief
-          </button>
-
-          {/* Tabs */}
-          <div style={{display:"flex",gap:4,flexWrap:"wrap"}}>
-            {TABS.map(t=>(
-              <button key={t} onClick={()=>setTab(tabKey(t))}
-                style={{position:"relative",padding:"6px 10px",borderRadius:"var(--r-sm)",fontSize:11,cursor:"pointer",
-                  fontFamily:"var(--font-mono)",border:"none",
-                  background:tab===tabKey(t)?"var(--indigo)":"transparent",
-                  color:tab===tabKey(t)?"white":"var(--text3)",
-                  fontWeight:600,transition:"all .15s"}}>
-                {t}
-                {tabHasAlert[t]&&tab!==tabKey(t)&&(
-                  <span style={{position:"absolute",top:3,right:3,width:6,height:6,
-                    borderRadius:"50%",background:"var(--rose)",display:"block"}}/>
-                )}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div style={{padding:24,display:"flex",flexDirection:"column",gap:14}}>
-
-          {/* OVERVIEW */}
-          {tab==="overview"&&(<>
-            {rdays>0&&rdays<=60&&(
-              <div style={{background:"var(--rose-dim)",border:"1.5px solid rgba(225,29,72,0.25)",
-                borderRadius:"var(--r)",padding:"12px 16px",display:"flex",gap:10,alignItems:"center",animation:"fadeUp .2s ease"}}>
-                <Ic n="bell" size={20} color="var(--rose)"/>
-                <div>
-                  <div style={{fontWeight:700,fontSize:13,color:"var(--rose)"}}>Renewal in {rdays} days</div>
-                  <div style={{fontSize:12,color:"var(--text2)",marginTop:2}}>Start the conversation now — don't wait.</div>
-                </div>
-              </div>
-            )}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:10}}>
               {[
-                {label:"ARR",    value:fmtMoney(account.arr), color:"var(--indigo)"},
-                {label:"NPS",    value:account.nps,           color:account.nps>=50?"var(--emerald)":"var(--amber)"},
-                {label:"Tickets",value:account.openTickets,   color:account.openTickets>4?"var(--rose)":"var(--text)"},
+                {label:"NPS",    value:account.nps,                color:account.nps>=50?"var(--emerald)":"var(--amber)"},
+                {label:"CES",    value:account.ces.toFixed(1),     color:account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"},
+                {label:"Usage",  value:`${account.productUsage}%`, color:account.productUsage>=70?"var(--emerald)":account.productUsage>=45?"var(--amber)":"var(--rose)"},
+                {label:"Tickets",value:account.openTickets,        color:account.openTickets>4?"var(--rose)":"var(--text2)"},
               ].map(m=>(
-                <div key={m.label} style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 10px",textAlign:"center"}}>
-                  <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:20,color:m.color}}>{m.value}</div>
-                  <div style={{fontSize:10,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginTop:3,fontFamily:"var(--font-mono)"}}>{m.label}</div>
+                <div key={m.label} style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"10px 8px",textAlign:"center"}}>
+                  <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:16,color:m.color}}>{m.value}</div>
+                  <div style={{fontSize:10,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginTop:3,fontFamily:"var(--font-mono)"}}>{m.label}</div>
                 </div>
               ))}
             </div>
-            <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-                <div style={{display:"flex",alignItems:"center",gap:12}}>
-                  <Ring score={account.healthScore} size={52}/>
-                  <div>
-                    <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Health Score</div>
-                    <div style={{fontWeight:700,fontSize:14,color:hColor(account.healthScore)}}>
-                      {account.healthScore>=70?"Strong":account.healthScore>=45?"Moderate":"Weak"}
-                    </div>
-                  </div>
-                </div>
-                <div style={{textAlign:"right"}}>
-                  <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:2}}>Churn Risk</div>
-                  <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:24,
-                    color:account.churnRisk>=60?"var(--rose)":account.churnRisk>=35?"var(--amber)":"var(--emerald)"}}>
-                    {account.churnRisk}%
-                  </div>
-                </div>
+
+            {/* Renewal + Last Contact */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
+              <div style={{background:"var(--bg3)",border:`1.5px solid ${rdays<=60&&rdays>0?"rgba(225,29,72,.3)":"var(--border)"}`,borderRadius:"var(--r)",padding:"10px 8px"}}>
+                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginBottom:3}}>Renewal</div>
+                <div style={{fontFamily:"var(--font-mono)",fontSize:12,fontWeight:500}}>{account.renewalDate||"—"}</div>
+                <div style={{fontSize:11,marginTop:2,fontFamily:"var(--font-mono)",color:rdays<=60&&rdays>0?"var(--rose)":"var(--text3)"}}>{rdays>0?`${rdays}d away`:"Overdue"}</div>
               </div>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:5}}>
-                <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>Product Usage</span>
-                <span style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text2)"}}>{account.productUsage}%</span>
-              </div>
-              <Bar value={account.productUsage} color={account.productUsage>=70?"var(--emerald)":account.productUsage>=45?"var(--amber)":"var(--rose)"}/>
-              <button onClick={()=>setTab("health")}
-                style={{marginTop:12,background:"none",border:"none",color:"var(--indigo)",fontSize:12,cursor:"pointer",fontWeight:600,padding:0}}>
-                See full breakdown →
-              </button>
-            </div>
-            <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                <div>
-                  <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Customer Effort Score</div>
-                  <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:28,
-                    color:account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}}>
-                    {account.ces.toFixed(1)}<span style={{fontSize:14,color:"var(--text3)",fontWeight:400}}> / 5</span>
-                  </div>
-                  <div style={{fontSize:12,fontFamily:"var(--font-mono)",marginTop:4,
-                    color:cesTrend>0?"var(--emerald)":cesTrend<0?"var(--rose)":"var(--text3)"}}>
-                    {cesTrend>0?"↑ Improving":cesTrend<0?"↓ Declining — investigate":"→ Flat"}
-                  </div>
-                </div>
-                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
-                  <Sparkline data={account.cesHistory} color={account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}/>
-                  <button onClick={()=>setShowCES(true)}
-                    style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--indigo)",
-                      background:"var(--indigo-dim)",border:"none",borderRadius:"var(--r-sm)",
-                      padding:"4px 10px",cursor:"pointer",fontWeight:600}}>+ Log CES</button>
-                </div>
+              <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"10px 8px"}}>
+                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginBottom:3}}>Last Contact</div>
+                <div style={{fontFamily:"var(--font-mono)",fontSize:12,fontWeight:500,color:days>30?"var(--rose)":days>14?"var(--amber)":"var(--text)"}}>{days}d ago</div>
+                <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{days>30?"Overdue":days>14?"Follow up":"Recent"}</div>
               </div>
             </div>
-            <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+
+            {/* Next Action */}
+            <div style={{background:account.nextAction?"var(--violet-dim)":"var(--bg3)",
+              border:`1.5px solid ${account.nextAction?"rgba(124,58,237,0.2)":"var(--border)"}`,
+              borderRadius:"var(--r)",padding:"10px 14px",marginBottom:14}}>
+              {editAct?(
+                <div style={{display:"flex",gap:8}}>
+                  <Inp value={actDraft} onChange={e=>setActDraft(e.target.value)}
+                    onKeyDown={e=>{if(e.key==="Enter")saveAct();if(e.key==="Escape")setEditAct(false);}}
+                    placeholder="What's the next action?" style={{fontSize:13,padding:"7px 10px"}}/>
+                  <Btn onClick={saveAct} style={{padding:"7px 14px",fontSize:12}}>Save</Btn>
+                </div>
+              ):(
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
+                    <Ic n="target" size={14} color="var(--violet)" style={{flexShrink:0}}/>
+                    <span style={{fontSize:13,color:account.nextAction?"var(--violet)":"var(--text3)",
+                      fontWeight:account.nextAction?600:400,
+                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {account.nextAction||"No next action — click to add"}
+                    </span>
+                  </div>
+                  <button onClick={()=>{setActDraft(account.nextAction||"");setEditAct(true);}}
+                    style={{background:"none",border:"none",color:"var(--indigo)",fontSize:11,
+                      cursor:"pointer",fontWeight:600,flexShrink:0}}>Edit</button>
+                </div>
+              )}
+            </div>
+
+            {/* Pre-Call Brief */}
+            <button onClick={()=>setShowPrep(true)}
+              style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:7,
+                background:"var(--bg3)",color:"var(--text2)",border:"1.5px solid var(--border)",
+                borderRadius:"var(--r)",padding:"8px 16px",fontWeight:600,fontSize:12,cursor:"pointer",
+                fontFamily:"var(--font-display)",transition:"background .12s,border-color .12s",marginBottom:16}}
+              onMouseEnter={e=>{e.currentTarget.style.background="var(--bg4)";e.currentTarget.style.borderColor="var(--border2)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background="var(--bg3)";e.currentTarget.style.borderColor="var(--border)";}}>
+              <Ic n="prep" size={13} color="var(--text2)"/>
+              Pre-Call Brief
+            </button>
+
+            {/* Stakeholders */}
+            <div>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Stakeholders</div>
                 <button onClick={()=>setShowStk(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage →</button>
               </div>
               {account.stakeholders.length===0
-                ?<div style={{fontSize:13,color:"var(--text3)"}}>No stakeholders mapped yet</div>
+                ?<div style={{fontSize:12,color:"var(--text3)"}}>None mapped yet</div>
                 :account.stakeholders.map(s=>{
                   const rc=ROLE_CFG[s.role]||ROLE_CFG.Neutral;
                   return (
-                    <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{width:28,height:28,borderRadius:"var(--r-sm)",background:`hsl(${hue(s.name)},60%,92%)`,
-                          display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,
+                    <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <div style={{width:26,height:26,borderRadius:"var(--r-sm)",background:`hsl(${hue(s.name)},60%,92%)`,
+                          display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,
                           fontWeight:700,color:`hsl(${hue(s.name)},50%,35%)`}}>{initials(s.name)}</div>
                         <div>
-                          <div style={{fontSize:13,fontWeight:600}}>{s.name}</div>
-                          <div style={{fontSize:11,color:"var(--text3)"}}>{s.title}</div>
+                          <div style={{fontSize:12,fontWeight:600}}>{s.name}</div>
+                          <div style={{fontSize:10,color:"var(--text3)"}}>{s.title}</div>
                         </div>
                       </div>
                       <Badge label={`${sentIcon(s.sentiment)} ${s.role}`} color={rc.color} bg={rc.bg}/>
@@ -2046,179 +2006,214 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   );
                 })}
             </div>
+
+            {/* Notes */}
             {account.notes&&(
-              <div style={{background:"var(--amber-dim)",border:"1.5px solid rgba(217,119,6,0.2)",borderRadius:"var(--r-lg)",padding:16}}>
-                <div style={{fontSize:11,color:"var(--amber)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Notes</div>
-                <div style={{fontSize:13,color:"var(--text)",lineHeight:1.6}}>{account.notes}</div>
+              <div style={{background:"var(--amber-dim)",border:"1.5px solid rgba(217,119,6,0.2)",borderRadius:"var(--r)",padding:"12px 14px",marginTop:14}}>
+                <div style={{fontSize:10,color:"var(--amber)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:6}}>Notes</div>
+                <div style={{fontSize:12,color:"var(--text)",lineHeight:1.6}}>{account.notes}</div>
               </div>
             )}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-              <div style={{background:"var(--bg3)",border:`1.5px solid ${rdays<=60&&rdays>0?"rgba(225,29,72,.3)":"var(--border)"}`,borderRadius:"var(--r)",padding:14}}>
-                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Renewal</div>
-                <div style={{fontFamily:"var(--font-mono)",fontSize:13,fontWeight:500}}>{account.renewalDate||"—"}</div>
-                <div style={{fontSize:11,marginTop:2,fontFamily:"var(--font-mono)",color:rdays<=60&&rdays>0?"var(--rose)":"var(--text3)"}}>{rdays>0?`${rdays}d away`:"Overdue"}</div>
-              </div>
-              <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:14}}>
-                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Last Contact</div>
-                <div style={{fontFamily:"var(--font-mono)",fontSize:13,fontWeight:500,color:days>30?"var(--rose)":days>14?"var(--amber)":"var(--text)"}}>{days}d ago</div>
-                <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{days>30?"Overdue":days>14?"Follow up soon":"Recent"}</div>
-              </div>
-            </div>
-          </>)}
+          </div>
+        </div>
 
-          {/* TASKS */}
-          {tab==="tasks"&&(
-            <AccountTasksTab
-              account={account}
-              accounts={[account]}
-              manualTasks={manualTasks||[]}
-              onAddManual={onAddManual}
-              onToggleManual={onToggleManual}
-              onDeleteManual={onDeleteManual}
-            />
-          )}
+        {/* ── RIGHT COLUMN ────────────────────────────────────────────────────── */}
+        <div style={{flex:1,minWidth:0}}>
 
-          {/* PLAN */}
-          {tab==="plan"&&(<>
-            <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-              <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>Customer Goal</div>
-              {editGoal?(
-                <div>
-                  <textarea value={goalDraft} onChange={e=>setGoalDraft(e.target.value)}
-                    style={{width:"100%",background:"white",border:"1.5px solid var(--indigo)",borderRadius:"var(--r)",
+          {/* Tab bar */}
+          <div style={{display:"flex",gap:4,borderBottom:"1.5px solid var(--border)",paddingBottom:12,marginBottom:20}}>
+            {TABS.map(({key,label})=>(
+              <button key={key} onClick={()=>setTab(key)}
+                style={{position:"relative",padding:"8px 18px",borderRadius:"var(--r-sm)",fontSize:13,cursor:"pointer",
+                  fontFamily:"var(--font-display)",border:"none",fontWeight:600,
+                  background:tab===key?"var(--indigo)":"transparent",
+                  color:tab===key?"white":"var(--text2)",
+                  transition:"all .15s"}}>
+                {label}
+                {tabHasAlert[key]&&tab!==key&&(
+                  <span style={{position:"absolute",top:4,right:4,width:6,height:6,
+                    borderRadius:"50%",background:"var(--rose)",display:"block"}}/>
+                )}
+              </button>
+            ))}
+          </div>
+
+          {/* ACTIVITY TAB */}
+          {tab==="activity"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              {rdays>0&&rdays<=60&&(
+                <div style={{background:"var(--rose-dim)",border:"1.5px solid rgba(225,29,72,0.25)",
+                  borderRadius:"var(--r)",padding:"12px 16px",display:"flex",gap:10,alignItems:"center"}}>
+                  <Ic n="bell" size={20} color="var(--rose)"/>
+                  <div>
+                    <div style={{fontWeight:700,fontSize:13,color:"var(--rose)"}}>Renewal in {rdays} days</div>
+                    <div style={{fontSize:12,color:"var(--text2)",marginTop:2}}>Start the conversation now — don't wait.</div>
+                  </div>
+                </div>
+              )}
+              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Log Activity</div>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
+                  <Fld label="Type"><Slct value={logF.type} onChange={e=>setLogF(f=>({...f,type:e.target.value}))}>{ACT_TYPES.map(t=><option key={t}>{t}</option>)}</Slct></Fld>
+                  <Fld label="Date"><Inp type="date" value={logF.date} onChange={e=>setLogF(f=>({...f,date:e.target.value}))}/></Fld>
+                </div>
+                <Fld label="Note">
+                  <textarea value={logF.note} onChange={e=>setLogF(f=>({...f,note:e.target.value}))}
+                    placeholder="What happened? Key outcomes, follow-ups…"
+                    style={{width:"100%",background:"white",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
                       padding:"9px 12px",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:14,
                       outline:"none",resize:"vertical",minHeight:70}}/>
-                  <div style={{display:"flex",gap:8,marginTop:8}}>
-                    <Btn onClick={saveGoal} style={{flex:1,padding:"8px"}}>Save Goal</Btn>
-                    <Btn variant="ghost" onClick={()=>setEditGoal(false)} style={{flex:1,padding:"8px"}}>Cancel</Btn>
-                  </div>
-                </div>
-              ):(
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
-                  <div style={{fontSize:13,color:account.successPlan.goal?"var(--text)":"var(--text3)",lineHeight:1.6,fontWeight:500}}>
-                    {account.successPlan.goal||"No goal defined yet — click Edit to add one"}
-                  </div>
-                  <button onClick={()=>{setGoalDraft(account.successPlan.goal);setEditGoal(true);}}
-                    style={{fontSize:11,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}}>Edit</button>
-                </div>
-              )}
-            </div>
-            {totalMs>0&&(
-              <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-                <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-                  <span style={{fontSize:12,color:"var(--text2)",fontWeight:600}}>Progress</span>
-                  <span style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--indigo)",fontWeight:600}}>{doneMs}/{totalMs} · {planPct}%</span>
-                </div>
-                <Bar value={planPct} color={planPct>=70?"var(--emerald)":planPct>=40?"var(--indigo)":"var(--amber)"}/>
+                </Fld>
+                <Btn onClick={logActivity} style={{width:"100%"}}>Log {logF.type}</Btn>
               </div>
-            )}
-            <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-              <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Milestones</div>
-              {account.successPlan.milestones.length===0&&<div style={{fontSize:13,color:"var(--text3)",marginBottom:14}}>No milestones yet.</div>}
-              <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
-                {account.successPlan.milestones.map(m=>(
-                  <div key={m.id} style={{display:"flex",alignItems:"center",gap:10,background:"white",borderRadius:"var(--r)",
-                    padding:"10px 12px",boxShadow:"var(--shadow-sm)",transition:"opacity .15s",opacity:m.done?0.65:1}}>
-                    <input type="checkbox" checked={m.done} onChange={()=>toggleMs(m.id)}
-                      style={{width:16,height:16,cursor:"pointer",accentColor:"var(--indigo)",flexShrink:0}}/>
-                    <span style={{fontSize:13,flex:1,color:m.done?"var(--text3)":"var(--text)",textDecoration:m.done?"line-through":"none"}}>{m.text}</span>
-                    <button onClick={()=>delMs(m.id)}
-                      style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",display:"flex",alignItems:"center",padding:"3px",borderRadius:"var(--r-xs)"}}>×</button>
-                  </div>
-                ))}
-              </div>
-              <div style={{display:"flex",gap:8}}>
-                <Inp value={newMs} onChange={e=>setNewMs(e.target.value)} placeholder="Add a milestone…"
-                  onKeyDown={e=>e.key==="Enter"&&addMs()} style={{flex:1,fontSize:13,padding:"8px 12px"}}/>
-                <Btn onClick={addMs} style={{padding:"8px 16px",fontSize:13}}>+</Btn>
-              </div>
-            </div>
-          </>)}
-
-          {/* ACTIVITY */}
-          {tab==="activity"&&(<>
-            <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-              <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Log Activity</div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
-                <Fld label="Type"><Slct value={logF.type} onChange={e=>setLogF(f=>({...f,type:e.target.value}))}>{ACT_TYPES.map(t=><option key={t}>{t}</option>)}</Slct></Fld>
-                <Fld label="Date"><Inp type="date" value={logF.date} onChange={e=>setLogF(f=>({...f,date:e.target.value}))}/></Fld>
-              </div>
-              <Fld label="Note">
-                <textarea value={logF.note} onChange={e=>setLogF(f=>({...f,note:e.target.value}))}
-                  placeholder="What happened? Key outcomes, follow-ups…"
-                  style={{width:"100%",background:"white",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
-                    padding:"9px 12px",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:14,
-                    outline:"none",resize:"vertical",minHeight:70}}/>
-              </Fld>
-              <Btn onClick={logActivity} style={{width:"100%"}}>Log {logF.type}</Btn>
-            </div>
-            <div style={{display:"flex",flexDirection:"column",gap:10}}>
-              {account.activityLog.length===0&&(
-                <div style={{textAlign:"center",padding:"24px 0",color:"var(--text3)",fontFamily:"var(--font-mono)",fontSize:12}}>No activity logged yet</div>
-              )}
-              {account.activityLog.map(a=>(
-                <div key={a.id} style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                    <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                      <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
-                        color:ACT_COLORS[a.type]||"var(--text2)",background:"var(--bg4)",
-                        padding:"2px 8px",borderRadius:"var(--r-sm)"}}>{a.type}</span>
-                    </div>
-                    <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.date}</span>
-                  </div>
-                  <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>{a.note}</div>
-                </div>
-              ))}
-            </div>
-          </>)}
-
-          {/* HEALTH */}
-          {tab==="health"&&(<>
-            <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-                <div>
-                  <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Overall Health</div>
-                  <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:32,color:hColor(account.healthScore)}}>
-                    {account.healthScore}<span style={{fontSize:16,color:"var(--text3)",fontWeight:400}}>/100</span>
-                  </div>
-                </div>
-                <Ring score={account.healthScore} size={64}/>
-              </div>
+              <AccountTasksTab
+                account={account}
+                accounts={[account]}
+                manualTasks={manualTasks||[]}
+                onAddManual={onAddManual}
+                onToggleManual={onToggleManual}
+                onDeleteManual={onDeleteManual}
+              />
               <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                {calcHealth(account).parts.map(p=>(
-                  <div key={p.label}>
-                    <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
-                      <span style={{fontSize:12,fontWeight:600}}>{p.label}</span>
-                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
-                        <span style={{fontSize:11,color:"var(--text3)"}}>{p.note}</span>
-                        <span style={{fontSize:12,fontFamily:"var(--font-mono)",fontWeight:600,
-                          color:p.pts===p.max?"var(--emerald)":p.pts<p.max*0.5?"var(--rose)":"var(--amber)"}}>
-                          {p.pts}/{p.max}
-                        </span>
-                      </div>
+                {account.activityLog.length===0&&(
+                  <div style={{textAlign:"center",padding:"24px 0",color:"var(--text3)",fontFamily:"var(--font-mono)",fontSize:12}}>No activity logged yet</div>
+                )}
+                {account.activityLog.map(a=>(
+                  <div key={a.id} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
+                        color:ACT_COLORS[a.type]||"var(--text2)",background:"var(--bg3)",
+                        padding:"2px 8px",borderRadius:"var(--r-sm)"}}>{a.type}</span>
+                      <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{a.date}</span>
                     </div>
-                    <Bar value={(p.pts/p.max)*100} color={p.pts===p.max?"var(--emerald)":p.pts<p.max*0.5?"var(--rose)":"var(--amber)"}/>
+                    <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>{a.note}</div>
                   </div>
                 ))}
               </div>
             </div>
-            <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,.15)",borderRadius:"var(--r)",padding:"14px 16px"}}>
-              <div style={{fontSize:12,fontWeight:700,color:"var(--indigo)",marginBottom:6}}>Improvement opportunities</div>
-              {calcHealth(account).parts.filter(p=>p.pts<p.max).map(p=>(
-                <div key={p.label} style={{fontSize:12,color:"var(--text2)",marginBottom:4}}>
-                  → <strong>{p.label}</strong>: {p.note} — +{p.max-p.pts} pts available
-                </div>
-              ))}
-            </div>
-          </>)}
-
-          {/* PLAYBOOK */}
-          {tab==="playbook"&&(
-            <ActivePlaybookTab account={account} onUpdate={onUpdate}/>
           )}
 
+          {/* ONBOARDING TAB */}
           {tab==="onboarding"&&(
             <OnboardingTab account={account} call={call} toast={toast}/>
+          )}
+
+          {/* HEALTH & PLAYBOOK TAB */}
+          {tab==="health"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+                  <div>
+                    <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Overall Health</div>
+                    <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:32,color:hColor(account.healthScore)}}>
+                      {account.healthScore}<span style={{fontSize:16,color:"var(--text3)",fontWeight:400}}>/100</span>
+                    </div>
+                  </div>
+                  <Ring score={account.healthScore} size={64}/>
+                </div>
+                <div style={{display:"flex",flexDirection:"column",gap:10}}>
+                  {calcHealth(account).parts.map(p=>(
+                    <div key={p.label}>
+                      <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                        <span style={{fontSize:12,fontWeight:600}}>{p.label}</span>
+                        <div style={{display:"flex",gap:8,alignItems:"center"}}>
+                          <span style={{fontSize:11,color:"var(--text3)"}}>{p.note}</span>
+                          <span style={{fontSize:12,fontFamily:"var(--font-mono)",fontWeight:600,
+                            color:p.pts===p.max?"var(--emerald)":p.pts<p.max*0.5?"var(--rose)":"var(--amber)"}}>
+                            {p.pts}/{p.max}
+                          </span>
+                        </div>
+                      </div>
+                      <Bar value={(p.pts/p.max)*100} color={p.pts===p.max?"var(--emerald)":p.pts<p.max*0.5?"var(--rose)":"var(--amber)"}/>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,.15)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+                <div style={{fontSize:12,fontWeight:700,color:"var(--indigo)",marginBottom:6}}>Improvement opportunities</div>
+                {calcHealth(account).parts.filter(p=>p.pts<p.max).map(p=>(
+                  <div key={p.label} style={{fontSize:12,color:"var(--text2)",marginBottom:4}}>
+                    → <strong>{p.label}</strong>: {p.note} — +{p.max-p.pts} pts available
+                  </div>
+                ))}
+              </div>
+              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
+                  <div>
+                    <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Customer Effort Score</div>
+                    <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:28,
+                      color:account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}}>
+                      {account.ces.toFixed(1)}<span style={{fontSize:14,color:"var(--text3)",fontWeight:400}}> / 5</span>
+                    </div>
+                    <div style={{fontSize:12,fontFamily:"var(--font-mono)",marginTop:4,
+                      color:cesTrend>0?"var(--emerald)":cesTrend<0?"var(--rose)":"var(--text3)"}}>
+                      {cesTrend>0?"↑ Improving":cesTrend<0?"↓ Declining — investigate":"→ Flat"}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
+                    <Sparkline data={account.cesHistory} color={account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}/>
+                    <button onClick={()=>setShowCES(true)}
+                      style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--indigo)",
+                        background:"var(--indigo-dim)",border:"none",borderRadius:"var(--r-sm)",
+                        padding:"4px 10px",cursor:"pointer",fontWeight:600}}>+ Log CES</button>
+                  </div>
+                </div>
+              </div>
+              <ActivePlaybookTab account={account} onUpdate={onUpdate}/>
+              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>Customer Goal</div>
+                {editGoal?(
+                  <div>
+                    <textarea value={goalDraft} onChange={e=>setGoalDraft(e.target.value)}
+                      style={{width:"100%",background:"white",border:"1.5px solid var(--indigo)",borderRadius:"var(--r)",
+                        padding:"9px 12px",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:14,
+                        outline:"none",resize:"vertical",minHeight:70}}/>
+                    <div style={{display:"flex",gap:8,marginTop:8}}>
+                      <Btn onClick={saveGoal} style={{flex:1,padding:"8px"}}>Save Goal</Btn>
+                      <Btn variant="ghost" onClick={()=>setEditGoal(false)} style={{flex:1,padding:"8px"}}>Cancel</Btn>
+                    </div>
+                  </div>
+                ):(
+                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:10}}>
+                    <div style={{fontSize:13,color:account.successPlan.goal?"var(--text)":"var(--text3)",lineHeight:1.6,fontWeight:500}}>
+                      {account.successPlan.goal||"No goal defined yet — click Edit to add one"}
+                    </div>
+                    <button onClick={()=>{setGoalDraft(account.successPlan.goal);setEditGoal(true);}}
+                      style={{fontSize:11,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600,whiteSpace:"nowrap"}}>Edit</button>
+                  </div>
+                )}
+              </div>
+              {totalMs>0&&(
+                <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
+                    <span style={{fontSize:12,color:"var(--text2)",fontWeight:600}}>Success Plan Progress</span>
+                    <span style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--indigo)",fontWeight:600}}>{doneMs}/{totalMs} · {planPct}%</span>
+                  </div>
+                  <Bar value={planPct} color={planPct>=70?"var(--emerald)":planPct>=40?"var(--indigo)":"var(--amber)"}/>
+                </div>
+              )}
+              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Milestones</div>
+                {account.successPlan.milestones.length===0&&<div style={{fontSize:13,color:"var(--text3)",marginBottom:14}}>No milestones yet.</div>}
+                <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
+                  {account.successPlan.milestones.map(m=>(
+                    <div key={m.id} style={{display:"flex",alignItems:"center",gap:10,background:"var(--bg3)",borderRadius:"var(--r)",
+                      padding:"10px 12px",transition:"opacity .15s",opacity:m.done?0.65:1}}>
+                      <input type="checkbox" checked={m.done} onChange={()=>toggleMs(m.id)}
+                        style={{width:16,height:16,cursor:"pointer",accentColor:"var(--indigo)",flexShrink:0}}/>
+                      <span style={{fontSize:13,flex:1,color:m.done?"var(--text3)":"var(--text)",textDecoration:m.done?"line-through":"none"}}>{m.text}</span>
+                      <button onClick={()=>delMs(m.id)}
+                        style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",display:"flex",alignItems:"center",padding:"3px",borderRadius:"var(--r-xs)"}}>×</button>
+                    </div>
+                  ))}
+                </div>
+                <div style={{display:"flex",gap:8}}>
+                  <Inp value={newMs} onChange={e=>setNewMs(e.target.value)} placeholder="Add a milestone…"
+                    onKeyDown={e=>e.key==="Enter"&&addMs()} style={{flex:1,fontSize:13,padding:"8px 12px"}}/>
+                  <Btn onClick={addMs} style={{padding:"8px 16px",fontSize:13}}>+</Btn>
+                </div>
+              </div>
+            </div>
           )}
 
         </div>
@@ -7214,7 +7209,7 @@ export default function App() {
   const [showAdd,      setShowAdd]      = useState(false);
   const [showBulk,     setShowBulk]     = useState(false);
   const [view,         setView]         = useState("portfolio");
-  const [detailTab,    setDetailTab]    = useState("overview");
+  const [detailTab,    setDetailTab]    = useState("activity");
   const [filter,       setFilter]       = useState("All");
   const [planFilter,   setPlanFilter]   = useState("All");
   const [search,       setSearch]       = useState("");
@@ -7633,7 +7628,14 @@ export default function App() {
           )}
 
           {/* ── PORTFOLIO VIEW ── */}
-          {view==="portfolio"&&(<>
+          {view==="portfolio"&&(
+            selected ? (
+              <Detail key={selected.id} account={selected} call={call}
+                initialTab={detailTab}
+                onClose={()=>{setSelected(null);setDetailTab("activity");}}
+                onUpdate={update} onDelete={del} toast={toast}
+                manualTasks={manualTasks} onAddManual={addManualTask} onToggleManual={toggleManualTask} onDeleteManual={deleteManualTask}/>
+            ) : (<>
             {!apiReady&&API_URL&&(
               <div style={{display:"flex",alignItems:"center",justifyContent:"center",
                 height:320,flexDirection:"column",gap:16}}>
@@ -7780,21 +7782,9 @@ export default function App() {
                 <Empty isFiltered={isFiltered} onClear={clearFilters} onAdd={()=>setShowAdd(true)} onLoadDemo={loadDemoData}/>
               )}
             </div>
-          </>)}
+          </>))}
         </div>
 
-        {/* Detail panel backdrop */}
-        {selected&&(
-          <div onClick={()=>setSelected(null)}
-            style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.15)",zIndex:499,
-              backdropFilter:"blur(1px)"}}/>
-        )}
-
-        {selected&&<Detail key={selected.id} account={selected} call={call}
-          initialTab={detailTab}
-          onClose={()=>{setSelected(null);setDetailTab("overview");}}
-          onUpdate={update} onDelete={del} toast={toast}
-          manualTasks={manualTasks} onAddManual={addManualTask} onToggleManual={toggleManualTask} onDeleteManual={deleteManualTask}/>}
         {showAdd &&<AccountForm onClose={()=>setShowAdd(false)} onSave={add} toast={toast}/>}
         {showBulk&&<BulkUpload onClose={()=>setShowBulk(false)} onImport={bulkImport}
           existingNames={active.map(a=>a.name.toLowerCase().trim())} toast={toast}/>}
