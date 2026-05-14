@@ -490,6 +490,7 @@ const Ic = ({ n, size=16, color="currentColor", style={} }) => {
     survey:     <><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/><circle cx="18" cy="4" r="3"/></>,
     automation:  <><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></>,
     onboarding:  <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><circle cx="12" cy="12" r="3" fill="none"/></>,
+    settings:    <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -2790,7 +2791,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                   borderRadius:"var(--r-lg)",padding:"48px 32px",textAlign:"center",
                   background:dragging?"var(--indigo-dim)":"var(--bg3)",transition:"all .2s",cursor:"pointer"}}
                 onClick={()=>document.getElementById("csv-input").click()}>
-                <div style={{fontSize:40,marginBottom:12}}>"↑"</div>
+                <div style={{fontSize:40,marginBottom:12}}>↑</div>
                 <div style={{fontWeight:700,fontSize:15,marginBottom:6,color:dragging?"var(--indigo)":"var(--text)"}}>
                   {dragging?"Drop it here":"Drag & drop your CSV file here"}
                 </div>
@@ -5805,6 +5806,7 @@ const AuthScreen = ({ onAuth }) => {
   const submit = async () => {
     if (!email.trim() || !password.trim()) { setError("Email and password are required"); return; }
     if (mode === "signup" && !name.trim()) { setError("Full name is required"); return; }
+    if (mode === "signup" && password.length < 8) { setError("Password must be at least 8 characters"); return; }
     setLoading(true); setError("");
 
     try {
@@ -5962,7 +5964,7 @@ const EmailSettingsPage = ({ session }) => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [session]);
 
   useEffect(() => {
     fetchAccounts();
@@ -6083,9 +6085,8 @@ popup.location.href = url;
       </p>
 
       {/* Connect Gmail card */}
-      <div style={{background:"var(--bg2)",border:`1.5px solid ${hasGmail?"rgba(234,67,53,0.25)":"var(--border)"}`,
+      <div style={{background:hasGmail?"rgba(234,67,53,0.04)":"var(--bg2)",border:`1.5px solid ${hasGmail?"rgba(234,67,53,0.25)":"var(--border)"}`,
         borderRadius:"var(--r-lg)",padding:"18px 20px",marginBottom:12,
-        background:hasGmail?"rgba(234,67,53,0.04)":"var(--bg2)",
         display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
           <div style={{width:40,height:40,borderRadius:"var(--r)",
@@ -6323,7 +6324,8 @@ const HandoverPage = ({ token }) => {
         body: JSON.stringify({ notes }),
       });
       if (r.ok) setConfirmed(true);
-    } catch {}
+      else setError("Failed to confirm handover — please try again");
+    } catch { setError("Network error — please check your connection and try again"); }
     setConfirming(false);
   };
 
@@ -6445,6 +6447,7 @@ const PortalPage = ({ token }) => {
 
   if (loading) return (
     <div style={{minHeight:'100vh',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center'}}>
+      <style>{`@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}`}</style>
       <div style={{width:20,height:20,border:`2px solid ${s.border}`,borderTopColor:s.indigo,borderRadius:'50%',animation:'spin .7s linear infinite'}}/>
     </div>
   );
@@ -8002,6 +8005,104 @@ Content-Type: application/json
   );
 };
 
+const ACTION_LABELS = {
+  "ai.config_updated":    "AI config updated",
+  "ai.config_removed":    "AI config removed",
+  "ai.brief_generated":   "AI brief generated",
+  "ai.chat":              "AI chat query",
+  "email.connected":      "Email account connected",
+  "email.disconnected":   "Email account disconnected",
+  "email.set_primary":    "Email set as primary",
+  "task.created":         "Task created",
+  "task.updated":         "Task updated",
+  "task.deleted":         "Task deleted",
+  "briefing.config_saved":"Briefing config saved",
+  "briefing.sent":        "Briefing sent",
+};
+
+const AuditLogSection = ({ call }) => {
+  const [events,  setEvents]  = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error,   setError]   = useState(null);
+
+  useEffect(() => {
+    call("GET", "/api/audit")
+      .then(d => setEvents(d.events || []))
+      .catch(() => setError("Could not load audit log"))
+      .finally(() => setLoading(false));
+  }, [call]);
+
+  const rowStyle = { background:"var(--bg2)", border:"1.5px solid var(--border)", borderRadius:"var(--r-lg)", padding:16 };
+
+  if (loading) return (
+    <div style={rowStyle}>
+      <div style={{fontSize:13,color:"var(--text3)"}}>Loading…</div>
+    </div>
+  );
+
+  if (error) return (
+    <div style={rowStyle}>
+      <div style={{fontSize:13,color:"var(--rose)"}}>{error}</div>
+    </div>
+  );
+
+  return (
+    <div style={rowStyle}>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:events.length?12:0,lineHeight:1.6}}>
+        A tamper-proof record of security-relevant actions in your workspace. Last 200 events.
+      </div>
+
+      {events.length === 0 ? (
+        <div style={{fontSize:13,color:"var(--text3)",fontStyle:"italic"}}>No events recorded yet.</div>
+      ) : (
+        <div style={{border:"1.5px solid var(--border)",borderRadius:"var(--r)",overflow:"hidden"}}>
+          {/* Header */}
+          <div style={{display:"grid",gridTemplateColumns:"1fr 100px 140px",
+            padding:"8px 14px",background:"var(--bg3)",borderBottom:"1px solid var(--border)",
+            fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em"}}>
+            <span>Action</span>
+            <span>IP address</span>
+            <span>Time</span>
+          </div>
+          <div style={{maxHeight:360,overflowY:"auto"}}>
+            {events.map((e, i) => {
+              const label = ACTION_LABELS[e.action] || e.action;
+              const isDelete = e.action.includes("removed") || e.action.includes("deleted") || e.action.includes("disconnected");
+              const isCreate = e.action.includes("connected") || e.action.includes("created") || e.action.includes("generated");
+              const dotColor = isDelete ? "var(--rose)" : isCreate ? "var(--emerald)" : "var(--indigo)";
+              return (
+                <div key={e.id}
+                  style={{display:"grid",gridTemplateColumns:"1fr 100px 140px",
+                    padding:"10px 14px",borderBottom:i<events.length-1?"1px solid var(--border)":"none",
+                    alignItems:"center",background:"var(--bg2)"}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,minWidth:0}}>
+                    <div style={{width:6,height:6,borderRadius:"50%",background:dotColor,flexShrink:0}}/>
+                    <span style={{fontSize:13,fontWeight:500,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                      {label}
+                    </span>
+                    {e.resource_type && (
+                      <span style={{fontSize:10,fontFamily:"var(--font-mono)",color:"var(--text3)",
+                        background:"var(--bg4)",padding:"1px 6px",borderRadius:"var(--r-xs)",flexShrink:0}}>
+                        {e.resource_type}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text3)"}}>
+                    {e.ip_address || "—"}
+                  </div>
+                  <div style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text3)"}}>
+                    {new Date(e.created_at).toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const BriefingSettings = ({ call, toast, hasGmail }) => {
   const [cfg, setCfg] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -8693,7 +8794,7 @@ export default function App() {
     { id:"playbooks",    icon:"playbooks",    label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
     { id:"surveys",      icon:"survey",       label:"Surveys",          active:true  },
     { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
-    { id:"settings",    icon:"shield",      label:"Email Settings", active:true },
+    { id:"settings",    icon:"settings",    label:"Settings",       active:true },
     { id:"automation",  icon:"automation",   label:"Automation",      active:true },
     { id:"onboarding",  icon:"onboarding",   label:"Onboarding",      active:true },
     { id:"briefing",    icon:"briefing",     label:"Daily Briefing",  active:true  },
@@ -8773,11 +8874,6 @@ export default function App() {
                 </button>
               </div>
             )}
-            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-              <span style={{fontSize:11,color:"var(--text3)",fontWeight:500}}>Build progress</span>
-              <span style={{fontSize:11,color:"var(--indigo)",fontFamily:"var(--font-mono)",fontWeight:600}}>3 / 6</span>
-            </div>
-            <Bar value={50} thin/>
           </div>
         </div>
 
@@ -8799,6 +8895,8 @@ export default function App() {
               <WebhookSettings call={call} toast={toast}/>
               <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Daily Briefing</div>
               <BriefingSettings call={call} toast={toast} hasGmail={!!session}/>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Audit Log</div>
+              <AuditLogSection call={call}/>
             </div>
           )}
           {view==="integrations"&&(
