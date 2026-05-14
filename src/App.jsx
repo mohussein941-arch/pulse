@@ -1898,16 +1898,22 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   };
 
   const [emailThreads,    setEmailThreads]    = useState([]);
+  const [meetingNotes,    setMeetingNotes]    = useState([]);
   const [threadsLoading, setThreadsLoading] = useState(false);
 
   useEffect(() => {
     if (tab !== "activity") return;
     let cancelled = false;
     setThreadsLoading(true);
-    call("GET", `/api/email/threads/${account.id}`)
-      .then(d => { if (!cancelled) setEmailThreads(d.threads || []); })
-      .catch(() => {})
-      .finally(() => { if (!cancelled) setThreadsLoading(false); });
+    Promise.all([
+      call("GET", `/api/email/threads/${account.id}`).catch(() => ({ threads: [] })),
+      call("GET", `/api/meetings/${account.id}`).catch(() => ({ meetings: [] })),
+    ]).then(([emailData, meetingData]) => {
+      if (!cancelled) {
+        setEmailThreads(emailData.threads || []);
+        setMeetingNotes(meetingData.meetings || []);
+      }
+    }).finally(() => { if (!cancelled) setThreadsLoading(false); });
     return () => { cancelled = true; };
   }, [tab, account.id]);
 
@@ -2162,17 +2168,22 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                 onDeleteManual={onDeleteManual}
               />
               {(() => {
-                const logItems = account.activityLog.map(a => ({ _type:"log", _sort:a.date, ...a }));
-                const threadItems = emailThreads.map(t => ({
+                const logItems     = account.activityLog.map(a => ({ _type:"log",     _sort:a.date, ...a }));
+                const threadItems  = emailThreads.map(t => ({
                   _type:"email", _sort:(t.last_message_at||"").slice(0,10),
                   id:t.id, subject:t.subject, snippet:t.snippet,
                   lastMessageAt:t.last_message_at, lastMessageFrom:t.last_message_from,
                   messageCount:t.message_count, isUnreadReply:t.is_unread_reply,
                 }));
-                const merged = [...logItems,...threadItems].sort((a,b)=>b._sort.localeCompare(a._sort));
+                const meetingItems = meetingNotes.map(m => ({
+                  _type:"meeting", _sort:(m.meeting_date||"").slice(0,10),
+                  id:m.id, title:m.title, summary:m.summary, action_items:m.action_items,
+                  participants:m.participants, meetingDate:m.meeting_date,
+                }));
+                const merged = [...logItems,...threadItems,...meetingItems].sort((a,b)=>b._sort.localeCompare(a._sort));
                 return (
                   <div style={{display:"flex",flexDirection:"column",gap:10}}>
-                    {threadsLoading&&<div style={{fontSize:12,color:"var(--text3)",textAlign:"center",padding:"8px 0"}}>Loading email threads…</div>}
+                    {threadsLoading&&<div style={{fontSize:12,color:"var(--text3)",textAlign:"center",padding:"8px 0"}}>Loading activity…</div>}
                     {merged.length===0&&!threadsLoading&&(
                       <div style={{textAlign:"center",padding:"24px 0",color:"var(--text3)",fontFamily:"var(--font-mono)",fontSize:12}}>No activity logged yet</div>
                     )}
@@ -2190,6 +2201,23 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                         <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{item.subject||"(no subject)"}</div>
                         {item.snippet&&<div style={{fontSize:12,color:"var(--text3)",lineHeight:1.5,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:2,WebkitBoxOrient:"vertical"}}>{item.snippet}</div>}
                         <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>From: {item.lastMessageFrom} · {item.messageCount} message{item.messageCount!==1?"s":""}</div>
+                      </div>
+                    ) : item._type==="meeting" ? (
+                      <div key={`meeting-${item.id}`} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+                        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                          <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
+                            color:"#ff4f00",background:"rgba(255,79,0,0.1)",
+                            padding:"2px 8px",borderRadius:"var(--r-sm)"}}>Meeting</span>
+                          <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{(item.meetingDate||"").slice(0,10)}</span>
+                        </div>
+                        <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>{item.title}</div>
+                        {item.summary&&<div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:item.action_items?8:0,overflow:"hidden",display:"-webkit-box",WebkitLineClamp:3,WebkitBoxOrient:"vertical"}}>{item.summary}</div>}
+                        {item.action_items&&(
+                          <div style={{fontSize:11,color:"var(--text3)",background:"var(--bg3)",borderRadius:"var(--r-sm)",padding:"7px 10px",marginTop:6,lineHeight:1.6}}>
+                            <span style={{fontWeight:700,color:"var(--text2)"}}>Action items: </span>{item.action_items}
+                          </div>
+                        )}
+                        {item.participants?.length>0&&<div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>{item.participants.slice(0,4).join(" · ")}{item.participants.length>4?` +${item.participants.length-4} more`:""}</div>}
                       </div>
                     ) : (
                       <div key={item.id} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
@@ -3533,6 +3561,19 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
 
 const CRM_CATALOG = [
   {
+    id: "fireflies",
+    name: "Fireflies.ai",
+    category: "Notetaking",
+    color: "#ff4f00",
+    bg: "rgba(255,79,0,0.08)",
+    description: "Auto-sync meeting transcripts and AI summaries from Fireflies.ai. Meetings appear in the Activity tab for matched accounts, and last-contact dates are kept up to date.",
+    fields: [],
+    credentials: [
+      { key:"apiKey", label:"API Key", placeholder:"Your Fireflies API key", type:"password" },
+    ],
+    docsUrl: "https://docs.fireflies.ai/",
+  },
+  {
     id: "hubspot",
     name: "HubSpot",
     category: "CRM",
@@ -4338,10 +4379,16 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
     if (!call || syncingId) return;
     setSyncingId(id);
     try {
-      const results = await call("POST", "/api/sync/run", { connectorId: id });
       const ts = new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
-      updateConfig(id, { lastSync: ts, syncCount: (configs[id].syncCount||0) + results.created + results.updated });
-      toast(`${crm_by_id(id).name} sync complete — ${results.created} created, ${results.updated} updated`, "success");
+      if (id === "fireflies") {
+        const results = await call("POST", "/api/meetings/sync");
+        updateConfig(id, { lastSync: ts });
+        toast(`Fireflies sync complete — ${results.synced} meetings synced, ${results.matched} matched to accounts`, "success");
+      } else {
+        const results = await call("POST", "/api/sync/run", { connectorId: id });
+        updateConfig(id, { lastSync: ts, syncCount: (configs[id].syncCount||0) + results.created + results.updated });
+        toast(`${crm_by_id(id).name} sync complete — ${results.created} created, ${results.updated} updated`, "success");
+      }
     } catch (e) {
       toast(`Sync failed: ${e.message || "unknown error"}`, "error");
     } finally {
