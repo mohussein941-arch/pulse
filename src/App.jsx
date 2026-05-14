@@ -1841,7 +1841,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const [showPrep,   setShowPrep]   = useState(false);
   const [showPortal, setShowPortal] = useState(false);
   const [tab,setTab]             = useState(initialTab);
-  const [logF,setLogF]           = useState({type:"Call",note:"",date:todayStr()});
+  const [logF,setLogF]           = useState({type:"Call",note:"",date:todayStr(),title:"",attendees:"",actionItems:""});
   const [newMs,setNewMs]         = useState("");
   const [editGoal,setEditGoal]   = useState(false);
   const [goalDraft,setGoalDraft] = useState(account.successPlan.goal);
@@ -1863,11 +1863,29 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const planPct=totalMs>0?Math.round((doneMs/totalMs)*100):0;
   const triggeredPbs=getTriggeredPlaybooks(account);
 
-  const logActivity=()=>{
-    if(!logF.note.trim()) return;
-    onUpdate(account.id,{activityLog:[{id:Date.now(),...logF},...account.activityLog],lastContact:logF.date});
-    toast("Activity logged","success");
-    setLogF({type:"Call",note:"",date:todayStr()});
+  const logActivity = async () => {
+    if (logF.type === "Meeting") {
+      if (!logF.title.trim() && !logF.note.trim()) return;
+      try {
+        const d = await call("POST", "/api/meetings/manual", {
+          accountId:   account.id,
+          title:       logF.title.trim() || "Meeting",
+          meetingDate: logF.date,
+          attendees:   logF.attendees,
+          summary:     logF.note.trim() || null,
+          actionItems: logF.actionItems.trim() || null,
+        });
+        setMeetingNotes(prev => [d.meeting, ...prev]);
+        onUpdate(account.id, { lastContact: logF.date });
+        toast("Meeting logged", "success");
+        setLogF({ type:"Meeting", note:"", date:todayStr(), title:"", attendees:"", actionItems:"" });
+      } catch { toast("Failed to save meeting","error"); }
+    } else {
+      if (!logF.note.trim()) return;
+      onUpdate(account.id, { activityLog:[{id:Date.now(),...logF},...account.activityLog], lastContact:logF.date });
+      toast("Activity logged","success");
+      setLogF({ type:"Call", note:"", date:todayStr(), title:"", attendees:"", actionItems:"" });
+    }
   };
   const toggleMs=id=>{
     const upd=account.successPlan.milestones.map(m=>m.id===id?{...m,done:!m.done}:m);
@@ -2150,13 +2168,32 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   <Fld label="Type"><Slct value={logF.type} onChange={e=>setLogF(f=>({...f,type:e.target.value}))}>{ACT_TYPES.map(t=><option key={t}>{t}</option>)}</Slct></Fld>
                   <Fld label="Date"><Inp type="date" value={logF.date} onChange={e=>setLogF(f=>({...f,date:e.target.value}))}/></Fld>
                 </div>
-                <Fld label="Note">
+                {logF.type==="Meeting"&&(
+                  <>
+                    <Fld label="Meeting Title">
+                      <Inp value={logF.title} onChange={e=>setLogF(f=>({...f,title:e.target.value}))} placeholder="e.g. QBR Q2, Onboarding call, Check-in"/>
+                    </Fld>
+                    <Fld label="Attendees (comma-separated)">
+                      <Inp value={logF.attendees} onChange={e=>setLogF(f=>({...f,attendees:e.target.value}))} placeholder="sara@acme.com, john@acme.com"/>
+                    </Fld>
+                  </>
+                )}
+                <Fld label={logF.type==="Meeting"?"Summary":"Note"}>
                   <textarea value={logF.note} onChange={e=>setLogF(f=>({...f,note:e.target.value}))}
-                    placeholder="What happened? Key outcomes, follow-ups…"
+                    placeholder={logF.type==="Meeting"?"What was discussed? Key outcomes…":"What happened? Key outcomes, follow-ups…"}
                     style={{width:"100%",background:"white",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
                       padding:"9px 12px",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:14,
                       outline:"none",resize:"vertical",minHeight:70}}/>
                 </Fld>
+                {logF.type==="Meeting"&&(
+                  <Fld label="Action Items">
+                    <textarea value={logF.actionItems} onChange={e=>setLogF(f=>({...f,actionItems:e.target.value}))}
+                      placeholder="Follow-ups, next steps, owner…"
+                      style={{width:"100%",background:"white",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+                        padding:"9px 12px",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:14,
+                        outline:"none",resize:"vertical",minHeight:55}}/>
+                  </Fld>
+                )}
                 <Btn onClick={logActivity} style={{width:"100%"}}>Log {logF.type}</Btn>
               </div>
               <AccountTasksTab
@@ -2179,6 +2216,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   _type:"meeting", _sort:(m.meeting_date||"").slice(0,10),
                   id:m.id, title:m.title, summary:m.summary, action_items:m.action_items,
                   participants:m.participants, meetingDate:m.meeting_date,
+                  isManual: m.fireflies_id?.startsWith("manual-"),
                 }));
                 const merged = [...logItems,...threadItems,...meetingItems].sort((a,b)=>b._sort.localeCompare(a._sort));
                 return (
@@ -2205,9 +2243,14 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                     ) : item._type==="meeting" ? (
                       <div key={`meeting-${item.id}`} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                          <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
-                            color:"#ff4f00",background:"rgba(255,79,0,0.1)",
-                            padding:"2px 8px",borderRadius:"var(--r-sm)"}}>Meeting</span>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
+                              color:"#ff4f00",background:"rgba(255,79,0,0.1)",
+                              padding:"2px 8px",borderRadius:"var(--r-sm)"}}>Meeting</span>
+                            <span style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
+                              {item.isManual ? "Manual" : "Fireflies"}
+                            </span>
+                          </div>
                           <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{(item.meetingDate||"").slice(0,10)}</span>
                         </div>
                         <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:4}}>{item.title}</div>
