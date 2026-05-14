@@ -439,12 +439,13 @@ const getHealthWarnings = (account) => {
 const renewalRisk = (account) => {
   const d = account.renewalDate ? Math.ceil((new Date(account.renewalDate)-Date.now())/86400000) : 999;
   const h = account.healthScore ?? 100;
-  if (d < 0)                          return {label:"Overdue",  color:"var(--rose)",    bg:"var(--rose-dim)"  };
-  if (h < 40 || (h < 50 && d <= 30)) return {label:"Critical", color:"var(--rose)",    bg:"var(--rose-dim)"  };
-  if (h < 55 && d <= 90)             return {label:"At Risk",  color:"var(--amber)",   bg:"var(--amber-dim)" };
-  if (h < 65 && d <= 120)            return {label:"Watch",    color:"var(--amber)",   bg:"var(--amber-dim)" };
-  if (h >= 70)                       return {label:"Safe",     color:"var(--emerald)", bg:"rgba(5,150,105,.1)"};
-  return                                     {label:"Monitor",  color:"var(--indigo)",  bg:"var(--indigo-dim)" };
+  if (d < 0)                          return {label:"Overdue",       color:"var(--rose)",    bg:"var(--rose-dim)"  };
+  if (d >= 0 && d <= 14)             return {label:"Renewing Soon", color:"var(--indigo)",  bg:"var(--indigo-dim)"};
+  if (h < 40 || (h < 50 && d <= 30)) return {label:"Critical",      color:"var(--rose)",    bg:"var(--rose-dim)"  };
+  if (h < 55 && d <= 90)             return {label:"At Risk",       color:"var(--amber)",   bg:"var(--amber-dim)" };
+  if (h < 65 && d <= 120)            return {label:"Watch",         color:"var(--amber)",   bg:"var(--amber-dim)" };
+  if (h >= 70)                       return {label:"Safe",          color:"var(--emerald)", bg:"rgba(5,150,105,.1)"};
+  return                                     {label:"Monitor",       color:"var(--indigo)",  bg:"var(--indigo-dim)" };
 };
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -5799,6 +5800,23 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
                 </div>
               )}
 
+              {item.metadata?.last_activity_note && (
+                <div style={{background:"rgba(99,102,241,.07)",border:"1.5px solid rgba(99,102,241,.15)",
+                  borderRadius:"var(--r-sm)",padding:"8px 12px",marginBottom:10}}>
+                  <div style={{fontSize:10,fontWeight:700,color:"var(--indigo)",textTransform:"uppercase",
+                    letterSpacing:".06em",marginBottom:4}}>CSM Context — not in email</div>
+                  <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>
+                    {item.metadata.last_activity_date && (
+                      <span style={{color:"var(--text3)",marginRight:6}}>
+                        {new Date(item.metadata.last_activity_date).toLocaleDateString('en-GB',{day:'numeric',month:'short'})}
+                        {item.metadata.last_activity_type ? ` · ${item.metadata.last_activity_type}` : ""}:
+                      </span>
+                    )}
+                    {item.metadata.last_activity_note}
+                  </div>
+                </div>
+              )}
+
               {/* Actions */}
               {item.status==="pending" && !isEdit && (
                 <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:4,borderTop:"1px solid var(--border)"}}>
@@ -8052,7 +8070,7 @@ const OnboardingTab = ({ account, call, toast }) => {
               <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:99,
                 background:sc.border,color:sc.color}}>{sc.label}</span>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+            <div style={{display:"grid",gridTemplateColumns:taskTot>0?"1fr 1fr":"1fr",gap:10}}>
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--text3)",marginBottom:4}}>
                   <span>Phases</span><span style={{fontFamily:"var(--font-mono)",fontWeight:600}}>{phDone}/{OB_PHASES.length}</span>
@@ -8062,15 +8080,17 @@ const OnboardingTab = ({ account, call, toast }) => {
                     background:phasePct>=timePct?"var(--emerald)":"var(--amber)",transition:"width .4s ease"}}/>
                 </div>
               </div>
+              {taskTot>0&&(
               <div>
                 <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--text3)",marginBottom:4}}>
-                  <span>Tasks</span><span style={{fontFamily:"var(--font-mono)",fontWeight:600}}>{taskDone}/{taskTot||0}</span>
+                  <span>Tasks</span><span style={{fontFamily:"var(--font-mono)",fontWeight:600}}>{taskDone}/{taskTot}</span>
                 </div>
                 <div style={{height:5,borderRadius:99,background:"var(--bg4)"}}>
-                  <div style={{height:"100%",width:taskTot?`${Math.round(taskDone/taskTot*100)}%`:"0%",borderRadius:99,
+                  <div style={{height:"100%",width:`${Math.round(taskDone/taskTot*100)}%`,borderRadius:99,
                     background:"var(--indigo)",transition:"width .4s ease"}}/>
                 </div>
               </div>
+              )}
             </div>
           </div>
         );
@@ -9545,6 +9565,7 @@ const ItemActions = ({item, onUpdate}) => {
 
 // ─── Manager Overview ─────────────────────────────────────────────────────────
 const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
+  const [showAllAttention, setShowAllAttention] = useState(false);
   const active = accounts.filter(a => !a.archived);
 
   // Portfolio-level aggregates
@@ -9561,14 +9582,26 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
   const today = new Date();
   const withRenewal = active.filter(a=>a.renewalDate)
     .map(a=>({...a, rd: Math.ceil((new Date(a.renewalDate)-today)/86400000)}));
+  const rOD  = withRenewal.filter(a=>a.rd<0);
   const r30  = withRenewal.filter(a=>a.rd>=0&&a.rd<=30);
   const r60  = withRenewal.filter(a=>a.rd>30&&a.rd<=60);
   const r90  = withRenewal.filter(a=>a.rd>60&&a.rd<=90);
+  const arrOD  = rOD.reduce((s,a)=>s+a.arr,0);
   const arrR30 = r30.reduce((s,a)=>s+a.arr,0);
   const arrR60 = r60.reduce((s,a)=>s+a.arr,0);
   const arrR90 = r90.reduce((s,a)=>s+a.arr,0);
   const safeR30 = r30.filter(a=>a.healthScore>=65).reduce((s,a)=>s+a.arr,0);
   const riskR30 = arrR30 - safeR30;
+  const forecastBuckets = [
+    {label:"Overdue",      arr:arrOD,  count:rOD.length, riskArr:arrOD,
+      color:"var(--rose)"},
+    {label:"Next 30 days", arr:arrR30, count:r30.length, riskArr:riskR30,
+      color:riskR30>0?"var(--rose)":"var(--emerald)"},
+    {label:"31–60 days",   arr:arrR60, count:r60.length, riskArr:r60.filter(a=>a.healthScore<65).reduce((s,a)=>s+a.arr,0),
+      color:"var(--amber)"},
+    {label:"61–90 days",   arr:arrR90, count:r90.length, riskArr:r90.filter(a=>a.healthScore<55).reduce((s,a)=>s+a.arr,0),
+      color:"var(--indigo)"},
+  ].filter(b=>b.count>0);
 
   // Urgency score: combined health risk + time pressure
   const urgencyScore = a => {
@@ -9578,8 +9611,8 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
   };
   const attention = [...active]
     .filter(a=>a.healthScore<65||ago(a.lastContact)>21)
-    .sort((a,b)=>urgencyScore(b)-urgencyScore(a))
-    .slice(0,8);
+    .sort((a,b)=>urgencyScore(b)-urgencyScore(a));
+  const attentionVisible = showAllAttention ? attention : attention.slice(0,8);
 
   const StatCard = ({label,value,sub,color,warn}) => (
     <div style={{background:"var(--bg2)",border:`1.5px solid ${warn?"rgba(225,29,72,0.25)":"var(--border)"}`,
@@ -9639,34 +9672,30 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
       {/* Renewal forecast */}
       <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
         padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:16}}>Renewal Forecast — Next 90 Days</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
-          {[
-            {label:"Next 30 days",  arr:arrR30, count:r30.length, riskArr:riskR30,
-              color:riskR30>0?"var(--rose)":"var(--emerald)"},
-            {label:"31–60 days",    arr:arrR60, count:r60.length, riskArr:r60.filter(a=>a.healthScore<65).reduce((s,a)=>s+a.arr,0),
-              color:"var(--amber)"},
-            {label:"61–90 days",    arr:arrR90, count:r90.length, riskArr:r90.filter(a=>a.healthScore<55).reduce((s,a)=>s+a.arr,0),
-              color:"var(--indigo)"},
-          ].map(b=>(
-            <div key={b.label} style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"14px 16px"}}>
-              <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",marginBottom:6}}>{b.label}</div>
-              <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:18,color:"var(--text)",marginBottom:2}}>
-                {fmtMoney(b.arr)}
-              </div>
-              <div style={{fontSize:11,color:"var(--text3)",marginBottom:8}}>{b.count} account{b.count!==1?"s":""}</div>
-              {b.riskArr>0&&(
-                <div style={{fontSize:10,fontWeight:600,color:"var(--rose)",background:"var(--rose-dim)",
-                  padding:"2px 8px",borderRadius:99,display:"inline-block"}}>
-                  {fmtMoney(b.riskArr)} at risk
+        <div style={{fontSize:13,fontWeight:700,marginBottom:16}}>Renewal Forecast</div>
+        {forecastBuckets.length>0 ? (
+          <div style={{display:"grid",gridTemplateColumns:`repeat(${forecastBuckets.length},1fr)`,gap:12}}>
+            {forecastBuckets.map(b=>(
+              <div key={b.label} style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"14px 16px",
+                border:b.label==="Overdue"?"1.5px solid var(--rose-dim)":"1.5px solid transparent"}}>
+                <div style={{fontSize:11,color:b.label==="Overdue"?"var(--rose)":"var(--text3)",
+                  fontFamily:"var(--font-mono)",fontWeight:b.label==="Overdue"?700:400,marginBottom:6}}>{b.label}</div>
+                <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:18,color:"var(--text)",marginBottom:2}}>
+                  {fmtMoney(b.arr)}
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-        {(arrR30+arrR60+arrR90)===0&&(
+                <div style={{fontSize:11,color:"var(--text3)",marginBottom:8}}>{b.count} account{b.count!==1?"s":""}</div>
+                {b.riskArr>0&&(
+                  <div style={{fontSize:10,fontWeight:600,color:"var(--rose)",background:"var(--rose-dim)",
+                    padding:"2px 8px",borderRadius:99,display:"inline-block"}}>
+                    {fmtMoney(b.riskArr)} at risk
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
           <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"12px 0"}}>
-            No renewals in the next 90 days — add renewal dates to accounts to see the forecast.
+            No renewals due — add renewal dates to accounts to see the forecast.
           </div>
         )}
       </div>
@@ -9680,7 +9709,7 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
             Sorted by urgency — health risk combined with renewal timeline and contact recency
           </div>
           <div style={{display:"flex",flexDirection:"column",gap:8}}>
-            {attention.map(a=>{
+            {attentionVisible.map(a=>{
               const sc  = STAGE_CFG[a.stage]||STAGE_CFG["Stable"];
               const rd  = a.renewalDate ? Math.ceil((new Date(a.renewalDate)-today)/86400000) : null;
               const hw  = getHealthWarnings(a);
@@ -9731,6 +9760,13 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
               );
             })}
           </div>
+          {attention.length>8&&(
+            <button onClick={()=>setShowAllAttention(v=>!v)}
+              style={{marginTop:12,width:"100%",padding:"8px 0",background:"none",border:"1.5px solid var(--border)",
+                borderRadius:"var(--r)",fontSize:12,fontWeight:600,color:"var(--text2)",cursor:"pointer"}}>
+              {showAllAttention?`Show less ↑`:`Show all ${attention.length} accounts ↓`}
+            </button>
+          )}
         </div>
       )}
 
