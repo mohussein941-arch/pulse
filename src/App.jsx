@@ -47,7 +47,8 @@ const STYLES = `
     --shadow:0 4px 16px rgba(0,0,0,0.07),0 2px 6px rgba(0,0,0,0.03);
     --shadow-lg:0 20px 48px rgba(0,0,0,0.12),0 8px 16px rgba(0,0,0,0.05);
   }
-  body { background:var(--bg); color:var(--text); font-family:var(--font-display); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font-display); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+  ::selection { background:rgba(59,94,222,0.10); }
   ::-webkit-scrollbar { width:5px; height:5px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
@@ -603,7 +604,7 @@ const Ring = ({ score, size=48 }) => {
 };
 
 const Bar = ({ value, color="var(--indigo)", thin }) => (
-  <div style={{height:thin?3:5,background:"var(--bg4)",borderRadius:99,overflow:"hidden"}}>
+  <div style={{height:thin?3:7,background:"var(--bg4)",borderRadius:99,overflow:"hidden"}}>
     <div style={{height:"100%",width:`${Math.min(100,value)}%`,background:color,borderRadius:99,transition:"width .7s ease"}}/>
   </div>
 );
@@ -619,9 +620,9 @@ const Badge = ({ label, color, bg, small }) => (
 const Avatar = ({ name, size=36 }) => {
   const h=hue(name);
   return (
-    <div style={{width:size,height:size,borderRadius:"var(--r)",flexShrink:0,display:"flex",
-      alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:size*0.33,
-      background:`hsl(${h},55%,91%)`,color:`hsl(${h},45%,32%)`,fontFamily:"var(--font-display)",
+    <div style={{width:size,height:size,borderRadius:"50%",flexShrink:0,display:"flex",
+      alignItems:"center",justifyContent:"center",fontWeight:700,fontSize:size*0.34,
+      background:`hsl(${h},48%,88%)`,color:`hsl(${h},42%,30%)`,fontFamily:"var(--font-display)",
       letterSpacing:"-.01em"}}>
       {initials(name)}
     </div>
@@ -640,8 +641,8 @@ const Slct = (p) => (
 );
 const Fld = ({ label, children }) => (
   <div style={{marginBottom:14}}>
-    <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
-      textTransform:"uppercase",letterSpacing:".07em",marginBottom:6}}>{label}</div>
+    <div style={{fontSize:11,fontWeight:600,color:"var(--text2)",
+      textTransform:"uppercase",letterSpacing:".05em",marginBottom:6}}>{label}</div>
     {children}
   </div>
 );
@@ -969,8 +970,8 @@ const PlaybookLibraryPage = ({ accounts, onUpdate, onAccountClick }) => {
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
         <div>
-          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Playbooks</h1>
-          <div style={{fontSize:13,color:"var(--text3)"}}>
+          <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Playbooks</h1>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
             {PLAYBOOK_LIBRARY.length} plays sourced from Gainsight, ChurnZero & top CS leaders
           </div>
         </div>
@@ -985,7 +986,7 @@ const PlaybookLibraryPage = ({ accounts, onUpdate, onAccountClick }) => {
           { label:"Need attention",  value:needsAttention.length,   color:"var(--amber)",   border:needsAttention.length?"rgba(217,119,6,0.3)":"var(--border)" },
         ].map(s=>(
           <div key={s.label} style={{background:"var(--bg2)",border:`1.5px solid ${s.border}`,
-            borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
+            borderTop:`3px solid ${s.color}`,borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
             <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:28,color:s.color,marginBottom:4,letterSpacing:"-.02em"}}>
               {s.value}
             </div>
@@ -1867,7 +1868,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
                   <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>{lastActivity.note}</div>
                 </>
               ):(
-                <div style={{fontSize:13,color:"var(--text3)"}}>No activity logged yet</div>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>No activity logged yet</div>
               )}
               <div style={{marginTop:10,fontSize:11,fontWeight:500,
                 color:days>30?"var(--rose)":days>14?"var(--amber)":"var(--text3)"}}>
@@ -1880,7 +1881,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
               <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
                 textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Stakeholders</div>
               {stakeholders.length===0 ? (
-                <div style={{fontSize:13,color:"var(--text3)"}}>No stakeholders mapped yet</div>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>No stakeholders mapped yet</div>
               ):(
                 <div style={{display:"flex",flexDirection:"column",gap:8}}>
                   {stakeholders.map(s=>{
@@ -1930,7 +1931,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
                   )}
                 </>
               ):(
-                <div style={{fontSize:13,color:"var(--text3)"}}>No active playbook</div>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>No active playbook</div>
               )}
             </div>
 
@@ -3949,8 +3950,8 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
         <div>
-          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Task List</h1>
-          <div style={{fontSize:13,color:"var(--text3)"}}>
+          <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Task List</h1>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
             {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}
           </div>
         </div>
@@ -3966,8 +3967,8 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
           {label:"Overdue",       value:overdue.length,color:overdue.length>0?"var(--rose)":"var(--text3)" },
         ].map(s=>(
           <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
-            borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
-            <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:26,color:s.color,marginBottom:4}}>{s.value}</div>
+            borderTop:`3px solid ${s.color}`,borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
+            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:26,color:s.color,marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
             <div style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>{s.label}</div>
           </div>
         ))}
@@ -4021,7 +4022,7 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
           const active=filterType===type;
           return (
             <button key={type} onClick={()=>setFilterType(type)} className="pill-btn"
-              style={{padding:"5px 12px",borderRadius:99,fontSize:11,cursor:"pointer",
+              style={{padding:"6px 14px",borderRadius:99,fontSize:12,cursor:"pointer",
                 fontFamily:"var(--font-mono)",fontWeight:active?600:400,
                 border:`1.5px solid ${active?(tc?.color||"var(--indigo)"):"var(--border)"}`,
                 background:active?(tc?.bg||"var(--indigo-dim)"):"var(--bg2)",
@@ -4031,7 +4032,7 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
           );
         })}
         <button onClick={()=>setFilterDone(p=>!p)} className="pill-btn"
-          style={{padding:"5px 12px",borderRadius:99,fontSize:11,cursor:"pointer",
+          style={{padding:"6px 14px",borderRadius:99,fontSize:12,cursor:"pointer",
             fontFamily:"var(--font-mono)",marginLeft:"auto",
             border:`1.5px solid ${filterDone?"var(--indigo)":"var(--border)"}`,
             background:filterDone?"var(--indigo-dim)":"var(--bg2)",
@@ -4195,8 +4196,8 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
     <div style={{animation:"fadeUp .2s ease"}}>
       {/* Header */}
       <div style={{marginBottom:28}}>
-        <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Renewal Pipeline</h1>
-        <div style={{fontSize:13,color:"var(--text3)"}}>
+        <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Renewal Pipeline</h1>
+        <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
           {withRenewal.length} accounts · {fmtMoney(totalArr)} total ARR
         </div>
       </div>
@@ -5128,7 +5129,7 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
                   <Ic n="success" size={40} color="var(--emerald)"/>
                 </div>
                 <div style={{fontWeight:700,fontSize:18,marginBottom:4}}>Sync complete</div>
-                <div style={{fontSize:13,color:"var(--text3)"}}>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
                   {results.total} record{results.total!==1?"s":""} processed from {crm.name}
                 </div>
               </div>
@@ -5236,8 +5237,8 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
         <div>
-          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Integrations</h1>
-          <div style={{fontSize:13,color:"var(--text3)"}}>
+          <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Integrations</h1>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
             Connect your CRM and ticketing tools to keep account health accurate
           </div>
         </div>
@@ -5982,8 +5983,8 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
         <div>
-          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Outreach Queue</h1>
-          <div style={{fontSize:13,color:"var(--text3)"}}>
+          <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Outreach Queue</h1>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
             Pulse drafts outreach when it detects signals — review, edit, and send with one click
           </div>
         </div>
@@ -6003,24 +6004,26 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
           {label:"Sent",           value:sentCount,  color:"var(--indigo)"},
         ].map(s=>(
           <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
-            borderRadius:"var(--r-lg)",padding:"16px 20px",boxShadow:"var(--shadow-sm)"}}>
-            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:26,color:s.color,marginBottom:3}}>{s.value}</div>
+            borderTop:`3px solid ${s.color}`,borderRadius:"var(--r-lg)",padding:"16px 20px",boxShadow:"var(--shadow-sm)"}}>
+            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:26,color:s.color,marginBottom:3,letterSpacing:"-.02em"}}>{s.value}</div>
             <div style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>{s.label}</div>
           </div>
         ))}
       </div>
 
       {/* Tabs */}
-      <div style={{display:"flex",gap:4,borderBottom:"1.5px solid var(--border)",marginBottom:20,paddingBottom:2}}>
+      <div style={{display:"flex",gap:0,borderBottom:"1.5px solid var(--border)",marginBottom:20}}>
         {["pending","approved","sent","all"].map(t=>(
           <button key={t} onClick={()=>setTab(t)}
-            style={{padding:"7px 18px",borderRadius:"var(--r-sm) var(--r-sm) 0 0",fontSize:13,
+            style={{padding:"9px 18px",fontSize:13,
               fontFamily:"var(--font-display)",fontWeight:600,border:"none",cursor:"pointer",
-              background:tab===t?"var(--indigo)":"transparent",
-              color:tab===t?"white":"var(--text2)"}}>
+              background:"transparent",
+              color:tab===t?"var(--indigo)":"var(--text2)",
+              borderBottom:tab===t?"2px solid var(--indigo)":"2px solid transparent",
+              marginBottom:"-1.5px",transition:"color .15s,border-color .15s"}}>
             {t.charAt(0).toUpperCase()+t.slice(1)}
             {t!=="all"&&<span style={{marginLeft:6,fontSize:11,fontFamily:"var(--font-mono)",
-              opacity:.8}}>
+              opacity:.7}}>
               {t==="pending"?pending:t==="approved"?approved:sentCount}
             </span>}
           </button>
@@ -6039,11 +6042,11 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
 
       {!loading && shown.length===0 && (
         <div style={{textAlign:"center",padding:"48px 0"}}>
-          <div style={{fontSize:36,marginBottom:12}}>✉️</div>
+          <div style={{marginBottom:12,display:"flex",justifyContent:"center"}}><Ic n="email" size={40} color="var(--text3)"/></div>
           <div style={{fontSize:15,fontWeight:600,marginBottom:6}}>
             {tab==="pending" ? "No drafts waiting" : `No ${tab} outreach`}
           </div>
-          <div style={{fontSize:13,color:"var(--text3)"}}>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
             {tab==="pending"
               ? "Pulse will queue drafts when it detects signals like health drops, no contact, or upcoming renewals."
               : "Items you send or approve will appear here."}
@@ -6647,8 +6650,8 @@ const SurveysPage = ({ accounts, session, toast, onGoToSettings }) => {
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
         <div>
-          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Surveys</h1>
-          <div style={{fontSize:13,color:"var(--text3)"}}>
+          <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Surveys</h1>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
             Send NPS, CES, and CSAT surveys to your customers directly from Pulse
           </div>
         </div>
@@ -6668,9 +6671,9 @@ const SurveysPage = ({ accounts, session, toast, onGoToSettings }) => {
           {label:"Response rate",   value:`${avgResponseRate}%`, color:avgResponseRate>=50?"var(--emerald)":avgResponseRate>0?"var(--amber)":"var(--text3)" },
         ].map(s=>(
           <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
-            borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
-            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:22,
-              color:s.color,marginBottom:4}}>{s.value}</div>
+            borderTop:`3px solid ${s.color}`,borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
+            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:24,
+              color:s.color,marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
             <div style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>{s.label}</div>
           </div>
         ))}
@@ -6995,7 +6998,7 @@ const SurveyResponsePage = ({ token }) => {
                     ? "How easy was it to work with us?"
                     : "How satisfied are you with our service?"}
                 </h1>
-                <div style={{fontSize:13,color:"var(--text3)"}}>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
                   From <strong>{survey.accountName}</strong>
                 </div>
               </div>
@@ -7282,7 +7285,7 @@ const AuthScreen = ({ onAuth }) => {
               }
             </Btn>
 
-            <div style={{textAlign:"center",marginTop:20,fontSize:13,color:"var(--text3)"}}>
+            <div style={{textAlign:"center",marginTop:20,fontSize:13,fontWeight:500,color:"var(--text3)"}}>
               {mode === "login" ? "Don't have an account? " : "Already have an account? "}
               <button onClick={()=>{setMode(mode==="login"?"signup":"login");setError("");}}
                 style={{background:"none",border:"none",color:"var(--indigo)",
@@ -7443,7 +7446,7 @@ popup.location.href = url;
 
   return (
     <div style={{animation:"fadeUp .2s ease",maxWidth:640}}>
-      <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Email Settings</h1>
+      <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Email Settings</h1>
       <p style={{fontSize:13,color:"var(--text3)",marginBottom:28,lineHeight:1.6}}>
         Connect your Gmail account to send surveys directly from your own address.
         Recipients will see your name and email — not a generic noreply.
@@ -7579,7 +7582,7 @@ popup.location.href = url;
           <div style={{fontSize:14,fontWeight:600,color:"var(--text2)",marginBottom:6}}>
             No email accounts connected
           </div>
-          <div style={{fontSize:13,color:"var(--text3)"}}>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
             Connect Gmail above to start sending surveys from your own address.
           </div>
         </div>
@@ -9397,7 +9400,7 @@ Content-Type: application/json
       </div>
 
       {loading ? (
-        <div style={{fontSize:13,color:"var(--text3)"}}>Loading…</div>
+        <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>Loading…</div>
       ) : (
         <>
           <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
@@ -9462,7 +9465,7 @@ const AuditLogSection = ({ call }) => {
 
   if (loading) return (
     <div style={rowStyle}>
-      <div style={{fontSize:13,color:"var(--text3)"}}>Loading…</div>
+      <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>Loading…</div>
     </div>
   );
 
@@ -9551,7 +9554,7 @@ const BriefingSettings = ({ call, toast, hasGmail }) => {
     update({ days });
   };
 
-  if (!cfg) return <div style={{fontSize:13,color:"var(--text3)"}}>Loading…</div>;
+  if (!cfg) return <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>Loading…</div>;
 
   return (
     <div style={{display:"flex",flexDirection:"column",gap:20,maxWidth:480}}>
@@ -9692,7 +9695,7 @@ const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPend
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:320,flexDirection:"column",gap:14}}>
       <div style={{width:28,height:28,border:"3px solid var(--border2)",borderTopColor:"var(--indigo)",
         borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
-      <div style={{fontSize:13,color:"var(--text3)"}}>Loading your briefing…</div>
+      <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>Loading your briefing…</div>
     </div>
   );
 
@@ -9878,7 +9881,7 @@ const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPend
             <div style={{fontSize:11,fontWeight:700,color:"var(--indigo)",textTransform:"uppercase",
               letterSpacing:".07em",marginBottom:4}}>AI Summary</div>
             {aiSumLoading
-              ? <div style={{fontSize:13,color:"var(--text3)"}}>Analysing your portfolio…</div>
+              ? <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>Analysing your portfolio…</div>
               : <div style={{fontSize:13,color:"var(--text)",lineHeight:1.7}}>{aiSummary}</div>
             }
           </div>
@@ -10083,8 +10086,9 @@ const MyPerformancePage = ({ accounts, call }) => {
   const portf  = perf?.portfolio || {};
 
   const StatBox = ({ value, label, sub, color="var(--text)" }) => (
-    <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"18px 20px"}}>
-      <div style={{fontFamily:"var(--font-mono)",fontWeight:800,fontSize:28,color,lineHeight:1,marginBottom:5}}>
+    <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+      borderTop:`3px solid ${color}`,borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
+      <div style={{fontFamily:"var(--font-mono)",fontWeight:800,fontSize:28,color,lineHeight:1,marginBottom:5,letterSpacing:"-.02em"}}>
         {value ?? "—"}
       </div>
       <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{label}</div>
@@ -10101,7 +10105,7 @@ const MyPerformancePage = ({ accounts, call }) => {
     <div style={{maxWidth:860,animation:"fadeUp .2s ease"}}>
       <div style={{marginBottom:24}}>
         <h2 style={{fontWeight:800,fontSize:22,letterSpacing:"-.02em",marginBottom:4}}>My Performance</h2>
-        <div style={{fontSize:13,color:"var(--text3)"}}>
+        <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
           {loading ? "Loading…" : `Week of ${week.start || "—"} · ${month.start ? `Month from ${month.start}` : ""}`}
         </div>
       </div>
@@ -10258,8 +10262,8 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
   return (
     <div style={{maxWidth:900,animation:"fadeUp .2s ease"}}>
       <div style={{marginBottom:28}}>
-        <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Portfolio Overview</h1>
-        <div style={{fontSize:13,color:"var(--text3)"}}>
+        <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Portfolio Overview</h1>
+        <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
           {active.length} accounts · as of today
         </div>
       </div>
@@ -10275,7 +10279,7 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
       {/* Coverage metrics */}
       <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
         padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:16}}>Coverage Health</div>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Coverage Health</div>
         <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
           {[
             {label:"Active contact coverage", pct:coveragePct, sub:"accounts contacted ≤14 days",
@@ -10303,7 +10307,7 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
       {/* Renewal forecast */}
       <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
         padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
-        <div style={{fontSize:13,fontWeight:700,marginBottom:16}}>Renewal Forecast</div>
+        <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Renewal Forecast</div>
         {forecastBuckets.length>0 ? (
           <div style={{display:"grid",gridTemplateColumns:`repeat(${forecastBuckets.length},1fr)`,gap:12}}>
             {forecastBuckets.map(b=>(
@@ -10335,7 +10339,7 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
       {attention.length>0&&(
         <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
           padding:"20px 24px",boxShadow:"var(--shadow-sm)"}}>
-          <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Needs Attention</div>
+          <div style={{fontSize:14,fontWeight:700,marginBottom:4}}>Needs Attention</div>
           <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>
             Sorted by urgency — health risk combined with renewal timeline and contact recency
           </div>
@@ -10842,7 +10846,7 @@ export default function App() {
         </div>
 
         {/* Main */}
-        <div style={{flex:1,overflow:"auto",padding:"32px"}}>
+        <div style={{flex:1,overflow:"auto",padding:"32px 40px"}}>
 
           {/* ── OUTREACH QUEUE VIEW ── */}
           {view==="outreach"&&(
@@ -10857,7 +10861,7 @@ export default function App() {
           {/* ── INTEGRATIONS VIEW ── */}
           {view==="settings"&&(
             <div style={{maxWidth:600}}>
-              <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:28}}>Settings</h1>
+              <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:28}}>Settings</h1>
               <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Email</div>
               <EmailSettingsPage session={session}/>
               <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Product Usage</div>
@@ -10943,7 +10947,7 @@ export default function App() {
                 <div style={{width:32,height:32,border:"3px solid var(--border2)",
                   borderTopColor:"var(--indigo)",borderRadius:"50%",
                   animation:"spin .7s linear infinite"}}/>
-                <div style={{fontSize:13,color:"var(--text3)"}}>Loading your portfolio…</div>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>Loading your portfolio…</div>
               </div>
             )}
 
@@ -10985,8 +10989,8 @@ export default function App() {
             )}
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
               <div>
-                <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Account Portfolio</h1>
-                <div style={{fontSize:13,color:"var(--text3)"}}>
+                <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Account Portfolio</h1>
+                <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
                   {new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}
                 </div>
               </div>
@@ -11014,7 +11018,7 @@ export default function App() {
                     const cfg=STAGE_CFG[f],active2=filter===f,count=stageCounts[f]??0;
                     return (
                       <button key={f} onClick={()=>setFilter(f)} className="pill-btn"
-                        style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
+                        style={{padding:"6px 14px",borderRadius:99,fontSize:12,cursor:"pointer",
                           fontFamily:"var(--font-mono)",fontWeight:active2?600:400,
                           display:"flex",alignItems:"center",gap:5,
                           border:`1.5px solid ${active2?(cfg?.color||"var(--indigo)"):"var(--border)"}`,
@@ -11057,7 +11061,7 @@ export default function App() {
                   const active2=planFilter===label, count=planCounts[label]??0;
                   return (
                     <button key={label} onClick={()=>setPlanFilter(label)} className="pill-btn"
-                      style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
+                      style={{padding:"6px 14px",borderRadius:99,fontSize:12,cursor:"pointer",
                         fontFamily:"var(--font-mono)",fontWeight:active2?600:400,
                         display:"flex",alignItems:"center",gap:5,
                         border:`1.5px solid ${active2?color:"var(--border)"}`,
@@ -11068,7 +11072,7 @@ export default function App() {
                 })}
                 {isFiltered&&(
                   <button onClick={clearFilters} className="pill-btn"
-                    style={{padding:"5px 11px",borderRadius:99,fontSize:11,cursor:"pointer",
+                    style={{padding:"6px 14px",borderRadius:99,fontSize:12,cursor:"pointer",
                       fontFamily:"var(--font-mono)",border:"1.5px solid var(--border)",
                       background:"var(--bg2)",color:"var(--text3)"}}>
                     Clear all ×
