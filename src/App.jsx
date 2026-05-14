@@ -3590,11 +3590,31 @@ const CRM_CATALOG = [
       { crmKey:"Last_Activity_Time",    crmLabel:"Last activity time",  pulseField:"lastContact" },
     ],
     credentials: [
-      { key:"clientId",  label:"Client ID",     placeholder:"1000.XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX", type:"text"     },
-      { key:"clientSecret", label:"Client Secret", placeholder:"xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx", type:"password" },
-      { key:"orgId",     label:"Organisation ID", placeholder:"20099xxxxx",                          type:"text"     },
+      { key:"clientId",     label:"Client ID",                        placeholder:"1000.XXXXXXXXXX",        type:"text"     },
+      { key:"clientSecret", label:"Client Secret",                    placeholder:"xxxxxxxxxxxxxxxxxx",      type:"password" },
+      { key:"refreshToken", label:"Refresh Token",                    placeholder:"1000.xxxxxxxxxx...",      type:"password" },
+      { key:"dc",           label:"Data Center",                      placeholder:"com  (or eu, in)",        type:"text"     },
+      { key:"deskOrgId",    label:"Zoho Desk Org ID (optional)",      placeholder:"20099xxxxx",              type:"text"     },
     ],
     docsUrl: "https://www.zoho.com/crm/developer/docs/api/",
+  },
+  {
+    id: "freshdesk",
+    name: "Freshdesk",
+    category: "Ticketing",
+    color: "#1ab394",
+    bg: "rgba(26,179,148,0.08)",
+    description: "Pull open ticket counts per company directly from Freshdesk Support.",
+    fields: [
+      { crmKey:"name",        crmLabel:"Company name",      pulseField:"name"        },
+      { crmKey:"openTickets", crmLabel:"Open ticket count", pulseField:"openTickets" },
+      { crmKey:"updated_at",  crmLabel:"Last ticket update",pulseField:"lastContact" },
+    ],
+    credentials: [
+      { key:"domain", label:"Freshdesk Domain", placeholder:"yourcompany  (yourcompany.freshdesk.com)", type:"text"     },
+      { key:"apiKey", label:"API Key",           placeholder:"Your Freshdesk API key",                  type:"password" },
+    ],
+    docsUrl: "https://developers.freshdesk.com/api/",
   },
   {
     id: "odoo",
@@ -3723,25 +3743,6 @@ const CRM_CATALOG = [
       { key:"apiToken",   label:"API Token",        placeholder:"Your Zendesk API token",               type:"password" },
     ],
     docsUrl: "https://developer.zendesk.com/api-reference/",
-  },
-  {
-    id: "jira",
-    name: "Jira Service Management",
-    category: "Ticketing",
-    color: "#0052cc",
-    bg: "rgba(0,82,204,0.07)",
-    description: "Sync open issue counts and resolution times from Jira Service Management.",
-    fields: [
-      { crmKey:"project_name",      crmLabel:"Project / customer name", pulseField:"name"        },
-      { crmKey:"open_issues",       crmLabel:"Open issues count",       pulseField:"openTickets" },
-      { crmKey:"updated",           crmLabel:"Last issue update",       pulseField:"lastContact" },
-    ],
-    credentials: [
-      { key:"domain",     label:"Atlassian Domain", placeholder:"yourcompany.atlassian.net",  type:"text"     },
-      { key:"email",      label:"Account email",    placeholder:"admin@yourcompany.com",      type:"text"     },
-      { key:"apiToken",   label:"API Token",        placeholder:"Your Atlassian API token",   type:"password" },
-    ],
-    docsUrl: "https://developer.atlassian.com/cloud/jira/service-desk/rest/intro/",
   },
   {
     id: "servicenow",
@@ -3877,32 +3878,43 @@ const saveIntegrations = d => {
 };
 
 // ── Connect / Edit credentials modal ──
-const CRMConnectModal = ({ crm, config, onSave, onClose }) => {
+const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
   const [creds, setCreds] = useState({...config.credentials});
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState(null); // null | "ok" | "fail"
+  const [testError, setTestError] = useState(null);
 
   useEffect(()=>{
     const h=e=>e.key==="Escape"&&onClose();
     window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
   },[onClose]);
 
-  const testConnection = () => {
+  const testConnection = async () => {
     const allFilled = crm.credentials.every(f => creds[f.key]?.trim());
-    if (!allFilled) { setTestResult("fail"); return; }
-    setTesting(true); setTestResult(null);
-    // Simulate API test — in production this would hit a backend proxy
-    setTimeout(()=>{
-      setTesting(false);
+    if (!allFilled) { setTestResult("fail"); setTestError("Please fill in all fields."); return; }
+    setTesting(true); setTestResult(null); setTestError(null);
+    try {
+      await call("POST", "/api/sync/test", { connectorId: crm.id, credentials: creds });
       setTestResult("ok");
-    }, 1400);
+    } catch (err) {
+      setTestResult("fail");
+      setTestError(err?.message || "Connection failed — check your credentials and try again.");
+    } finally { setTesting(false); }
   };
 
-  const save = () => {
+  const save = async () => {
     const allFilled = crm.credentials.every(f => creds[f.key]?.trim());
     if (!allFilled) return;
-    onSave({ credentials: creds, connected: testResult==="ok", status: testResult==="ok"?"connected":"idle" });
-    onClose();
+    try {
+      await call("POST", "/api/sync/configure", {
+        connectorId: crm.id,
+        credentials: creds,
+        fieldMap: config.fieldMap || {},
+        connected: testResult === "ok",
+      });
+      onSave({ connected: testResult === "ok", credentials: {} });
+      onClose();
+    } catch {}
   };
 
   return (
@@ -3964,7 +3976,7 @@ const CRMConnectModal = ({ crm, config, onSave, onClose }) => {
               <span style={{fontSize:13,fontWeight:600,color:testResult==="ok"?"var(--emerald)":"var(--rose)"}}>
                 {testResult==="ok"
                   ? "Connection successful — credentials verified"
-                  : "Connection failed — check your credentials and try again"}
+                  : (testError || "Connection failed — check your credentials and try again")}
               </span>
             </div>
           )}
@@ -4262,12 +4274,36 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
 };
 
 // ── Main integrations page ──
-const IntegrationsPage = ({ onImport, toast }) => {
+const IntegrationsPage = ({ onImport, toast, call }) => {
   const [configs, setConfigs]           = useState(loadIntegrations);
   const [showConnect, setShowConnect]   = useState(null);
   const [showFieldMap, setShowFieldMap] = useState(null);
   const [showSync, setShowSync]         = useState(null);
   const [categoryFilter, setCategoryFilter] = useState("All");
+  const [syncingId, setSyncingId]       = useState(null);
+
+  // Load real connection status from backend on mount
+  useEffect(() => {
+    if (!call) return;
+    call("GET", "/api/sync/status").then(data => {
+      const byId = {};
+      for (const row of (data.integrations || [])) {
+        byId[row.connector_id] = row;
+      }
+      setConfigs(prev => {
+        const next = { ...prev };
+        for (const [id, row] of Object.entries(byId)) {
+          if (next[id]) {
+            const ts = row.last_sync
+              ? new Date(row.last_sync).toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"})
+              : null;
+            next[id] = { ...next[id], connected: row.connected, lastSync: ts, syncCount: row.sync_count || 0 };
+          }
+        }
+        return next;
+      });
+    }).catch(() => {});
+  }, [call]);
 
   useEffect(()=>{ saveIntegrations(configs); },[configs]);
 
@@ -4277,13 +4313,19 @@ const IntegrationsPage = ({ onImport, toast }) => {
 
   const crm_by_id = id => CRM_CATALOG.find(c=>c.id===id);
 
-  const handleSync = (id, results) => {
-    const ts = new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
-    updateConfig(id,{
-      lastSync: ts,
-      syncCount: (configs[id].syncCount||0) + results.total,
-    });
-    toast(`${crm_by_id(id).name} sync complete — ${results.created} created, ${results.updated} updated`,"success");
+  const handleSyncNow = async (id) => {
+    if (!call || syncingId) return;
+    setSyncingId(id);
+    try {
+      const results = await call("POST", "/api/sync/run", { connectorId: id });
+      const ts = new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+      updateConfig(id, { lastSync: ts, syncCount: (configs[id].syncCount||0) + results.created + results.updated });
+      toast(`${crm_by_id(id).name} sync complete — ${results.created} created, ${results.updated} updated`, "success");
+    } catch (e) {
+      toast(`Sync failed: ${e.message || "unknown error"}`, "error");
+    } finally {
+      setSyncingId(null);
+    }
   };
 
   const connectedCount = Object.values(configs).filter(c=>c.connected).length;
@@ -4515,6 +4557,7 @@ const IntegrationsPage = ({ onImport, toast }) => {
             config={configs[showConnect]}
             onSave={patch=>{ updateConfig(showConnect,patch); toast(`${crm.name} connected`,"success"); }}
             onClose={()=>setShowConnect(null)}
+            call={call}
           />
         );
       })()}
@@ -8564,7 +8607,7 @@ export default function App() {
             </div>
           )}
           {view==="integrations"&&(
-            <IntegrationsPage onImport={bulkImport} toast={toast}/>
+            <IntegrationsPage onImport={bulkImport} toast={toast} call={call}/>
           )}
 
           {/* ── TASKS VIEW ── */}
