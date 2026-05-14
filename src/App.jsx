@@ -9318,20 +9318,21 @@ const SIGNAL_LABELS = {
   onboarding_phase_completed: "Onboarding",
 };
 
-const BriefingPage = ({ call, toast, onAccountClick }) => {
-  const [items,     setItems]     = useState(null);
-  const [loading,   setLoading]   = useState(true);
-  const [aiSummary, setAiSummary] = useState(null);
+const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPending = 0 }) => {
+  const [items,        setItems]        = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [aiSummary,    setAiSummary]    = useState(null);
   const [aiSumLoading, setAiSumLoading] = useState(false);
+  const [showDone,     setShowDone]     = useState(false);
 
   const loadAiSummary = useCallback(async (briefingItems) => {
-    const actionable = briefingItems.filter(i => i.status === "pending" && i.category !== "win");
-    if (actionable.length === 0) return;
+    const actionable = briefingItems.filter(i => i.status==="pending" && i.category!=="win");
+    if (!actionable.length) return;
     setAiSumLoading(true);
     try {
       const data = await call("POST", "/api/ai/briefing-summary", { items: briefingItems });
       if (data?.summary) setAiSummary(data.summary);
-    } catch { /* no AI key configured — silently skip */ }
+    } catch { }
     finally { setAiSumLoading(false); }
   }, [call]);
 
@@ -9339,10 +9340,8 @@ const BriefingPage = ({ call, toast, onAccountClick }) => {
     setLoading(true);
     call("GET", "/api/briefing/today")
       .then(data => {
-        const items = Array.isArray(data) ? data : [];
-        setItems(items);
-        setLoading(false);
-        loadAiSummary(items);
+        const it = Array.isArray(data) ? data : [];
+        setItems(it); setLoading(false); loadAiSummary(it);
       })
       .catch(() => setLoading(false));
   }, [call, loadAiSummary]);
@@ -9350,107 +9349,159 @@ const BriefingPage = ({ call, toast, onAccountClick }) => {
   useEffect(() => { load(); }, [load]);
 
   const updateItem = async (id, status, snoozeDays) => {
-    setItems(p => p.map(i => i.id===id ? {...i, status} : i)); // optimistic
-    try {
-      await call("PATCH", `/api/briefing/items/${id}`, { status, snoozeDays });
-    } catch {
-      toast("Failed to update item","error");
-      load(); // revert
-    }
+    setItems(p => p.map(i => i.id===id ? {...i, status} : i));
+    try { await call("PATCH", `/api/briefing/items/${id}`, { status, snoozeDays }); }
+    catch { toast("Failed to update item","error"); load(); }
   };
 
   if (loading) return (
     <div style={{display:"flex",alignItems:"center",justifyContent:"center",height:320,flexDirection:"column",gap:14}}>
-      <div style={{width:28,height:28,border:"3px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
-      <div style={{fontSize:13,color:"var(--text3)"}}>Generating your briefing…</div>
+      <div style={{width:28,height:28,border:"3px solid var(--border2)",borderTopColor:"var(--indigo)",
+        borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+      <div style={{fontSize:13,color:"var(--text3)"}}>Loading your briefing…</div>
     </div>
   );
 
-  const today = new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
+  const now      = new Date();
+  const hour     = now.getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
+  const dateStr  = now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
 
-  const actionItems  = (items||[]).filter(i=>i.category==="action" && i.status==="pending")
+  const actionItems   = (items||[]).filter(i=>i.category==="action"&&i.status==="pending")
     .sort((a,b)=>b.currentScore-a.currentScore);
-  const overdueItems = (items||[]).filter(i=>i.category==="task" && i.signalType==="task_overdue" && i.status==="pending");
-  const dueTodayItems= (items||[]).filter(i=>i.category==="task" && i.signalType==="task_due_today" && i.status==="pending");
-  const wins         = (items||[]).filter(i=>i.category==="win");
-  const doneItems    = (items||[]).filter(i=>i.status==="done");
+  const overdueItems  = (items||[]).filter(i=>i.category==="task"&&i.signalType==="task_overdue"&&i.status==="pending");
+  const dueTodayItems = (items||[]).filter(i=>i.category==="task"&&i.signalType==="task_due_today"&&i.status==="pending");
+  const wins          = (items||[]).filter(i=>i.category==="win");
+  const doneItems     = (items||[]).filter(i=>i.status==="done");
 
-  const allClear = actionItems.length===0 && overdueItems.length===0 && dueTodayItems.length===0;
-
-  // Deduplicate: top signal per account
-  const seenAccounts = new Set();
-  const topItems = [];
+  // Top 5 accounts — one signal per account
+  const seenAccts = new Set();
+  const topItems  = [];
   for (const item of actionItems) {
-    if (!item.accountId || !seenAccounts.has(item.accountId)) {
-      if (item.accountId) seenAccounts.add(item.accountId);
+    if (topItems.length >= 5) break;
+    if (!item.accountId || !seenAccts.has(item.accountId)) {
+      if (item.accountId) seenAccts.add(item.accountId);
       topItems.push(item);
     }
   }
 
+  const tasksDue = overdueItems.length + dueTodayItems.length;
+  const allClear = topItems.length===0 && tasksDue===0;
+
+  // Renewals this week from accounts prop
+  const renewalsThisWeek = accounts.filter(a => {
+    if (!a.renewalDate) return false;
+    const d = Math.ceil((new Date(a.renewalDate)-now)/86400000);
+    return d>=0 && d<=7;
+  });
+  const renewalArr = renewalsThisWeek.reduce((s,a)=>s+(a.arr||0),0);
+
   const urgColor = s => s>=12?"var(--rose)":s>=8?"var(--amber)":"var(--indigo)";
 
-  const ActionCard = ({item}) => (
-    <div style={{background:"var(--bg2)",border:`1.5px solid ${urgColor(item.currentScore)}33`,
-      borderLeft:`3px solid ${urgColor(item.currentScore)}`,
-      borderRadius:"var(--r)",padding:"14px 16px",marginBottom:8}}>
-      <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
-        <div style={{flex:1,minWidth:0}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-            {item.accountId && (
-              <button onClick={()=>onAccountClick&&onAccountClick(item.accountId)}
-                style={{fontWeight:700,fontSize:14,background:"none",border:"none",
-                  color:"var(--text)",cursor:"pointer",padding:0,textAlign:"left"}}>
-                {item.accountName || item.accountId || "—"}
-              </button>
-            )}
-            {item.carryDays===0
-              ? <span style={{fontSize:11,background:"var(--indigo-dim)",color:"var(--indigo)",padding:"2px 8px",borderRadius:99,fontWeight:600}}>NEW</span>
-              : <span style={{fontSize:11,background:"var(--amber-dim)",color:"var(--amber)",padding:"2px 8px",borderRadius:99,fontWeight:600}}>{item.carryDays}d carrying</span>
-            }
-            <span style={{marginLeft:"auto",fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text3)",fontWeight:600}}>{Math.round(item.currentScore)}pts</span>
-          </div>
-          <div style={{fontSize:13,color:"var(--text2)"}}>{item.signalDetail}</div>
-        </div>
-        <ItemActions item={item} onUpdate={updateItem}/>
+  // ── Sub-components ────────────────────────────────────────────────────────────
+  const StatPill = ({value, label, color}) => (
+    <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",
+      background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+      padding:"14px 18px",flex:1}}>
+      <div style={{fontFamily:"var(--font-mono)",fontWeight:800,fontSize:22,color,lineHeight:1,marginBottom:4}}>
+        {value}
       </div>
+      <div style={{fontSize:11,color:"var(--text3)",lineHeight:1.3}}>{label}</div>
     </div>
   );
 
+  const ActionCard = ({item}) => {
+    const uc   = urgColor(item.currentScore);
+    const acct = accounts.find(a=>a.id===item.accountId);
+    const hw   = acct ? getHealthWarnings(acct) : [];
+    return (
+      <div onClick={()=>onAccountClick&&onAccountClick(item.accountId)}
+        style={{background:"var(--bg2)",borderTop:`1.5px solid var(--border)`,
+          borderRight:`1.5px solid var(--border)`,borderBottom:`1.5px solid var(--border)`,
+          borderLeft:`3px solid ${uc}`,borderRadius:"var(--r)",padding:"14px 16px",marginBottom:6,
+          cursor:"pointer",transition:"background .1s"}}
+        onMouseEnter={e=>e.currentTarget.style.background="var(--bg3)"}
+        onMouseLeave={e=>e.currentTarget.style.background="var(--bg2)"}>
+        <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+          <div style={{flex:1,minWidth:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:5,flexWrap:"wrap"}}>
+              <span style={{fontWeight:700,fontSize:14,color:"var(--text)"}}>{item.accountName||"—"}</span>
+              {item.carryDays>1&&(
+                <span style={{fontSize:10,background:"var(--amber-dim)",color:"var(--amber)",
+                  padding:"2px 7px",borderRadius:99,fontWeight:600}}>{item.carryDays}d open</span>
+              )}
+              {hw.map((w,i)=>(
+                <span key={i} style={{fontSize:10,fontWeight:600,padding:"2px 7px",borderRadius:99,
+                  background:w.s===2?"var(--rose-dim)":"var(--amber-dim)",
+                  color:w.s===2?"var(--rose)":"var(--amber)"}}>
+                  {w.t}
+                </span>
+              ))}
+            </div>
+            <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5}}>{item.signalDetail}</div>
+          </div>
+          <div onClick={e=>e.stopPropagation()}>
+            <ItemActions item={item} onUpdate={updateItem}/>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   const TaskRow = ({item, isOverdue}) => (
-    <div style={{background:"var(--bg2)",border:`1.5px solid ${isOverdue?"var(--rose)":"var(--indigo)"}22`,
+    <div style={{background:"var(--bg2)",
+      borderTop:`1.5px solid var(--border)`,borderRight:`1.5px solid var(--border)`,
+      borderBottom:`1.5px solid var(--border)`,
       borderLeft:`3px solid ${isOverdue?"var(--rose)":"var(--indigo)"}`,
       borderRadius:"var(--r)",padding:"10px 14px",marginBottom:6,
       display:"flex",alignItems:"center",justifyContent:"space-between",gap:10}}>
       <div style={{flex:1,minWidth:0}}>
         <span style={{fontSize:13,color:"var(--text2)"}}>{item.signalDetail}</span>
-        {isOverdue && <span style={{fontSize:11,color:"var(--rose)",fontWeight:600,marginLeft:8}}>OVERDUE</span>}
+        {isOverdue&&(
+          <span style={{fontSize:10,color:"var(--rose)",fontWeight:700,marginLeft:8,
+            background:"var(--rose-dim)",padding:"2px 7px",borderRadius:99}}>OVERDUE</span>
+        )}
       </div>
       <ItemActions item={item} onUpdate={updateItem}/>
     </div>
   );
 
+  // ── Render ────────────────────────────────────────────────────────────────────
   return (
-    <div style={{maxWidth:720}}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+    <div style={{maxWidth:720,animation:"fadeUp .2s ease"}}>
+
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
         <div>
-          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Daily Briefing</h1>
-          <div style={{fontSize:13,color:"var(--text3)"}}>{today}</div>
+          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>{greeting}</h1>
+          <div style={{fontSize:13,color:"var(--text3)"}}>{dateStr}</div>
         </div>
         <button onClick={load} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
           borderRadius:"var(--r)",padding:"8px 16px",fontSize:12,fontWeight:600,
-          color:"var(--text2)",cursor:"pointer"}}>Refresh</button>
+          color:"var(--text2)",cursor:"pointer",marginTop:4}}>
+          Refresh
+        </button>
+      </div>
+
+      {/* Stat row */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:28}}>
+        <StatPill value={topItems.length}          label="need attention"    color={topItems.length>0?"var(--rose)":"var(--emerald)"}/>
+        <StatPill value={outreachPending}           label="outreach drafts"  color={outreachPending>0?"var(--amber)":"var(--text3)"}/>
+        <StatPill value={tasksDue}                  label="tasks due"        color={tasksDue>0?"var(--amber)":"var(--text3)"}/>
+        <StatPill value={renewalsThisWeek.length}   label="renewing this week" color={renewalsThisWeek.length>0?"var(--indigo)":"var(--text3)"}/>
       </div>
 
       {/* AI Summary */}
-      {(aiSummary || aiSumLoading) && (
+      {(aiSummary||aiSumLoading)&&(
         <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
-          borderRadius:"var(--r-lg)",padding:"16px 20px",marginBottom:8,display:"flex",gap:12,alignItems:"flex-start"}}>
+          borderRadius:"var(--r-lg)",padding:"16px 20px",marginBottom:24,display:"flex",gap:12,alignItems:"flex-start"}}>
           <div style={{width:28,height:28,borderRadius:"var(--r-sm)",background:"var(--indigo)",
             display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
-            <span style={{fontSize:14}}>✦</span>
+            <span style={{fontSize:14,color:"white"}}>✦</span>
           </div>
           <div style={{flex:1}}>
-            <div style={{fontSize:11,fontWeight:700,color:"var(--indigo)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:4}}>AI Summary</div>
+            <div style={{fontSize:11,fontWeight:700,color:"var(--indigo)",textTransform:"uppercase",
+              letterSpacing:".07em",marginBottom:4}}>AI Summary</div>
             {aiSumLoading
               ? <div style={{fontSize:13,color:"var(--text3)"}}>Analysing your portfolio…</div>
               : <div style={{fontSize:13,color:"var(--text)",lineHeight:1.7}}>{aiSummary}</div>
@@ -9459,59 +9510,118 @@ const BriefingPage = ({ call, toast, onAccountClick }) => {
         </div>
       )}
 
-      {allClear && wins.length===0 && (
-        <div style={{background:"var(--emerald-dim)",border:"1.5px solid rgba(5,150,105,0.2)",
-          borderRadius:"var(--r-lg)",padding:"28px",textAlign:"center",marginBottom:24}}>
-          <div style={{fontSize:28,marginBottom:10}}>✅</div>
-          <div style={{fontWeight:700,fontSize:15,color:"var(--emerald)",marginBottom:4}}>Portfolio is healthy</div>
-          <div style={{fontSize:13,color:"var(--text2)"}}>No urgent signals today. Great work.</div>
+      {/* All-clear — not a dead end, shows what's coming */}
+      {allClear&&(
+        <div style={{background:"rgba(5,150,105,.06)",border:"1.5px solid rgba(5,150,105,.2)",
+          borderRadius:"var(--r-lg)",padding:"18px 22px",marginBottom:24,
+          display:"flex",alignItems:"center",gap:14}}>
+          <div style={{width:34,height:34,borderRadius:"50%",background:"rgba(5,150,105,.15)",
+            display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <Ic n="check" size={16} color="var(--emerald)"/>
+          </div>
+          <div>
+            <div style={{fontWeight:700,fontSize:14,color:"var(--emerald)",marginBottom:2}}>
+              Portfolio is healthy
+            </div>
+            <div style={{fontSize:13,color:"var(--text2)"}}>
+              No urgent signals today.{renewalsThisWeek.length>0
+                ? ` ${renewalsThisWeek.length} renewal${renewalsThisWeek.length>1?"s":""} coming up this week.`
+                : outreachPending>0 ? ` ${outreachPending} outreach draft${outreachPending>1?"s":""} waiting for review.`
+                : " Check wins below."}
+            </div>
+          </div>
         </div>
       )}
 
+      {/* Today's Focus */}
       {topItems.length>0&&(
-        <Section title={`${topItems.length} account${topItems.length>1?"s":""} need${topItems.length===1?"s":""} attention`}>
+        <Section title={`Today's focus · ${topItems.length} account${topItems.length>1?"s need":"needs"} attention`}>
           {topItems.map(i=><ActionCard key={i.id} item={i}/>)}
         </Section>
       )}
 
-      {overdueItems.length>0&&(
-        <Section title={`Overdue tasks (${overdueItems.length})`}>
+      {/* Tasks */}
+      {tasksDue>0&&(
+        <Section title={`Tasks · ${tasksDue} due`}>
           {overdueItems.map(i=><TaskRow key={i.id} item={i} isOverdue={true}/>)}
-        </Section>
-      )}
-
-      {dueTodayItems.length>0&&(
-        <Section title={`Due today (${dueTodayItems.length})`}>
           {dueTodayItems.map(i=><TaskRow key={i.id} item={i} isOverdue={false}/>)}
         </Section>
       )}
 
+      {/* Wins */}
       {wins.length>0&&(
-        <Section title="Wins">
+        <Section title={`Wins · ${wins.length}`}>
           {wins.map(i=>(
-            <div key={i.id} style={{display:"flex",alignItems:"center",gap:8,
-              fontSize:13,color:"var(--emerald)",padding:"6px 0",borderBottom:"1px solid var(--border)"}}>
-              <span>✓</span><span>{i.signalDetail}</span>
+            <div key={i.id} style={{display:"flex",alignItems:"center",gap:10,
+              padding:"9px 14px",borderRadius:"var(--r)",marginBottom:4,
+              background:"rgba(5,150,105,.05)",border:"1.5px solid rgba(5,150,105,.12)"}}>
+              <Ic n="check" size={13} color="var(--emerald)"/>
+              <span style={{fontSize:13,color:"var(--text2)"}}>{i.signalDetail}</span>
             </div>
           ))}
         </Section>
       )}
 
+      {/* This week */}
+      {(renewalsThisWeek.length>0||outreachPending>0)&&(
+        <Section title="This week">
+          {renewalsThisWeek.length>0&&(
+            <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+              borderRadius:"var(--r)",padding:"12px 16px",marginBottom:6,
+              display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+              <div>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>
+                  {renewalsThisWeek.length} renewal{renewalsThisWeek.length>1?"s":""} due in the next 7 days
+                </div>
+                <div style={{fontSize:11,color:"var(--text3)",lineHeight:1.4}}>
+                  {renewalsThisWeek.map(a=>a.name).join(" · ")}
+                </div>
+              </div>
+              {renewalArr>0&&(
+                <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:15,
+                  color:"var(--indigo)",flexShrink:0}}>
+                  {fmtMoney(renewalArr)}
+                </div>
+              )}
+            </div>
+          )}
+          {outreachPending>0&&(
+            <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+              borderRadius:"var(--r)",padding:"12px 16px",marginBottom:6,
+              display:"flex",alignItems:"center",justifyContent:"space-between",gap:12}}>
+              <div style={{fontSize:13,color:"var(--text2)"}}>
+                <span style={{fontWeight:600,color:"var(--text)"}}>{outreachPending} outreach draft{outreachPending>1?"s":""}</span> waiting for your review in Outreach Queue
+              </div>
+              <Ic n="email" size={14} color="var(--text3)"/>
+            </div>
+          )}
+        </Section>
+      )}
+
+      {/* Completed — collapsed by default */}
       {doneItems.length>0&&(
-        <Section title={`Completed today (${doneItems.length})`}>
-          {doneItems.map(i=>(
+        <div style={{marginBottom:24}}>
+          <button onClick={()=>setShowDone(v=>!v)}
+            style={{fontSize:11,fontWeight:700,textTransform:"uppercase",letterSpacing:".09em",
+              color:"var(--text3)",background:"none",border:"none",cursor:"pointer",padding:"0 0 8px",
+              borderBottom:"1.5px solid var(--border)",width:"100%",textAlign:"left",
+              display:"flex",justifyContent:"space-between",alignItems:"center",
+              marginBottom:showDone?12:0}}>
+            <span>Completed today · {doneItems.length}</span>
+            <Ic n={showDone?"chevron_up":"chevron_down"} size={13} color="var(--text3)"/>
+          </button>
+          {showDone&&doneItems.map(i=>(
             <div key={i.id} style={{display:"flex",alignItems:"center",gap:8,
               fontSize:13,color:"var(--text3)",padding:"6px 0",textDecoration:"line-through",
               borderBottom:"1px solid var(--border)"}}>
-              <span style={{fontSize:10,fontFamily:"var(--font-mono)",
-                background:"var(--bg3)",padding:"1px 6px",borderRadius:4,textDecoration:"none",
-                color:"var(--text3)"}}>
+              <span style={{fontSize:10,fontFamily:"var(--font-mono)",background:"var(--bg3)",
+                padding:"1px 6px",borderRadius:4,textDecoration:"none",color:"var(--text3)",flexShrink:0}}>
                 {SIGNAL_LABELS[i.signalType]||i.signalType}
               </span>
               {i.signalDetail}
             </div>
           ))}
-        </Section>
+        </div>
       )}
     </div>
   );
@@ -10283,7 +10393,8 @@ export default function App() {
 
           {/* ── BRIEFING VIEW ── */}
           {view==="briefing"&&(
-            <BriefingPage call={call} toast={toast}
+            <BriefingPage call={call} toast={toast} accounts={active}
+              outreachPending={outreachPending}
               onAccountClick={id=>{const a=active.find(x=>x.id===id);if(a){setSelected(a);setView("portfolio");}}}/>
           )}
 
