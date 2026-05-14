@@ -414,6 +414,39 @@ const calcHealth = (a) => {
   ]};
 };
 
+// ─── Health signal helpers ────────────────────────────────────────────────────
+// Returns the top-2 worst signals driving an account's health score down.
+// Used on portfolio cards and pipeline cards so CSMs see WHY not just WHAT.
+const getHealthWarnings = (account) => {
+  const w = [];
+  const cd = account.lastContact  ? Math.floor((Date.now()-new Date(account.lastContact))/86400000) : 999;
+  const rd = account.renewalDate  ? Math.ceil((new Date(account.renewalDate)-Date.now())/86400000)  : 999;
+  if ((account.nps??50) < 35)               w.push({t:`NPS ${account.nps??'—'}`,         s:2});
+  else if ((account.nps??50) < 55)          w.push({t:"NPS low",                          s:1});
+  if ((account.ces??3.5) < 2.5)            w.push({t:"High friction",                    s:2});
+  if ((account.productUsage??60) < 25)      w.push({t:`Usage ${account.productUsage??'—'}%`, s:2});
+  else if ((account.productUsage??60) < 45) w.push({t:"Low usage",                       s:1});
+  if ((account.openTickets??0) >= 5)        w.push({t:`${account.openTickets} tickets`,   s:2});
+  else if ((account.openTickets??0) >= 3)   w.push({t:`${account.openTickets} tickets`,   s:1});
+  if (cd > 30)       w.push({t:`${cd}d no contact`,  s:2});
+  else if (cd > 21)  w.push({t:`${cd}d no contact`,  s:1});
+  if (rd >= 0 && rd <= 45 && (account.healthScore??100) < 65) w.push({t:`Renews ${rd}d`, s:2});
+  return w.sort((a,b)=>b.s-a.s).slice(0,2);
+};
+
+// Renewal risk rating that weighs health against time-to-renewal.
+// 90 days away but health=35 is MORE at risk than 20 days away but health=85.
+const renewalRisk = (account) => {
+  const d = account.renewalDate ? Math.ceil((new Date(account.renewalDate)-Date.now())/86400000) : 999;
+  const h = account.healthScore ?? 100;
+  if (d < 0)                          return {label:"Overdue",  color:"var(--rose)",    bg:"var(--rose-dim)"  };
+  if (h < 40 || (h < 50 && d <= 30)) return {label:"Critical", color:"var(--rose)",    bg:"var(--rose-dim)"  };
+  if (h < 55 && d <= 90)             return {label:"At Risk",  color:"var(--amber)",   bg:"var(--amber-dim)" };
+  if (h < 65 && d <= 120)            return {label:"Watch",    color:"var(--amber)",   bg:"var(--amber-dim)" };
+  if (h >= 70)                       return {label:"Safe",     color:"var(--emerald)", bg:"rgba(5,150,105,.1)"};
+  return                                     {label:"Monitor",  color:"var(--indigo)",  bg:"var(--indigo-dim)" };
+};
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const hColor   = s => s>=70?"var(--emerald)":s>=45?"var(--amber)":"var(--rose)";
 const fmtMoney = n => n>=1000?`$${(n/1000).toFixed(0)}k`:`$${n}`;
@@ -3241,6 +3274,19 @@ const Card = ({ account, onClick, index }) => {
         ))}
       </div>
 
+      {/* Health signal chips — explains WHY the score is what it is */}
+      {(()=>{ const hw=getHealthWarnings(account); return hw.length>0&&(
+        <div style={{display:"flex",gap:5,flexWrap:"wrap",marginBottom:8}}>
+          {hw.map((w,i)=>(
+            <span key={i} style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,
+              background:w.s===2?"var(--rose-dim)":"var(--amber-dim)",
+              color:w.s===2?"var(--rose)":"var(--amber)"}}>
+              {w.t}
+            </span>
+          ))}
+        </div>
+      ); })()}
+
       {account.nextAction&&(
         <div style={{background:"var(--violet-dim)",borderRadius:"var(--r-sm)",padding:"6px 10px",marginBottom:8,
           display:"flex",gap:6,alignItems:"center"}}>
@@ -3860,6 +3906,43 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
         </div>
       </div>
 
+      {/* Hidden risk alert — accounts that look safe by timeline but are health-at-risk */}
+      {(()=>{
+        const hidden = withRenewal.filter(a => a.rdays > 60 && (a.healthScore??100) < 55);
+        return hidden.length > 0 && (
+          <div style={{background:"rgba(217,119,6,0.07)",border:"1.5px solid rgba(217,119,6,0.3)",
+            borderRadius:"var(--r-lg)",padding:"16px 20px",marginBottom:24}}>
+            <div style={{display:"flex",gap:10,alignItems:"flex-start",marginBottom:10}}>
+              <Ic n="alert" size={16} color="var(--amber)"/>
+              <div>
+                <div style={{fontWeight:700,fontSize:13,color:"var(--amber)",marginBottom:2}}>
+                  {hidden.length} account{hidden.length!==1?" are":" is"} health-at-risk despite distant renewal
+                </div>
+                <div style={{fontSize:12,color:"var(--text3)",lineHeight:1.5}}>
+                  These accounts have 60+ days until renewal but health below 55 — the work to save them starts now, not in 60 days.
+                </div>
+              </div>
+            </div>
+            <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+              {hidden.map(a=>(
+                <div key={a.id} onClick={()=>onAccountClick(a)}
+                  style={{display:"flex",alignItems:"center",gap:6,background:"white",borderRadius:"var(--r-sm)",
+                    padding:"5px 10px",cursor:"pointer",border:"1px solid rgba(217,119,6,0.2)"}}>
+                  <Avatar name={a.name} size={18}/>
+                  <span style={{fontSize:12,fontWeight:600}}>{a.name}</span>
+                  <span style={{fontSize:10,fontFamily:"var(--font-mono)",color:"var(--rose)",fontWeight:600}}>
+                    {a.healthScore}
+                  </span>
+                  <span style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
+                    {a.rdays}d
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Swimlanes */}
       {bucketed.map(bucket => {
         if (!bucket.accounts.length) return null;
@@ -3895,6 +3978,10 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
                         <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
                         <span style={{fontSize:11,color:"var(--text3)"}}>{account.plan}</span>
                         <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
+                        {(()=>{ const rr=renewalRisk(account); return (
+                          <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,
+                            background:rr.bg,color:rr.color}}>{rr.label}</span>
+                        ); })()}
                         {triggered.length>0&&!account.activePlaybookId&&(
                           <span style={{fontSize:10,color:"var(--amber)",fontFamily:"var(--font-mono)",
                             background:"var(--amber-dim)",padding:"1px 7px",borderRadius:99}}>
@@ -7930,6 +8017,65 @@ const OnboardingTab = ({ account, call, toast }) => {
         </button>
       </div>
 
+      {/* TTV Progress Banner */}
+      {(()=>{
+        const EXPECTED_DAYS = 45;
+        const planAge  = plan.created_at ? Math.floor((Date.now()-new Date(plan.created_at))/86400000) : 0;
+        const phDone   = OB_PHASES.filter(p=>(plan.phases?.[p.key]||{}).actual).length;
+        const taskDone = tasks.filter(t=>t.status==="done").length;
+        const taskTot  = tasks.length;
+        const timePct  = Math.min(100, Math.round(planAge/EXPECTED_DAYS*100));
+        const phasePct = Math.round(phDone/OB_PHASES.length*100);
+        const isComplete = !!plan.go_live_actual;
+        const status = isComplete ? "complete"
+          : phasePct >= timePct     ? "on_track"
+          : phasePct < timePct-30   ? "at_risk"
+          : "watch";
+        const statusCfg = {
+          complete: {label:"Onboarding Complete", color:"var(--emerald)", bg:"rgba(5,150,105,.08)", border:"rgba(5,150,105,.25)"},
+          on_track: {label:"On Track",            color:"var(--emerald)", bg:"rgba(5,150,105,.08)", border:"rgba(5,150,105,.25)"},
+          watch:    {label:"Slight Delay",         color:"var(--amber)",  bg:"var(--amber-dim)",    border:"rgba(217,119,6,.3)" },
+          at_risk:  {label:"At Risk",              color:"var(--rose)",   bg:"var(--rose-dim)",     border:"rgba(225,29,72,.3)" },
+        };
+        const sc = statusCfg[status];
+        return (
+          <div style={{background:sc.bg,border:`1.5px solid ${sc.border}`,borderRadius:"var(--r)",padding:"14px 16px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <div>
+                <div style={{fontSize:11,fontWeight:700,color:sc.color,textTransform:"uppercase",letterSpacing:".06em",marginBottom:2}}>
+                  Time to Value
+                </div>
+                <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>
+                  {isComplete ? `Completed in ${planAge} days` : `Day ${planAge} of ~${EXPECTED_DAYS}-day window`}
+                </div>
+              </div>
+              <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:99,
+                background:sc.border,color:sc.color}}>{sc.label}</span>
+            </div>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+              <div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--text3)",marginBottom:4}}>
+                  <span>Phases</span><span style={{fontFamily:"var(--font-mono)",fontWeight:600}}>{phDone}/{OB_PHASES.length}</span>
+                </div>
+                <div style={{height:5,borderRadius:99,background:"var(--bg4)"}}>
+                  <div style={{height:"100%",width:`${phasePct}%`,borderRadius:99,
+                    background:phasePct>=timePct?"var(--emerald)":"var(--amber)",transition:"width .4s ease"}}/>
+                </div>
+              </div>
+              <div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11,color:"var(--text3)",marginBottom:4}}>
+                  <span>Tasks</span><span style={{fontFamily:"var(--font-mono)",fontWeight:600}}>{taskDone}/{taskTot||0}</span>
+                </div>
+                <div style={{height:5,borderRadius:99,background:"var(--bg4)"}}>
+                  <div style={{height:"100%",width:taskTot?`${Math.round(taskDone/taskTot*100)}%`:"0%",borderRadius:99,
+                    background:"var(--indigo)",transition:"width .4s ease"}}/>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Phase track */}
       <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 14px"}}>
         <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",marginBottom:10,letterSpacing:".04em"}}>PHASES</div>
@@ -9397,6 +9543,206 @@ const ItemActions = ({item, onUpdate}) => {
   );
 };
 
+// ─── Manager Overview ─────────────────────────────────────────────────────────
+const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
+  const active = accounts.filter(a => !a.archived);
+
+  // Portfolio-level aggregates
+  const totalArr      = active.reduce((s,a)=>s+a.arr,0);
+  const atRiskArr     = active.filter(a=>a.healthScore<50).reduce((s,a)=>s+a.arr,0);
+  const avgHealth     = active.length ? Math.round(active.reduce((s,a)=>s+a.healthScore,0)/active.length) : 0;
+  const atRiskCount   = active.filter(a=>a.healthScore<50).length;
+  const staleContact  = active.filter(a=>ago(a.lastContact)>21).length;
+  const withPlaybook  = active.filter(a=>a.activePlaybookId).length;
+  const coveragePct   = active.length ? Math.round(active.filter(a=>ago(a.lastContact)<=14).length/active.length*100) : 0;
+  const playbookPct   = active.length ? Math.round(withPlaybook/active.length*100) : 0;
+
+  // Renewal forecast buckets
+  const today = new Date();
+  const withRenewal = active.filter(a=>a.renewalDate)
+    .map(a=>({...a, rd: Math.ceil((new Date(a.renewalDate)-today)/86400000)}));
+  const r30  = withRenewal.filter(a=>a.rd>=0&&a.rd<=30);
+  const r60  = withRenewal.filter(a=>a.rd>30&&a.rd<=60);
+  const r90  = withRenewal.filter(a=>a.rd>60&&a.rd<=90);
+  const arrR30 = r30.reduce((s,a)=>s+a.arr,0);
+  const arrR60 = r60.reduce((s,a)=>s+a.arr,0);
+  const arrR90 = r90.reduce((s,a)=>s+a.arr,0);
+  const safeR30 = r30.filter(a=>a.healthScore>=65).reduce((s,a)=>s+a.arr,0);
+  const riskR30 = arrR30 - safeR30;
+
+  // Urgency score: combined health risk + time pressure
+  const urgencyScore = a => {
+    const rd = a.renewalDate ? Math.ceil((new Date(a.renewalDate)-today)/86400000) : 999;
+    const timePressure = rd<=30?40:rd<=60?20:rd<=90?10:0;
+    return (100-a.healthScore) + timePressure + (ago(a.lastContact)>21?15:0);
+  };
+  const attention = [...active]
+    .filter(a=>a.healthScore<65||ago(a.lastContact)>21)
+    .sort((a,b)=>urgencyScore(b)-urgencyScore(a))
+    .slice(0,8);
+
+  const StatCard = ({label,value,sub,color,warn}) => (
+    <div style={{background:"var(--bg2)",border:`1.5px solid ${warn?"rgba(225,29,72,0.25)":"var(--border)"}`,
+      borderRadius:"var(--r-lg)",padding:"20px 22px",boxShadow:"var(--shadow-sm)"}}>
+      <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:26,color:color||"var(--indigo)",
+        marginBottom:4,letterSpacing:"-.01em"}}>{value}</div>
+      <div style={{fontSize:12,fontWeight:600,color:"var(--text2)",marginBottom:2}}>{label}</div>
+      {sub&&<div style={{fontSize:11,color:"var(--text3)"}}>{sub}</div>}
+    </div>
+  );
+
+  return (
+    <div style={{maxWidth:900,animation:"fadeUp .2s ease"}}>
+      <div style={{marginBottom:28}}>
+        <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Portfolio Overview</h1>
+        <div style={{fontSize:13,color:"var(--text3)"}}>
+          {active.length} accounts · as of today
+        </div>
+      </div>
+
+      {/* Hero stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
+        <StatCard label="Total ARR"        value={fmtMoney(totalArr)}    sub={`${active.length} accounts`}          color="var(--indigo)"/>
+        <StatCard label="At-Risk ARR"      value={fmtMoney(atRiskArr)}   sub={`${atRiskCount} accounts below 50`}   color="var(--rose)"    warn={atRiskArr>0}/>
+        <StatCard label="Avg Health Score" value={avgHealth}             sub="portfolio average"                    color={hColor(avgHealth)}/>
+        <StatCard label="No Recent Contact" value={staleContact}         sub="no contact in 21+ days"               color={staleContact>0?"var(--amber)":"var(--emerald)"} warn={staleContact>0}/>
+      </div>
+
+      {/* Coverage metrics */}
+      <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+        padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:16}}>Coverage Health</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
+          {[
+            {label:"Active contact coverage", pct:coveragePct, sub:"accounts contacted ≤14 days",
+              color:coveragePct>=80?"var(--emerald)":coveragePct>=60?"var(--amber)":"var(--rose)"},
+            {label:"Playbook adoption",        pct:playbookPct, sub:"accounts with active playbook",
+              color:playbookPct>=60?"var(--emerald)":playbookPct>=40?"var(--amber)":"var(--rose)"},
+            {label:"Health above threshold",   pct:active.length?Math.round(active.filter(a=>a.healthScore>=55).length/active.length*100):0,
+              sub:"accounts with health ≥55",
+              color:"var(--indigo)"},
+          ].map(m=>(
+            <div key={m.label}>
+              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+                <span style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>{m.label}</span>
+                <span style={{fontSize:13,fontFamily:"var(--font-mono)",fontWeight:700,color:m.color}}>{m.pct}%</span>
+              </div>
+              <div style={{height:7,borderRadius:99,background:"var(--bg4)"}}>
+                <div style={{height:"100%",width:`${m.pct}%`,borderRadius:99,background:m.color,transition:"width .6s ease"}}/>
+              </div>
+              <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>{m.sub}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Renewal forecast */}
+      <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+        padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
+        <div style={{fontSize:13,fontWeight:700,marginBottom:16}}>Renewal Forecast — Next 90 Days</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:16}}>
+          {[
+            {label:"Next 30 days",  arr:arrR30, count:r30.length, riskArr:riskR30,
+              color:riskR30>0?"var(--rose)":"var(--emerald)"},
+            {label:"31–60 days",    arr:arrR60, count:r60.length, riskArr:r60.filter(a=>a.healthScore<65).reduce((s,a)=>s+a.arr,0),
+              color:"var(--amber)"},
+            {label:"61–90 days",    arr:arrR90, count:r90.length, riskArr:r90.filter(a=>a.healthScore<55).reduce((s,a)=>s+a.arr,0),
+              color:"var(--indigo)"},
+          ].map(b=>(
+            <div key={b.label} style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+              <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",marginBottom:6}}>{b.label}</div>
+              <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:18,color:"var(--text)",marginBottom:2}}>
+                {fmtMoney(b.arr)}
+              </div>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:8}}>{b.count} account{b.count!==1?"s":""}</div>
+              {b.riskArr>0&&(
+                <div style={{fontSize:10,fontWeight:600,color:"var(--rose)",background:"var(--rose-dim)",
+                  padding:"2px 8px",borderRadius:99,display:"inline-block"}}>
+                  {fmtMoney(b.riskArr)} at risk
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+        {(arrR30+arrR60+arrR90)===0&&(
+          <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"12px 0"}}>
+            No renewals in the next 90 days — add renewal dates to accounts to see the forecast.
+          </div>
+        )}
+      </div>
+
+      {/* Accounts needing attention */}
+      {attention.length>0&&(
+        <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+          padding:"20px 24px",boxShadow:"var(--shadow-sm)"}}>
+          <div style={{fontSize:13,fontWeight:700,marginBottom:4}}>Needs Attention</div>
+          <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>
+            Sorted by urgency — health risk combined with renewal timeline and contact recency
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {attention.map(a=>{
+              const sc  = STAGE_CFG[a.stage]||STAGE_CFG["Stable"];
+              const rd  = a.renewalDate ? Math.ceil((new Date(a.renewalDate)-today)/86400000) : null;
+              const hw  = getHealthWarnings(a);
+              return (
+                <div key={a.id} onClick={()=>onAccountClick(a)}
+                  style={{display:"flex",alignItems:"center",gap:14,
+                    background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 16px",
+                    cursor:"pointer",border:"1.5px solid transparent",transition:"border-color .12s"}}
+                  onMouseEnter={e=>e.currentTarget.style.borderColor="var(--indigo)"}
+                  onMouseLeave={e=>e.currentTarget.style.borderColor="transparent"}>
+                  <Avatar name={a.name} size={32}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{a.name}</div>
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                      <Badge label={a.stage} color={sc.color} bg={sc.bg} small/>
+                      {hw.map((w,i)=>(
+                        <span key={i} style={{fontSize:10,fontWeight:600,padding:"1px 7px",borderRadius:99,
+                          background:w.s===2?"var(--rose-dim)":"var(--amber-dim)",
+                          color:w.s===2?"var(--rose)":"var(--amber)"}}>
+                          {w.t}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",gap:20,alignItems:"center",flexShrink:0}}>
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:14,
+                        color:hColor(a.healthScore)}}>{a.healthScore}</div>
+                      <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em",marginTop:1}}>Health</div>
+                    </div>
+                    {rd!==null&&(
+                      <div style={{textAlign:"center"}}>
+                        <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:14,
+                          color:rd<=30?"var(--rose)":rd<=60?"var(--amber)":"var(--text2)"}}>
+                          {rd<0?`${Math.abs(rd)}d OD`:rd+"d"}
+                        </div>
+                        <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em",marginTop:1}}>Renewal</div>
+                      </div>
+                    )}
+                    <div style={{textAlign:"center"}}>
+                      <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:14,
+                        color:fmtMoney(a.arr)==="$0"?"var(--text3)":"var(--text2)"}}>{fmtMoney(a.arr)}</div>
+                      <div style={{fontSize:9,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".06em",marginTop:1}}>ARR</div>
+                    </div>
+                  </div>
+                  <span style={{color:"var(--text3)",fontSize:16,flexShrink:0}}>→</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {active.length===0&&(
+        <div style={{textAlign:"center",padding:"60px 0",color:"var(--text3)",fontSize:13}}>
+          No accounts yet. Add accounts to see portfolio metrics.
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function App() {
   const [session,      setSession]      = useState(loadSession);
   const [accounts,     setAccounts]     = useState([]);
@@ -9719,6 +10065,7 @@ export default function App() {
   };
 
   const NAV = [
+    { id:"overview",     icon:"portfolio",    label:"Overview",         active:true  },
     { id:"portfolio",    icon:"portfolio",    label:"Portfolio",        active:true  },
     { id:"tasks",        icon:"tasks",        label:"Tasks",            active:true, badge:taskAlerts>0?taskAlerts:null },
     { id:"pipeline",     icon:"pipeline",     label:"Renewal Pipeline", active:true  },
@@ -9848,6 +10195,14 @@ export default function App() {
               onAddManual={addManualTask}
               onToggleManual={toggleManualTask}
               onDeleteManual={deleteManualTask}
+              onAccountClick={a=>{setSelected(a);setView("portfolio");}}
+            />
+          )}
+
+          {/* ── OVERVIEW VIEW ── */}
+          {view==="overview"&&(
+            <ManagerOverviewPage
+              accounts={active}
               onAccountClick={a=>{setSelected(a);setView("portfolio");}}
             />
           )}
