@@ -9788,7 +9788,7 @@ export default function App() {
   const [selected,     setSelected]     = useState(null);
   const [showAdd,      setShowAdd]      = useState(false);
   const [showBulk,     setShowBulk]     = useState(false);
-  const [view,         setView]         = useState("portfolio");
+  const [view,         setView]         = useState("briefing");
   const [detailTab,    setDetailTab]    = useState("activity");
   const [filter,       setFilter]       = useState("All");
   const [planFilter,   setPlanFilter]   = useState("All");
@@ -10101,18 +10101,23 @@ export default function App() {
   };
 
   const NAV = [
-    { id:"overview",     icon:"portfolio",    label:"Overview",         active:true  },
-    { id:"portfolio",    icon:"portfolio",    label:"Portfolio",        active:true  },
-    { id:"tasks",        icon:"tasks",        label:"Tasks",            active:true, badge:taskAlerts>0?taskAlerts:null },
-    { id:"pipeline",     icon:"pipeline",     label:"Renewal Pipeline", active:true  },
-    { id:"playbooks",    icon:"playbooks",    label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
-    { id:"outreach",     icon:"email",        label:"Outreach Queue",   active:true, badge:outreachPending>0?outreachPending:null },
-    { id:"surveys",      icon:"survey",       label:"Surveys",          active:true  },
-    { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
-    { id:"settings",    icon:"settings",    label:"Settings",       active:true },
-    { id:"automation",  icon:"automation",   label:"Automation",      active:true },
-    { id:"onboarding",  icon:"onboarding",   label:"Onboarding",      active:true },
-    { id:"briefing",    icon:"briefing",     label:"Daily Briefing",  active:true  },
+    // ── Daily work ──────────────────────────────────────────────────────────────
+    { id:"briefing",    icon:"briefing",     label:"Daily Briefing",   active:true  },
+    { id:"portfolio",   icon:"portfolio",    label:"Portfolio",         active:true  },
+    { id:"outreach",    icon:"email",        label:"Outreach Queue",    active:true, badge:outreachPending>0?outreachPending:null },
+    { id:"tasks",       icon:"tasks",        label:"Tasks",             active:true, badge:taskAlerts>0?taskAlerts:null },
+    // ── Manage ──────────────────────────────────────────────────────────────────
+    { divider:"Manage" },
+    { id:"overview",    icon:"portfolio",    label:"Overview",          active:true  },
+    { id:"pipeline",    icon:"pipeline",     label:"Renewal Pipeline",  active:true  },
+    { id:"playbooks",   icon:"playbooks",    label:"Playbooks",         active:true, badge:playbookAlerts>0?playbookAlerts:null },
+    { id:"onboarding",  icon:"onboarding",   label:"Onboarding",        active:true },
+    // ── Configure ───────────────────────────────────────────────────────────────
+    { divider:"Configure" },
+    { id:"surveys",     icon:"survey",       label:"Surveys",           active:true  },
+    { id:"automation",  icon:"automation",   label:"Automation",        active:true },
+    { id:"integrations",icon:"integrations", label:"Integrations",      active:true  },
+    { id:"settings",    icon:"settings",     label:"Settings",          active:true },
   ];
 
   return (
@@ -10133,8 +10138,15 @@ export default function App() {
             </div>
           </div>
 
-          <div style={{padding:"12px 8px",flex:1}}>
-            {NAV.map(n=>(
+          <div style={{padding:"12px 8px",flex:1,overflowY:"auto"}}>
+            {NAV.map((n,i)=>
+              n.divider ? (
+                <div key={`div-${i}`} style={{fontSize:10,fontWeight:700,color:"var(--text3)",
+                  textTransform:"uppercase",letterSpacing:".08em",
+                  padding:"16px 10px 5px",userSelect:"none"}}>
+                  {n.divider}
+                </div>
+              ) : (
               <div key={n.id}
                 title={n.tip||""}
                 onClick={n.active?()=>{setView(n.id);setSelected(null);}:undefined}
