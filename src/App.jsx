@@ -2,59 +2,75 @@
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Mono:wght@300;400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@300;400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     /* Surfaces */
-    --bg:#f7f8fc; --bg2:#ffffff; --bg3:#f1f3f9; --bg4:#e8ecf5;
-    --border:#e2e6ef; --border2:#c9d0e8;
+    --bg:#F7F9FC; --bg2:#ffffff; --bg3:#F0F4FB; --bg4:#E4EBF8;
+    --border:#E2E8F2; --border2:#C8D2E9;
 
-    /* Semantic colours */
-    --indigo:#4361ee; --indigo-dim:rgba(67,97,238,0.07); --indigo-glow:rgba(67,97,238,0.20);
+    /* Primary — cobalt blue */
+    --indigo:#2563EB; --indigo-dim:rgba(37,99,235,0.07); --indigo-glow:rgba(37,99,235,0.22);
+
+    /* Semantic */
     --emerald:#059669; --emerald-dim:rgba(5,150,105,0.07);
-    --amber:#d97706;  --amber-dim:rgba(217,119,6,0.08);
-    --rose:#e11d48;   --rose-dim:rgba(225,29,72,0.07);
-    --sky:#0284c7;    --sky-dim:rgba(2,132,199,0.07);
-    --violet:#7c3aed; --violet-dim:rgba(124,58,237,0.07);
-    --teal:#0d9488;   --teal-dim:rgba(13,148,136,0.07);
+    --amber:#D97706;   --amber-dim:rgba(217,119,6,0.08);
+    --rose:#E11D48;    --rose-dim:rgba(225,29,72,0.07);
+    --sky:#0284C7;     --sky-dim:rgba(2,132,199,0.07);
+    --violet:#7C3AED;  --violet-dim:rgba(124,58,237,0.07);
+    --teal:#0D9488;    --teal-dim:rgba(13,148,136,0.07);
 
     /* Text */
-    --text:#0f172a; --text2:#475569; --text3:#94a3b8;
+    --text:#0F172A; --text2:#475569; --text3:#94A3B8;
+
+    /* Sidebar — dark shell */
+    --sidebar-bg:#0F1623;
+    --sidebar-border:rgba(255,255,255,0.055);
+    --sidebar-active:rgba(37,99,235,0.18);
+    --sidebar-hover:rgba(255,255,255,0.05);
+    --sidebar-text:rgba(255,255,255,0.48);
+    --sidebar-text-active:rgba(255,255,255,0.92);
+    --sidebar-icon:rgba(255,255,255,0.32);
+    --sidebar-icon-active:#7EB3FF;
+    --sidebar-section:rgba(255,255,255,0.2);
 
     /* Typography */
     --font-display:'Plus Jakarta Sans',sans-serif;
     --font-mono:'DM Mono',monospace;
 
-    /* Radius tokens */
+    /* Radius */
     --r-xs:4px; --r-sm:6px; --r:10px; --r-lg:14px; --r-xl:18px; --r-2xl:22px;
 
     /* Shadows */
     --shadow-xs:0 1px 2px rgba(15,23,42,0.05);
-    --shadow-sm:0 1px 4px rgba(15,23,42,0.06),0 1px 2px rgba(15,23,42,0.04);
-    --shadow:0 4px 12px rgba(15,23,42,0.07),0 2px 4px rgba(15,23,42,0.04);
-    --shadow-lg:0 16px 40px rgba(15,23,42,0.12),0 6px 14px rgba(15,23,42,0.05);
+    --shadow-sm:0 1px 3px rgba(15,23,42,0.07),0 1px 2px rgba(15,23,42,0.04);
+    --shadow:0 4px 18px rgba(15,23,42,0.09),0 2px 6px rgba(15,23,42,0.04);
+    --shadow-lg:0 20px 50px rgba(15,23,42,0.15),0 8px 18px rgba(15,23,42,0.07);
   }
-  body { background:var(--bg); color:var(--text); font-family:var(--font-display); -webkit-font-smoothing:antialiased; }
-  ::-webkit-scrollbar { width:4px; height:4px; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font-display); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+  ::-webkit-scrollbar { width:5px; height:5px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
+  ::-webkit-scrollbar-thumb:hover { background:var(--text3); }
 
-  @keyframes fadeUp    { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
-  @keyframes slideRight{ from{opacity:0;transform:translateX(28px)} to{opacity:1;transform:translateX(0)} }
-  @keyframes scaleIn   { from{opacity:0;transform:scale(0.96)}      to{opacity:1;transform:scale(1)} }
-  @keyframes toastIn   { from{opacity:0;transform:translateY(12px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
+  @keyframes fadeUp    { from{opacity:0;transform:translateY(8px)}   to{opacity:1;transform:translateY(0)} }
+  @keyframes fadeIn    { from{opacity:0}                              to{opacity:1} }
+  @keyframes slideRight{ from{opacity:0;transform:translateX(24px)}  to{opacity:1;transform:translateX(0)} }
+  @keyframes scaleIn   { from{opacity:0;transform:scale(0.95)}       to{opacity:1;transform:scale(1)} }
+  @keyframes toastIn   { from{opacity:0;transform:translateY(10px) scale(0.97)} to{opacity:1;transform:translateY(0) scale(1)} }
   @keyframes spin      { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
-  .card-hover { transition:box-shadow 0.18s,transform 0.18s,border-color 0.18s; }
-  .card-hover:hover { box-shadow:var(--shadow); transform:translateY(-1px); border-color:var(--border2)!important; }
-  .nav-item { transition:background 0.12s,color 0.12s; border-radius:var(--r); }
-  .nav-item:hover { background:var(--bg3)!important; }
+  .card-hover { transition:box-shadow 0.2s,transform 0.2s,border-color 0.2s; }
+  .card-hover:hover { box-shadow:0 6px 28px rgba(15,23,42,0.11),0 2px 8px rgba(15,23,42,0.05)!important; transform:translateY(-2px); border-color:var(--border2)!important; }
+  .nav-item { transition:background 0.1s; border-radius:var(--r); }
+  .nav-item:hover { background:var(--sidebar-hover)!important; }
   .pill-btn { transition:all 0.12s; }
   .pill-btn:hover { filter:brightness(0.96); }
   .icon-btn { transition:background 0.12s; cursor:pointer; }
   .icon-btn:hover { background:var(--bg3)!important; }
+  .sidebar-icon-btn:hover { background:rgba(255,255,255,0.08)!important; }
   input:focus, select:focus, textarea:focus { border-color:var(--indigo)!important; box-shadow:0 0 0 3px var(--indigo-dim)!important; outline:none; }
-  button:disabled { opacity:0.45; cursor:not-allowed; }
+  button:disabled { opacity:0.42; cursor:not-allowed; }
 `;
 
 // ─── Scenario config ──────────────────────────────────────────────────────────
@@ -613,13 +629,13 @@ const Avatar = ({ name, size=36 }) => {
 };
 
 const Inp = (p) => (
-  <input {...p} style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
-    borderRadius:"var(--r)",padding:"9px 12px",color:"var(--text)",fontFamily:"var(--font-display)",
+  <input {...p} style={{width:"100%",background:"var(--bg2)",border:"1.5px solid var(--border)",
+    borderRadius:"var(--r)",padding:"10px 12px",color:"var(--text)",fontFamily:"var(--font-display)",
     fontSize:13,outline:"none",transition:"border-color .15s,box-shadow .15s",...p.style}}/>
 );
 const Slct = (p) => (
-  <select {...p} style={{width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",
-    borderRadius:"var(--r)",padding:"9px 12px",color:"var(--text)",fontFamily:"var(--font-display)",
+  <select {...p} style={{width:"100%",background:"var(--bg2)",border:"1.5px solid var(--border)",
+    borderRadius:"var(--r)",padding:"10px 12px",color:"var(--text)",fontFamily:"var(--font-display)",
     fontSize:13,outline:"none",cursor:"pointer",...p.style}}/>
 );
 const Fld = ({ label, children }) => (
@@ -631,18 +647,18 @@ const Fld = ({ label, children }) => (
 );
 const Btn = ({ children, variant="primary", onClick, style={}, ...rest }) => {
   const styles = {
-    primary: { background:"var(--indigo)",   color:"white",       boxShadow:"0 2px 10px var(--indigo-glow)" },
-    ghost:   { background:"var(--bg3)",      color:"var(--text2)", boxShadow:"none" },
-    danger:  { background:"var(--rose-dim)", color:"var(--rose)", boxShadow:"none" },
+    primary: { background:"var(--indigo)", color:"white", boxShadow:"0 2px 12px var(--indigo-glow)", border:"none" },
+    ghost:   { background:"var(--bg3)",    color:"var(--text2)", boxShadow:"none", border:"1.5px solid var(--border)" },
+    danger:  { background:"var(--rose-dim)", color:"var(--rose)", boxShadow:"none", border:"none" },
   };
   return (
     <button onClick={onClick} {...rest}
-      style={{border:"none",borderRadius:"var(--r)",padding:"10px 18px",
+      style={{borderRadius:"var(--r)",padding:"10px 20px",
         fontFamily:"var(--font-display)",fontWeight:600,fontSize:13,
-        cursor:"pointer",transition:"opacity .12s,filter .12s",
+        cursor:"pointer",transition:"filter .15s,transform .1s",letterSpacing:"-.01em",
         ...styles[variant],...style}}
-      onMouseEnter={e=>e.currentTarget.style.filter="brightness(0.93)"}
-      onMouseLeave={e=>e.currentTarget.style.filter="none"}>
+      onMouseEnter={e=>{e.currentTarget.style.filter="brightness(0.91)";e.currentTarget.style.transform="translateY(-0.5px)";}}
+      onMouseLeave={e=>{e.currentTarget.style.filter="none";e.currentTarget.style.transform="none";}}>
       {children}
     </button>
   );
@@ -653,11 +669,12 @@ const ToastBar = ({ toasts }) => (
     display:"flex",flexDirection:"column",gap:8,zIndex:9999,alignItems:"center",pointerEvents:"none"}}>
     {toasts.map(t=>(
       <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,
-        background:t.type==="error"?"#dc2626":t.type==="success"?"#059669":"var(--indigo)",
-        color:"white",padding:"10px 18px",borderRadius:"var(--r-lg)",
-        boxShadow:"var(--shadow-lg)",fontSize:13,fontWeight:600,
-        animation:"toastIn .2s ease",maxWidth:380,letterSpacing:"-.01em"}}>
-        <Ic n={t.type==="error"?"dismiss":t.type==="success"?"check":"info"} size={15} color="white"/>
+        background:t.type==="error"?"#C81E1E":t.type==="success"?"#047857":"#1D4ED8",
+        color:"white",padding:"11px 20px",borderRadius:"var(--r-lg)",
+        boxShadow:"0 8px 32px rgba(10,18,36,0.3)",fontSize:13,fontWeight:600,
+        animation:"toastIn .18s ease",maxWidth:400,letterSpacing:"-.015em",
+        border:"1px solid rgba(255,255,255,0.12)"}}>
+        <Ic n={t.type==="error"?"dismiss":t.type==="success"?"check":"info"} size={15} color="rgba(255,255,255,0.85)"/>
         {t.message}
       </div>
     ))}
@@ -671,10 +688,10 @@ const Modal = ({ title, onClose, children, wide }) => {
   },[onClose]);
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()}
-      style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.4)",backdropFilter:"blur(6px)",
+      style={{position:"fixed",inset:0,background:"rgba(10,18,36,0.55)",backdropFilter:"blur(8px)",
         display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
       <div style={{background:"var(--bg2)",borderRadius:"var(--r-2xl)",width:"100%",maxWidth:wide?800:560,
-        maxHeight:"90vh",overflow:"auto",boxShadow:"var(--shadow-lg)",animation:"scaleIn .2s ease"}}>
+        maxHeight:"90vh",overflow:"auto",boxShadow:"var(--shadow-lg)",animation:"scaleIn .18s ease",border:"1px solid var(--border)"}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
           padding:"20px 24px",borderBottom:"1px solid var(--border)",
           position:"sticky",top:0,background:"var(--bg2)",zIndex:1}}>
@@ -857,7 +874,7 @@ const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle, tr
       {/* Read-only notice */}
       {readOnly && (
         <div style={{display:"flex",alignItems:"center",gap:10,background:"var(--indigo-dim)",
-          border:"1.5px solid rgba(67,97,238,0.2)",borderRadius:"var(--r)",
+          border:"1.5px solid rgba(37,99,235,0.2)",borderRadius:"var(--r)",
           padding:"10px 14px",marginBottom:16,fontSize:12,color:"var(--indigo)"}}>
           <Ic n="info" size={14} color="var(--indigo)"/>
           To track step progress, open an account and go to the <strong style={{margin:"0 3px"}}>Health & Playbook</strong> tab, then activate this playbook.
@@ -2777,7 +2794,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   ))}
                 </div>
               </div>
-              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,.15)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,.15)",borderRadius:"var(--r)",padding:"14px 16px"}}>
                 <div style={{fontSize:12,fontWeight:700,color:"var(--indigo)",marginBottom:6}}>Improvement opportunities</div>
                 {calcHealth(account).parts.filter(p=>p.pts<p.max).map(p=>(
                   <div key={p.label} style={{fontSize:12,color:"var(--text2)",marginBottom:4}}>
@@ -3361,7 +3378,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                   </div>
                 ))}
               </div>
-              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
+              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.2)",
                 borderRadius:"var(--r-lg)",padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontWeight:700,fontSize:14,color:"var(--indigo)",marginBottom:4}}>Start with the template</div>
@@ -3437,7 +3454,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                     return (
                       <div key={i} style={{display:"grid",gridTemplateColumns:"40px 28px 1.5fr 1fr 1fr 80px 70px 70px 80px",
                         padding:"10px 16px",fontSize:13,borderBottom:"1px solid var(--border)",alignItems:"center",
-                        background:hasError?"rgba(225,29,72,0.03)":r.selected?"rgba(67,97,238,0.02)":"var(--bg2)",
+                        background:hasError?"rgba(225,29,72,0.03)":r.selected?"rgba(37,99,235,0.02)":"var(--bg2)",
                         opacity:hasError?0.6:1}}>
                         <div style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--text3)"}}>{r.rowNum}</div>
                         <input type="checkbox" checked={r.selected} disabled={hasError} onChange={()=>toggleRow(i)}
@@ -3531,8 +3548,9 @@ const Card = ({ account, onClick, index }) => {
         boxShadow:atRisk?"0 0 0 1px rgba(225,29,72,0.08),var(--shadow-sm)":"var(--shadow-sm)",
         animation:`fadeUp .3s ease ${index*0.05}s both`,position:"relative",overflow:"hidden"}}>
 
-      <div style={{position:"absolute",top:0,left:0,right:0,height:3,
-        background:`linear-gradient(90deg,${sc.color},transparent)`,opacity:0.7}}/>
+      <div style={{position:"absolute",top:0,left:0,right:0,height:4,
+        background:`linear-gradient(90deg,${sc.color},${sc.color}44)`,
+        borderRadius:"var(--r-lg) var(--r-lg) 0 0"}}/>
 
       {urgent&&(
         <div style={{position:"absolute",top:10,right:12,fontSize:10,fontFamily:"var(--font-mono)",
@@ -3548,7 +3566,7 @@ const Card = ({ account, onClick, index }) => {
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <Avatar name={account.name} size={36}/>
           <div>
-            <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>{account.name}</div>
+            <div style={{fontWeight:800,fontSize:15,letterSpacing:"-.02em",marginBottom:4}}>{account.name}</div>
             <div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}>
               <span style={{fontSize:10,color:"var(--text3)"}}>{account.industry}</span>
               <span style={{fontSize:10,color:"var(--text3)"}}>·</span>
@@ -3575,7 +3593,7 @@ const Card = ({ account, onClick, index }) => {
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12,
-        background:"var(--bg3)",borderRadius:"var(--r)",padding:"10px 8px"}}>
+        background:"var(--bg3)",border:"1px solid var(--border)",borderRadius:"var(--r)",padding:"10px 8px"}}>
         {[
           {label:"ARR",  value:fmtMoney(account.arr)},
           {label:"NPS",  value:account.nps},
@@ -3685,8 +3703,9 @@ const Stats = ({ accounts, isFiltered }) => {
           {label:"At Risk",    value:atRisk,              sub:"need urgent action",            color:atRisk>0?"var(--rose)":"var(--emerald)"},
           {label:"Avg CES",    value:avgCes,              sub:"effort score / 5",             color:parseFloat(avgCes)>=3.5?"var(--emerald)":"var(--amber)"},
         ].map(s=>(
-          <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
-            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:22,color:s.color,marginBottom:4,letterSpacing:"-.01em"}}>{s.value}</div>
+          <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+            borderTop:`3px solid ${s.color}`,borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
+            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:24,color:s.color,marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
             <div style={{fontSize:12,fontWeight:600,color:"var(--text2)",marginBottom:2}}>{s.label}</div>
             <div style={{fontSize:11,color:"var(--text3)"}}>{s.sub}</div>
           </div>
@@ -5233,7 +5252,7 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
       </div>
 
       {/* Info banner */}
-      <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.15)",
+      <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.15)",
         borderRadius:"var(--r-lg)",padding:"14px 18px",marginBottom:24,
         display:"flex",gap:12,alignItems:"flex-start"}}>
         <Ic n="info" size={16} color="var(--indigo)" style={{flexShrink:0,marginTop:1}}/>
@@ -6010,7 +6029,7 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
 
       {/* AI readiness note */}
       <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--indigo-dim)",
-        border:"1.5px solid rgba(67,97,238,0.2)",borderRadius:"var(--r)",
+        border:"1.5px solid rgba(37,99,235,0.2)",borderRadius:"var(--r)",
         padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--indigo)"}}>
         <Ic n="info" size={14} color="var(--indigo)"/>
         Drafts are currently template-based. Once the AI layer is enabled, each draft will be personalised to the account's history and context.
@@ -6506,7 +6525,7 @@ const SurveySchedulesSection = ({ session, toast }) => {
             </div>
 
             {/* Live preview */}
-            <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
+            <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.2)",
               borderRadius:"var(--r)",padding:"12px 16px",marginBottom:20}}>
               <div style={{fontSize:10,fontWeight:700,color:"var(--indigo)",textTransform:"uppercase",
                 letterSpacing:".08em",marginBottom:4}}>What this schedule will do</div>
@@ -7196,9 +7215,11 @@ const AuthScreen = ({ onAuth }) => {
             <div style={{width:40,height:40,borderRadius:"var(--r-lg)",background:"var(--indigo)",
               display:"flex",alignItems:"center",justifyContent:"center",
               boxShadow:"0 4px 16px var(--indigo-glow)"}}>
-              <span style={{color:"white",fontSize:18,fontWeight:800,letterSpacing:"-.02em"}}>P</span>
+              <svg width="22" height="12" viewBox="0 0 18 10" fill="none">
+                <path d="M0 5H4L6 1L8 9L10 2L12 7L14 5H18" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
             </div>
-            <span style={{fontWeight:800,fontSize:22,letterSpacing:"-.03em"}}>Pulse</span>
+            <span style={{fontWeight:800,fontSize:22,letterSpacing:"-.04em"}}>Pulse</span>
           </div>
 
           {/* Card */}
@@ -7497,7 +7518,7 @@ popup.location.href = url;
                       Gmail
                       {acc.is_primary && (
                         <span style={{background:"var(--indigo-dim)",color:"var(--indigo)",
-                          border:"1px solid rgba(67,97,238,0.2)",borderRadius:4,
+                          border:"1px solid rgba(37,99,235,0.2)",borderRadius:4,
                           fontSize:9,fontWeight:700,padding:"1px 6px"}}>
                           PRIMARY
                         </span>
@@ -7673,7 +7694,7 @@ const HandoverPage = ({ token }) => {
     setConfirming(false);
   };
 
-  const s = { bg:"#f8fafc", card:"white", border:"#e2e8f0", text:"#0f172a", text2:"#475569", text3:"#94a3b8", indigo:"#4361ee", emerald:"#10b981" };
+  const s = { bg:"#f8fafc", card:"white", border:"#e2e8f0", text:"#0f172a", text2:"#475569", text3:"#94a3b8", indigo:"#2563EB", emerald:"#10b981" };
 
   if (loading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:s.bg,fontFamily:"system-ui,sans-serif"}}>
@@ -7787,7 +7808,7 @@ const PortalPage = ({ token }) => {
     }).catch(() => setTasks(ts => ts.map(t => t.id === task.id ? { ...t, status: task.status } : t)));
   };
 
-  const s = { bg: '#f8fafc', card: 'white', border: '#e2e8f0', text: '#0f172a', text2: '#475569', text3: '#94a3b8', indigo: '#4361ee', emerald: '#10b981', amber: '#f59e0b', rose: '#e11d48' };
+  const s = { bg: '#F7F9FC', card: 'white', border: '#E2E8F2', text: '#0f172a', text2: '#475569', text3: '#94a3b8', indigo: '#2563EB', emerald: '#059669', amber: '#D97706', rose: '#E11D48' };
 
   if (loading) return (
     <div style={{minHeight:'100vh',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -9844,7 +9865,7 @@ const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPend
 
       {/* AI Summary */}
       {(aiSummary||aiSumLoading)&&(
-        <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
+        <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.2)",
           borderRadius:"var(--r-lg)",padding:"16px 20px",marginBottom:24,display:"flex",gap:12,alignItems:"flex-start"}}>
           <div style={{width:28,height:28,borderRadius:"var(--r-sm)",background:"var(--indigo)",
             display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
@@ -10734,24 +10755,28 @@ export default function App() {
       <div style={{minHeight:"100vh",display:"flex",background:"var(--bg)"}}>
 
         {/* Sidebar */}
-        <div style={{width:220,background:"var(--bg2)",borderRight:"1px solid var(--border)",
+        <div style={{width:224,background:"var(--sidebar-bg)",borderRight:"1px solid var(--sidebar-border)",
           display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh"}}>
-          <div style={{padding:"20px 16px 18px",borderBottom:"1px solid var(--border)"}}>
+          <div style={{padding:"22px 16px 18px",borderBottom:"1px solid var(--sidebar-border)"}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
-              <div style={{width:32,height:32,borderRadius:"var(--r)",background:"var(--indigo)",display:"flex",
-                alignItems:"center",justifyContent:"center",boxShadow:"0 2px 8px var(--indigo-glow)",flexShrink:0}}>
-                <span style={{color:"white",fontSize:14,fontWeight:800,letterSpacing:"-.02em"}}>P</span>
+              <div style={{width:32,height:32,borderRadius:"var(--r)",
+                background:"linear-gradient(135deg,rgba(126,179,255,0.18),rgba(37,99,235,0.30))",
+                border:"1px solid rgba(255,255,255,0.12)",
+                display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <svg width="18" height="10" viewBox="0 0 18 10" fill="none">
+                  <path d="M0 5H4L6 1L8 9L10 2L12 7L14 5H18" stroke="#7EB3FF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                </svg>
               </div>
-              <span style={{fontWeight:800,fontSize:17,letterSpacing:"-.03em",color:"var(--text)"}}>Pulse</span>
+              <span style={{fontWeight:800,fontSize:16,letterSpacing:"-.04em",color:"rgba(255,255,255,0.92)"}}>Pulse</span>
             </div>
           </div>
 
           <div style={{padding:"12px 8px",flex:1,overflowY:"auto"}}>
             {NAV.map((n,i)=>
               n.divider ? (
-                <div key={`div-${i}`} style={{fontSize:10,fontWeight:700,color:"var(--text3)",
-                  textTransform:"uppercase",letterSpacing:".08em",
-                  padding:"16px 10px 5px",userSelect:"none"}}>
+                <div key={`div-${i}`} style={{fontSize:10,fontWeight:600,color:"var(--sidebar-section)",
+                  textTransform:"uppercase",letterSpacing:".1em",
+                  padding:"18px 12px 6px",userSelect:"none"}}>
                   {n.divider}
                 </div>
               ) : (
@@ -10760,12 +10785,13 @@ export default function App() {
                 onClick={n.active?()=>{setView(n.id);setSelected(null);}:undefined}
                 className={n.active?"nav-item":""}
                 style={{display:"flex",justifyContent:"space-between",alignItems:"center",
-                  padding:"9px 10px",borderRadius:"var(--r)",marginBottom:2,
-                  background:view===n.id?"var(--indigo-dim)":"none",
-                  cursor:n.active?"pointer":"not-allowed",opacity:n.active?1:0.4}}>
+                  padding:"8px 12px",borderRadius:"var(--r)",marginBottom:1,
+                  background:view===n.id?"var(--sidebar-active)":"transparent",
+                  borderLeft:view===n.id?"2.5px solid var(--sidebar-icon-active)":"2.5px solid transparent",
+                  cursor:n.active?"pointer":"not-allowed",opacity:n.active?1:0.35}}>
                 <div style={{display:"flex",alignItems:"center",gap:9}}>
-                  <Ic n={n.icon||n.id} size={15} color={view===n.id?"var(--indigo)":"var(--text3)"}/>
-                  <span style={{fontSize:13,color:view===n.id?"var(--indigo)":"var(--text2)",fontWeight:view===n.id?600:400}}>{n.label}</span>
+                  <Ic n={n.icon||n.id} size={14} color={view===n.id?"var(--sidebar-icon-active)":"var(--sidebar-icon)"}/>
+                  <span style={{fontSize:13,color:view===n.id?"var(--sidebar-text-active)":"var(--sidebar-text)",fontWeight:view===n.id?600:400}}>{n.label}</span>
                 </div>
                 {n.badge&&(
                   <span style={{fontSize:10,fontFamily:"var(--font-mono)",color:"white",
@@ -10775,8 +10801,8 @@ export default function App() {
                   </span>
                 )}
                 {n.tip&&!n.badge&&(
-                  <span style={{fontSize:9,fontFamily:"var(--font-mono)",color:"var(--text3)",
-                    background:"var(--bg4)",padding:"2px 6px",borderRadius:"var(--r-xs)",letterSpacing:".04em"}}>
+                  <span style={{fontSize:9,fontFamily:"var(--font-mono)",color:"var(--sidebar-text)",
+                    background:"rgba(255,255,255,0.08)",padding:"2px 6px",borderRadius:"var(--r-xs)",letterSpacing:".04em"}}>
                     {n.tip}
                   </span>
                 )}
@@ -10784,28 +10810,28 @@ export default function App() {
             ))}
           </div>
 
-          <div style={{padding:"14px 16px",borderTop:"1px solid var(--border)"}}>
+          <div style={{padding:"14px 12px",borderTop:"1px solid var(--sidebar-border)"}}>
             {session?.user && (
-              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:12,
-                padding:"8px 10px",background:"var(--bg3)",borderRadius:"var(--r)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,
+                padding:"8px 10px",background:"rgba(255,255,255,0.06)",borderRadius:"var(--r)"}}>
                 <Avatar name={session.user.fullName||session.user.email} size={28}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12,fontWeight:600,overflow:"hidden",
-                    textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                    textOverflow:"ellipsis",whiteSpace:"nowrap",color:"rgba(255,255,255,0.85)"}}>
                     {session.user.fullName||session.user.email}
                   </div>
                   {session.user.company&&(
-                    <div style={{fontSize:10,color:"var(--text3)",overflow:"hidden",
+                    <div style={{fontSize:10,color:"var(--sidebar-text)",overflow:"hidden",
                       textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                       {session.user.company}
                     </div>
                   )}
                 </div>
-                <button onClick={logout} className="icon-btn"
+                <button onClick={logout} className="sidebar-icon-btn icon-btn"
                   title="Sign out"
                   style={{background:"none",border:"none",cursor:"pointer",
                     padding:4,borderRadius:"var(--r-xs)",flexShrink:0}}>
-                  <Ic n="arrow_right" size={13} color="var(--text3)"/>
+                  <Ic n="arrow_right" size={13} color="var(--sidebar-icon)"/>
                 </button>
               </div>
             )}
@@ -10921,7 +10947,7 @@ export default function App() {
             {/* Migration banner — shown when local data exists but DB is empty */}
             {apiReady&&API_URL&&accounts.length===0&&!migrateDone&&
               localStorage.getItem("pulse_v4")&&JSON.parse(localStorage.getItem("pulse_v4")||"[]").length>0&&(
-              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
+              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.2)",
                 borderRadius:"var(--r-lg)",padding:"18px 22px",marginBottom:24,
                 display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,
                 animation:"fadeUp .2s ease"}}>
@@ -10963,12 +10989,12 @@ export default function App() {
               </div>
               <div style={{display:"flex",gap:10}}>
                 <button onClick={()=>setShowBulk(true)}
-                  style={{background:"var(--bg2)",color:"var(--indigo)",border:"1.5px solid rgba(67,97,238,0.3)",
+                  style={{background:"var(--bg2)",color:"var(--indigo)",border:"1.5px solid var(--indigo-dim)",
                     borderRadius:"var(--r)",padding:"10px 18px",fontWeight:700,fontSize:14,cursor:"pointer",
                     display:"flex",alignItems:"center",gap:7,fontFamily:"var(--font-display)",transition:"background .15s"}}
                   onMouseEnter={e=>e.currentTarget.style.background="var(--indigo-dim)"}
                   onMouseLeave={e=>e.currentTarget.style.background="var(--bg2)"}>
-                  ↑ Import CSV
+                  <Ic n="upload" size={14} color="var(--indigo)"/> Import CSV
                 </button>
                 <Btn onClick={()=>setShowAdd(true)} style={{fontSize:14,padding:"11px 22px"}}>+ Add Account</Btn>
               </div>
@@ -10998,10 +11024,12 @@ export default function App() {
                 </div>
                 <div style={{display:"flex",gap:10}}>
                   <div style={{position:"relative"}}>
-                    <span style={{position:"absolute",left:12,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"var(--text3)",pointerEvents:"none"}}>🔍</span>
+                    <span style={{position:"absolute",left:10,top:"50%",transform:"translateY(-50%)",pointerEvents:"none"}}>
+                      <Ic n="eye" size={14} color="var(--text3)"/>
+                    </span>
                     <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search accounts…"
                       style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
-                        padding:"8px 14px 8px 34px",color:"var(--text)",fontFamily:"var(--font-display)",
+                        padding:"8px 14px 8px 32px",color:"var(--text)",fontFamily:"var(--font-display)",
                         fontSize:13,outline:"none",width:200}}/>
                   </div>
                   <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
