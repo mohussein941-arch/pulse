@@ -514,10 +514,11 @@ const ScenarioBadge = ({ scenario, small }) => {
     </span>
   );
 };
-const Sparkline = ({ data, color }) => {
-  const vals=data.map(d=>d.value);
+const Sparkline = ({ data, color, width=60, height=24 }) => {
+  if (!data||data.length<2) return null;
+  const vals=data.map(d=>d.value??d.product_usage);
   const min=Math.min(...vals),max=Math.max(...vals),range=max-min||1;
-  const w=60,h=24;
+  const w=width,h=height;
   const pts=vals.map((v,i)=>`${(i/(vals.length-1))*w},${h-((v-min)/range)*(h-4)-2}`).join(" ");
   const last=pts.split(" ").pop().split(",");
   return (
@@ -1917,7 +1918,15 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
 
   const [emailThreads,    setEmailThreads]    = useState([]);
   const [meetingNotes,    setMeetingNotes]    = useState([]);
-  const [threadsLoading, setThreadsLoading] = useState(false);
+  const [threadsLoading,  setThreadsLoading]  = useState(false);
+  const [usageHistory,    setUsageHistory]    = useState([]);
+  const [usageLatest,     setUsageLatest]     = useState(null);
+
+  useEffect(() => {
+    call("GET", `/api/accounts/${account.id}/usage-history`)
+      .then(d => { setUsageHistory(d.history || []); setUsageLatest(d.latest || null); })
+      .catch(() => {});
+  }, [account.id]);
 
   useEffect(() => {
     if (tab !== "activity") return;
@@ -2379,6 +2388,93 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   </div>
                 ))}
               </div>
+
+              {/* Product Usage deep-dive card */}
+              {(()=>{
+                const updatedAt   = account.productUsageUpdatedAt;
+                const daysSince   = updatedAt ? Math.floor((Date.now()-new Date(updatedAt))/86400000) : null;
+                const isStale     = daysSince === null || daysSince > 30;
+                const isWarning   = daysSince !== null && daysSince > 7 && daysSince <= 30;
+                const usageColor  = account.productUsage>=75?"var(--emerald)":account.productUsage>=50?"var(--amber)":"var(--rose)";
+                const seatPct     = usageLatest?.active_users && usageLatest?.licensed_seats
+                  ? Math.round((usageLatest.active_users/usageLatest.licensed_seats)*100) : null;
+                const dauMauPct   = usageLatest?.dau && usageLatest?.mau
+                  ? Math.round((usageLatest.dau/usageLatest.mau)*100) : null;
+                const featurePct  = usageLatest?.features_used_count && usageLatest?.total_features
+                  ? Math.round((usageLatest.features_used_count/usageLatest.total_features)*100) : null;
+                return (
+                  <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
+                      <div>
+                        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Product Usage</div>
+                        <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:28,color:usageColor}}>
+                          {account.productUsage}<span style={{fontSize:14,color:"var(--text3)",fontWeight:400}}>/100</span>
+                        </div>
+                        <div style={{fontSize:11,marginTop:4,
+                          color: isStale?"var(--rose)":isWarning?"var(--amber)":"var(--text3)"}}>
+                          {daysSince===null
+                            ? "No data received yet — set up the webhook in Settings"
+                            : daysSince===0 ? "Updated today"
+                            : `Last updated ${daysSince} day${daysSince!==1?"s":""} ago${isStale?" — data may be stale":isWarning?" — consider refreshing":""}`}
+                        </div>
+                      </div>
+                      {usageHistory.length>=2&&(
+                        <Sparkline
+                          data={usageHistory.map(h=>({value:parseFloat(h.product_usage)}))}
+                          color={usageColor} width={100} height={36}/>
+                      )}
+                    </div>
+
+                    {/* Sub-metrics breakdown */}
+                    {(seatPct!==null||dauMauPct!==null||featurePct!==null)&&(
+                      <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:12}}>
+                        {seatPct!==null&&(
+                          <div>
+                            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                              <span style={{fontSize:12,fontWeight:600}}>Seat adoption</span>
+                              <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:600,
+                                color:seatPct>=75?"var(--emerald)":seatPct>=50?"var(--amber)":"var(--rose)"}}>
+                                {usageLatest.active_users} / {usageLatest.licensed_seats} seats ({seatPct}%)
+                              </span>
+                            </div>
+                            <Bar value={seatPct} color={seatPct>=75?"var(--emerald)":seatPct>=50?"var(--amber)":"var(--rose)"}/>
+                          </div>
+                        )}
+                        {dauMauPct!==null&&(
+                          <div>
+                            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                              <span style={{fontSize:12,fontWeight:600}}>Daily / Monthly ratio</span>
+                              <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:600,
+                                color:dauMauPct>=30?"var(--emerald)":dauMauPct>=15?"var(--amber)":"var(--rose)"}}>
+                                {usageLatest.dau} DAU / {usageLatest.mau} MAU ({dauMauPct}%)
+                              </span>
+                            </div>
+                            <Bar value={dauMauPct} color={dauMauPct>=30?"var(--emerald)":dauMauPct>=15?"var(--amber)":"var(--rose)"}/>
+                          </div>
+                        )}
+                        {featurePct!==null&&(
+                          <div>
+                            <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                              <span style={{fontSize:12,fontWeight:600}}>Feature breadth</span>
+                              <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:600,
+                                color:featurePct>=60?"var(--emerald)":featurePct>=35?"var(--amber)":"var(--rose)"}}>
+                                {usageLatest.features_used_count} / {usageLatest.total_features} features ({featurePct}%)
+                              </span>
+                            </div>
+                            <Bar value={featurePct} color={featurePct>=60?"var(--emerald)":featurePct>=35?"var(--amber)":"var(--rose)"}/>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {usageHistory.length===0&&(
+                      <div style={{fontSize:12,color:"var(--text3)",background:"var(--bg3)",borderRadius:"var(--r)",padding:"10px 14px"}}>
+                        No webhook data received yet. Go to <strong>Settings → Product Usage</strong> to get your webhook URL and share it with your engineering team.
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
               <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
                   <div>
@@ -7805,6 +7901,107 @@ const TIMEZONES = [
   {value:"UTC",          label:"UTC"},
 ];
 
+const WebhookSettings = ({ call, toast }) => {
+  const [token,        setToken]        = useState(null);
+  const [loading,      setLoading]      = useState(true);
+  const [regenerating, setRegenerating] = useState(false);
+  const [copied,       setCopied]       = useState(false);
+
+  const apiBase = import.meta.env.VITE_API_URL || "";
+
+  useEffect(() => {
+    call("GET", "/api/webhook/token")
+      .then(d => setToken(d.token))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [call]);
+
+  const webhookUrl = token ? `${apiBase}/webhook/${token}` : "";
+
+  const copy = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const regenerate = async () => {
+    if (!confirm("This will invalidate your current webhook URL. Any existing integrations using it will stop working. Continue?")) return;
+    setRegenerating(true);
+    try {
+      const d = await call("POST", "/api/webhook/token/regenerate");
+      setToken(d.token);
+      toast("Webhook URL regenerated", "success");
+    } catch { toast("Failed to regenerate", "error"); }
+    finally { setRegenerating(false); }
+  };
+
+  const rowStyle = { background:"var(--bg2)", border:"1.5px solid var(--border)", borderRadius:"var(--r-lg)", padding:"16px 20px" };
+  const monoStyle = { fontFamily:"var(--font-mono)", fontSize:12, color:"var(--text2)", wordBreak:"break-all", lineHeight:1.7 };
+
+  const examplePayload = `POST ${webhookUrl || "<your-webhook-url>"}
+Content-Type: application/json
+
+// Recommended — send raw metrics, Pulse calculates the score
+[
+  {
+    "account": "acme.com",          // domain, name, or CRM external ID
+    "active_users": 45,             // users active in last 30 days
+    "licensed_seats": 60,           // total purchased seats
+    "dau": 12,                      // daily active users (avg)
+    "mau": 45,                      // monthly active users
+    "features_used_count": 8,       // distinct features used
+    "total_features": 15            // total features in your product
+  }
+]
+
+// Minimal — if you only have one metric, that's fine too
+{ "account": "acme.com", "active_users": 45, "licensed_seats": 60 }
+
+// Fallback — pre-calculated 0-100 score (less accurate)
+{ "account": "acme.com", "product_usage": 78 }`;
+
+  return (
+    <div style={rowStyle}>
+      <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Product Usage Webhook</div>
+      <div style={{fontSize:12,color:"var(--text3)",marginBottom:16,lineHeight:1.7}}>
+        Give this URL to your engineering team. They POST usage data to it and Pulse automatically updates health scores — no login required.
+      </div>
+
+      {loading ? (
+        <div style={{fontSize:13,color:"var(--text3)"}}>Loading…</div>
+      ) : (
+        <>
+          <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"10px 14px",marginBottom:12,display:"flex",alignItems:"center",gap:10}}>
+            <div style={{...monoStyle,flex:1}}>{webhookUrl}</div>
+            <button onClick={copy}
+              style={{flexShrink:0,background:copied?"var(--emerald-dim)":"var(--bg2)",border:"1.5px solid var(--border)",
+                borderRadius:"var(--r-sm)",padding:"6px 14px",fontSize:12,fontWeight:600,cursor:"pointer",
+                color:copied?"var(--emerald)":"var(--text2)",fontFamily:"var(--font-display)",whiteSpace:"nowrap"}}>
+              {copied ? "Copied!" : "Copy URL"}
+            </button>
+          </div>
+
+          <div style={{marginBottom:16}}>
+            <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>How to send data</div>
+            <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 14px"}}>
+              <pre style={{...monoStyle,margin:0,whiteSpace:"pre-wrap"}}>{examplePayload}</pre>
+            </div>
+            <div style={{fontSize:11,color:"var(--text3)",marginTop:8,lineHeight:1.7}}>
+              <strong>account</strong> matches by domain, company name, or CRM external ID. Pulse calculates the usage score from your raw metrics using a weighted formula: seat adoption (40%), DAU/MAU ratio (40%), feature breadth (20%). The score drives the health score. Every call is stored in history so the CSM can see the trend over time.
+            </div>
+          </div>
+
+          <button onClick={regenerate} disabled={regenerating}
+            style={{background:"transparent",border:"none",padding:0,fontSize:12,color:"var(--text3)",
+              cursor:"pointer",textDecoration:"underline",fontFamily:"var(--font-display)"}}>
+            {regenerating ? "Regenerating…" : "Regenerate URL"}
+          </button>
+        </>
+      )}
+    </div>
+  );
+};
+
 const BriefingSettings = ({ call, toast, hasGmail }) => {
   const [cfg, setCfg] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -8598,6 +8795,8 @@ export default function App() {
               <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:28}}>Settings</h1>
               <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Email</div>
               <EmailSettingsPage session={session}/>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Product Usage</div>
+              <WebhookSettings call={call} toast={toast}/>
               <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Daily Briefing</div>
               <BriefingSettings call={call} toast={toast} hasGmail={!!session}/>
             </div>
