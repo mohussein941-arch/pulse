@@ -467,7 +467,7 @@ const renewalRisk = (account) => {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 const hColor   = s => s>=70?"var(--emerald)":s>=45?"var(--amber)":"var(--rose)";
-const fmtMoney = n => n>=1000?`$${(n/1000).toFixed(0)}k`:`$${n}`;
+const fmtMoney = n => { const v=parseFloat(n)||0; return v>=1000?`$${(v/1000).toFixed(0)}k`:`$${v}`; };
 const ago      = d => Math.floor((new Date()-new Date(d))/86400000);
 const until    = d => Math.ceil((new Date(d)-new Date())/86400000);
 const todayStr = () => new Date().toISOString().split("T")[0];
@@ -588,7 +588,8 @@ const Sparkline = ({ data, color, width=60, height=24 }) => {
 };
 
 const Ring = ({ score, size=48 }) => {
-  const r=(size-6)/2,circ=2*Math.PI*r,dash=(score/100)*circ,color=hColor(score);
+  const s = score ?? 0;
+  const r=(size-6)/2,circ=2*Math.PI*r,dash=(s/100)*circ,color=hColor(s);
   return (
     <svg width={size} height={size} style={{transform:"rotate(-90deg)",flexShrink:0}}>
       <circle cx={size/2} cy={size/2} r={r} fill="none" stroke={color} strokeOpacity=".15" strokeWidth="4"/>
@@ -597,7 +598,7 @@ const Ring = ({ score, size=48 }) => {
       <text x={size/2} y={size/2} textAnchor="middle" dominantBaseline="central"
         style={{transform:`rotate(90deg)`,transformOrigin:`${size/2}px ${size/2}px`,
           fill:color,fontSize:"11px",fontFamily:"var(--font-mono)",fontWeight:500}}>
-        {score}
+        {score ?? "—"}
       </text>
     </svg>
   );
@@ -670,7 +671,7 @@ const ToastBar = ({ toasts }) => (
     display:"flex",flexDirection:"column",gap:8,zIndex:9999,alignItems:"center",pointerEvents:"none"}}>
     {toasts.map(t=>(
       <div key={t.id} style={{display:"flex",alignItems:"center",gap:10,
-        background:t.type==="error"?"#C81E1E":t.type==="success"?"#047857":"#1D4ED8",
+        background:t.type==="error"?"var(--rose)":t.type==="success"?"var(--emerald)":"var(--indigo)",
         color:"white",padding:"11px 20px",borderRadius:"var(--r-lg)",
         boxShadow:"0 8px 32px rgba(10,18,36,0.3)",fontSize:13,fontWeight:600,
         animation:"toastIn .18s ease",maxWidth:400,letterSpacing:"-.015em",
@@ -1604,7 +1605,7 @@ const AccountForm = ({ onClose, onSave, existing, toast }) => {
   const sc = STAGE_CFG[preview.stage]||STAGE_CFG["Stable"];
 
   const submit = () => {
-    if(!f.name.trim()) return;
+    if(!f.name.trim()) { toast("Company name is required","error"); return; }
     const ces=parseFloat(f.ces)||3.5, nps=parseInt(f.nps)||50, usage=parseInt(f.productUsage)||60, tickets=parseInt(f.openTickets)||0;
     const { total, stage } = calcHealth({ nps, ces, productUsage:usage, openTickets:tickets });
     if(existing) {
@@ -1642,7 +1643,7 @@ const AccountForm = ({ onClose, onSave, existing, toast }) => {
         <Fld label="Product Usage (%)"><Inp type="number" value={f.productUsage} onChange={s("productUsage")} placeholder="75"/></Fld>
         <Fld label="Open Tickets"><Inp type="number" value={f.openTickets} onChange={s("openTickets")} placeholder="2"/></Fld>
         <div style={{gridColumn:"1/-1"}}><Fld label="Company Domain (e.g. acme.com — used for Gmail thread matching)"><Inp value={f.domain} onChange={s("domain")} placeholder="acme.com"/></Fld></div>
-        <div style={{gridColumn:"1/-1"}}><Fld label="🎯 Next Action"><Inp value={f.nextAction} onChange={s("nextAction")} placeholder="e.g. Send renewal proposal to Sara by Jan 15"/></Fld></div>
+        <div style={{gridColumn:"1/-1"}}><Fld label="Next Action"><Inp value={f.nextAction} onChange={s("nextAction")} placeholder="e.g. Send renewal proposal to Sara by Jan 15"/></Fld></div>
         <div style={{gridColumn:"1/-1"}}>
           <Fld label="Notes">
             <textarea value={f.notes} onChange={s("notes")} placeholder="Key context, risks, opportunities..."
@@ -1666,7 +1667,7 @@ const LogCES = ({ account, onClose, onUpdate, toast }) => {
   const [dt,setDt]   = useState(todayStr());
   const submit = () => {
     const ces=parseFloat(val);
-    if(!ces||ces<1||ces>5) return;
+    if(!ces||ces<1||ces>5) { toast("CES must be between 1 and 5","error"); return; }
     const hist=[...account.cesHistory,{date:dt,value:ces}];
     const {total,stage}=calcHealth({...account,ces});
     onUpdate(account.id,{ces,cesHistory:hist,healthScore:total,churnRisk:100-total,stage});
@@ -1753,8 +1754,8 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
       `Date: ${new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"})}`,
       ``,
       `ACCOUNT SNAPSHOT`,
-      `Health: ${account.healthScore}/100  Stage: ${account.stage}  Churn Risk: ${account.churnRisk}%`,
-      `ARR: ${fmtMoney(account.arr)}  Plan: ${account.plan}  CES: ${account.ces.toFixed(1)}/5`,
+      `Health: ${account.healthScore??'—'}/100  Stage: ${account.stage}  Churn Risk: ${account.churnRisk??'—'}%`,
+      `ARR: ${fmtMoney(account.arr)}  Plan: ${account.plan}  CES: ${(account.ces??3.5).toFixed(1)}/5`,
       `Renewal: ${account.renewalDate ? `${rdays > 0 ? rdays+"d away" : "Overdue"} (${account.renewalDate})` : "—"}`,
       ``,
       `LAST TOUCHPOINT`,
@@ -1831,9 +1832,9 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
           {/* Health snapshot strip */}
           <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:8}}>
             {[
-              {label:"Health",    value:account.healthScore, unit:"/100", color:hColor(account.healthScore)},
-              {label:"Churn Risk",value:`${account.churnRisk}%`, unit:"", color:account.churnRisk>=60?"var(--rose)":account.churnRisk>=35?"var(--amber)":"var(--emerald)"},
-              {label:"CES",       value:account.ces.toFixed(1), unit:"/5", color:account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"},
+              {label:"Health",    value:account.healthScore??'—', unit:"/100", color:hColor(account.healthScore??50)},
+              {label:"Churn Risk",value:`${account.churnRisk??50}%`, unit:"", color:(account.churnRisk??50)>=60?"var(--rose)":(account.churnRisk??50)>=35?"var(--amber)":"var(--emerald)"},
+              {label:"CES",       value:(account.ces??3.5).toFixed(1), unit:"/5", color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"},
               {label:"Tickets",   value:account.openTickets, unit:" open", color:account.openTickets>4?"var(--rose)":"var(--text)"},
               {label:"Renewal",   value:rdays>0?`${rdays}d`:"Overdue", unit:"", color:rdays<=30&&rdays>0?"var(--rose)":rdays<=60&&rdays>0?"var(--amber)":"var(--text3)"},
             ].map(m=>(
@@ -1981,10 +1982,10 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
                   textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>CES Trend</div>
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
                   <Sparkline data={account.cesHistory}
-                    color={account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}/>
+                    color={(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"}/>
                   <span style={{fontSize:14,fontFamily:"var(--font-mono)",fontWeight:700,
-                    color:account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}}>
-                    {account.ces.toFixed(1)}
+                    color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"}}>
+                    {(account.ces??3.5).toFixed(1)}
                   </span>
                   <span style={{fontSize:12,color:cesTrend>0?"var(--emerald)":cesTrend<0?"var(--rose)":"var(--text3)"}}>
                     {cesTrend>0?"↑ Improving":cesTrend<0?"↓ Declining":"→ Flat"}
@@ -2112,7 +2113,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const days=ago(account.lastContact);
   const rdays=until(account.renewalDate);
   const cesVals=account.cesHistory.map(d=>d.value);
-  const cesTrend=cesVals.length>1?cesVals.at(-1)-cesVals[0]:0;
+  const cesTrend=cesVals.length>1?cesVals.at(-1)-cesVals.at(-2):0;
   const doneMs=account.successPlan.milestones.filter(m=>m.done).length;
   const totalMs=account.successPlan.milestones.length;
   const planPct=totalMs>0?Math.round((doneMs/totalMs)*100):0;
@@ -2305,8 +2306,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
               </div>
               <div style={{textAlign:"center",background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 8px"}}>
                 <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:22,
-                  color:account.churnRisk>=60?"var(--rose)":account.churnRisk>=35?"var(--amber)":"var(--emerald)"}}>
-                  {account.churnRisk}%
+                  color:(account.churnRisk??50)>=60?"var(--rose)":(account.churnRisk??50)>=35?"var(--amber)":"var(--emerald)"}}>
+                  {account.churnRisk??'—'}%
                 </div>
                 <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginTop:6,letterSpacing:".07em"}}>Churn Risk</div>
               </div>
@@ -2320,7 +2321,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
               </div>
               {[
                 {label:"NPS",    value:account.nps,                color:account.nps>=50?"var(--emerald)":"var(--amber)"},
-                {label:"CES",    value:account.ces.toFixed(1),     color:account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"},
+                {label:"CES",    value:(account.ces??3.5).toFixed(1),     color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"},
                 {label:"Usage",  value:`${account.productUsage}%`, color:account.productUsage>=70?"var(--emerald)":account.productUsage>=45?"var(--amber)":"var(--rose)"},
                 {label:"Tickets",value:account.openTickets,        color:account.openTickets>4?"var(--rose)":"var(--text2)"},
               ].map(m=>(
@@ -2895,8 +2896,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   <div>
                     <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Customer Effort Score</div>
                     <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:28,
-                      color:account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}}>
-                      {account.ces.toFixed(1)}<span style={{fontSize:14,color:"var(--text3)",fontWeight:400}}> / 5</span>
+                      color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"}}>
+                      {(account.ces??3.5).toFixed(1)}<span style={{fontSize:14,color:"var(--text3)",fontWeight:400}}> / 5</span>
                     </div>
                     <div style={{fontSize:12,fontFamily:"var(--font-mono)",marginTop:4,
                       color:cesTrend>0?"var(--emerald)":cesTrend<0?"var(--rose)":"var(--text3)"}}>
@@ -2904,7 +2905,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                     </div>
                   </div>
                   <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:10}}>
-                    <Sparkline data={account.cesHistory} color={account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}/>
+                    <Sparkline data={account.cesHistory} color={(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"}/>
                     <button onClick={()=>setShowCES(true)}
                       style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--indigo)",
                         background:"var(--indigo-dim)",border:"none",borderRadius:"var(--r-sm)",
@@ -3598,9 +3599,9 @@ const Card = ({ account, onClick, index }) => {
         {[
           {label:"ARR",  value:fmtMoney(account.arr)},
           {label:"NPS",  value:account.nps},
-          {label:"CES",  value:account.ces.toFixed(1)},
-          {label:"Risk", value:`${account.churnRisk}%`,
-            color:account.churnRisk>=60?"var(--rose)":account.churnRisk>=35?"var(--amber)":"var(--emerald)"},
+          {label:"CES",  value:(account.ces??3.5).toFixed(1)},
+          {label:"Risk", value:`${account.churnRisk??50}%`,
+            color:(account.churnRisk??50)>=60?"var(--rose)":(account.churnRisk??50)>=35?"var(--amber)":"var(--emerald)"},
         ].map(m=>(
           <div key={m.label} style={{textAlign:"center"}}>
             <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:13,color:m.color||"var(--text)"}}>{m.value}</div>
@@ -3672,7 +3673,7 @@ const Card = ({ account, onClick, index }) => {
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>CES</span>
-          <Sparkline data={account.cesHistory} color={account.ces>=3.5?"var(--emerald)":account.ces>=2.5?"var(--amber)":"var(--rose)"}/>
+          <Sparkline data={account.cesHistory} color={(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"}/>
         </div>
         <span style={{fontSize:10,fontFamily:"var(--font-mono)",
           color:days>30?"var(--rose)":days>14?"var(--amber)":"var(--text3)"}}>
@@ -4345,8 +4346,8 @@ const RenewalPipelinePage = ({ accounts, onAccountClick }) => {
                       </div>
                       <div style={{textAlign:"center"}}>
                         <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:15,
-                          color:account.churnRisk>=60?"var(--rose)":account.churnRisk>=35?"var(--amber)":"var(--emerald)"}}>
-                          {account.churnRisk}%
+                          color:(account.churnRisk??50)>=60?"var(--rose)":(account.churnRisk??50)>=35?"var(--amber)":"var(--emerald)"}}>
+                          {account.churnRisk??'—'}%
                         </div>
                         <div style={{fontSize:9,color:"var(--text3)",fontFamily:"var(--font-mono)",
                           textTransform:"uppercase",letterSpacing:".06em",marginTop:2}}>Risk</div>
