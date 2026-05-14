@@ -3599,6 +3599,27 @@ const CRM_CATALOG = [
     docsUrl: "https://www.zoho.com/crm/developer/docs/api/",
   },
   {
+    id: "zoho_desk",
+    name: "Zoho Desk",
+    category: "Ticketing",
+    color: "#e42527",
+    bg: "rgba(228,37,39,0.07)",
+    description: "Pull open ticket counts per customer account from Zoho Desk. Use the same OAuth credentials as Zoho CRM — just add your Desk Org ID.",
+    fields: [
+      { crmKey:"accountName",  crmLabel:"Account name",       pulseField:"name"        },
+      { crmKey:"openTickets",  crmLabel:"Open ticket count",   pulseField:"openTickets" },
+      { crmKey:"modifiedTime", crmLabel:"Last ticket update",  pulseField:"lastContact" },
+    ],
+    credentials: [
+      { key:"clientId",     label:"Client ID",     placeholder:"1000.XXXXXXXXXX",        type:"text"     },
+      { key:"clientSecret", label:"Client Secret", placeholder:"xxxxxxxxxxxxxxxxxx",      type:"password" },
+      { key:"refreshToken", label:"Refresh Token", placeholder:"1000.xxxxxxxxxx...",      type:"password" },
+      { key:"dc",           label:"Data Center",   placeholder:"com  (or eu, in)",        type:"text"     },
+      { key:"orgId",        label:"Org ID",        placeholder:"20099xxxxx",              type:"text"     },
+    ],
+    docsUrl: "https://desk.zoho.com/DeskAPIDocument",
+  },
+  {
     id: "freshdesk",
     name: "Freshdesk",
     category: "Ticketing",
@@ -3641,10 +3662,10 @@ const CRM_CATALOG = [
   {
     id: "freshsales",
     name: "FreshSales",
-    category: "CRM + FreshDesk",
+    category: "CRM",
     color: "#1a73e8",
     bg: "rgba(26,115,232,0.07)",
-    description: "Sync deals from FreshSales CRM and ticket counts from FreshDesk.",
+    description: "Sync deals and accounts from FreshSales CRM. Pair with the Freshdesk integration separately to track ticket counts.",
     fields: [
       { crmKey:"name",              crmLabel:"Deal / account name",   pulseField:"name"        },
       { crmKey:"industry",          crmLabel:"Industry",              pulseField:"industry"    },
@@ -7689,124 +7710,6 @@ const TIMEZONES = [
   {value:"UTC",          label:"UTC"},
 ];
 
-const AISettings = ({ call, toast }) => {
-  const [config,   setConfig]   = useState(undefined); // undefined = loading
-  const [editing,  setEditing]  = useState(false);
-  const [provider, setProvider] = useState("anthropic");
-  const [apiKey,   setApiKey]   = useState("");
-  const [saving,   setSaving]   = useState(false);
-  const [testing,  setTesting]  = useState(false);
-
-  useEffect(() => {
-    call("GET", "/api/ai/config")
-      .then(d => { setConfig(d); if (d?.provider) setProvider(d.provider); })
-      .catch(() => setConfig(null));
-  }, [call]);
-
-  const save = async () => {
-    if (!apiKey.trim()) return;
-    setSaving(true);
-    try {
-      const d = await call("PATCH", "/api/ai/config", { provider, api_key: apiKey.trim() });
-      setConfig(d);
-      setEditing(false);
-      setApiKey("");
-      toast("AI key saved","success");
-    } catch (e) { toast(e.message||"Failed to save","error"); }
-    finally { setSaving(false); }
-  };
-
-  const test = async () => {
-    setTesting(true);
-    try {
-      await call("POST", "/api/ai/test");
-      toast("Connection successful ✓","success");
-    } catch { toast("Connection failed — check your key","error"); }
-    finally { setTesting(false); }
-  };
-
-  const remove = async () => {
-    await call("DELETE", "/api/ai/config");
-    setConfig(null);
-    setEditing(false);
-    toast("AI key removed","info");
-  };
-
-  const rowStyle = {background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"16px 20px"};
-  const lblStyle = {fontSize:12,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8,display:"block"};
-  const inputStyle = {width:"100%",background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
-    padding:"9px 13px",fontSize:13,color:"var(--text)",fontFamily:"var(--font-display)",outline:"none",boxSizing:"border-box"};
-  const smBtn = (bg,color)=>({background:bg,color,border:"none",borderRadius:"var(--r)",padding:"7px 14px",
-    fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--font-display)"});
-
-  if (config === undefined) return <div style={{fontSize:13,color:"var(--text3)"}}>Loading…</div>;
-
-  if (config?.configured && !editing) return (
-    <div style={rowStyle}>
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <div>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}>
-            <div style={{width:8,height:8,borderRadius:"50%",background:"var(--emerald)"}}/>
-            <div style={{fontWeight:700,fontSize:14}}>AI Connected</div>
-          </div>
-          <div style={{fontSize:12,color:"var(--text3)"}}>
-            {config.provider==="anthropic"?"Anthropic (Claude)":"OpenAI"} · {config.model} · {config.api_key_mask}
-          </div>
-        </div>
-        <div style={{display:"flex",gap:8}}>
-          <button onClick={test} disabled={testing} style={smBtn("var(--bg3)","var(--text2)")}>
-            {testing?"Testing…":"Test"}
-          </button>
-          <button onClick={()=>setEditing(true)} style={smBtn("var(--bg3)","var(--text2)")}>Change key</button>
-          <button onClick={remove} style={smBtn("transparent","var(--rose)")}>Remove</button>
-        </div>
-      </div>
-    </div>
-  );
-
-  return (
-    <div style={{...rowStyle,display:"flex",flexDirection:"column",gap:16}}>
-      <div>
-        <div style={{fontWeight:700,fontSize:14,marginBottom:4}}>Connect AI Provider</div>
-        <div style={{fontSize:12,color:"var(--text3)"}}>Your key is encrypted at rest and never shared. Bring your own key — you pay your provider directly.</div>
-      </div>
-
-      <div>
-        <span style={lblStyle}>Provider</span>
-        <div style={{display:"flex",gap:8}}>
-          {[{v:"anthropic",l:"Anthropic (Claude)"},{v:"openai",l:"OpenAI (GPT)"}].map(({v,l})=>(
-            <button key={v} onClick={()=>setProvider(v)}
-              style={{...smBtn(provider===v?"var(--indigo-dim)":"var(--bg3)",provider===v?"var(--indigo)":"var(--text2)"),
-                border:`1.5px solid ${provider===v?"var(--indigo)":"var(--border)"}`,padding:"8px 18px"}}>
-              {l}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <span style={lblStyle}>API Key</span>
-        <input type="password" value={apiKey} onChange={e=>setApiKey(e.target.value)}
-          placeholder={provider==="anthropic"?"sk-ant-api03-…":"sk-proj-…"}
-          style={inputStyle}/>
-        <div style={{fontSize:11,color:"var(--text3)",marginTop:6}}>
-          {provider==="anthropic"
-            ? "Get your key at console.anthropic.com → API Keys"
-            : "Get your key at platform.openai.com → API Keys"}
-        </div>
-      </div>
-
-      <div style={{display:"flex",gap:8}}>
-        <button onClick={save} disabled={saving||!apiKey.trim()}
-          style={{...smBtn("var(--indigo)","white"),padding:"9px 20px",opacity:saving||!apiKey.trim()?0.6:1}}>
-          {saving?"Saving…":"Save key"}
-        </button>
-        {editing&&<button onClick={()=>{setEditing(false);setApiKey("");}} style={smBtn("var(--bg3)","var(--text2)")}>Cancel</button>}
-      </div>
-    </div>
-  );
-};
-
 const BriefingSettings = ({ call, toast, hasGmail }) => {
   const [cfg, setCfg] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -8602,8 +8505,6 @@ export default function App() {
               <EmailSettingsPage session={session}/>
               <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Daily Briefing</div>
               <BriefingSettings call={call} toast={toast} hasGmail={!!session}/>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>AI</div>
-              <AISettings call={call} toast={toast}/>
             </div>
           )}
           {view==="integrations"&&(
