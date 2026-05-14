@@ -718,55 +718,118 @@ const PlaybookStepView = ({ step, done, onToggle, expanded, onExpand }) => {
   );
 };
 
-const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle }) => {
+const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle, triggeredAccounts=[], onAccountClick }) => {
   const [expandedStep, setExpandedStep] = useState(null);
   const sc = SCENARIO_CFG[playbook.scenario]||SCENARIO_CFG["Onboarding"];
   const pc = getPriorityConfig(playbook.priority);
   const completedCount = playbook.steps.filter(s=>activeSteps[s.id]).length;
   const progress = Math.round((completedCount/playbook.steps.length)*100);
+  const readOnly = !onStepToggle;
 
   return (
-    <div style={{animation:"fadeUp .2s ease"}}>
+    <div style={{maxWidth:760,animation:"fadeUp .2s ease"}}>
       <button onClick={onBack}
         style={{background:"none",border:"none",color:"var(--indigo)",cursor:"pointer",
           fontSize:13,fontWeight:600,padding:0,marginBottom:20,display:"flex",alignItems:"center",gap:6}}>
         ← Back to library
       </button>
 
-      <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
-        padding:24,marginBottom:20,boxShadow:"var(--shadow-sm)"}}>
-        <div style={{display:"flex",gap:10,alignItems:"center",marginBottom:12}}>
-          <span style={{fontSize:24}}>{sc.abbr||""}</span>
-          <div>
-            <div style={{fontWeight:800,fontSize:20,marginBottom:4}}>{playbook.name}</div>
-            <div style={{display:"flex",gap:8}}>
-              <Badge label={playbook.scenario} color={sc.color} bg={sc.bg}/>
-              <Badge label={pc.label} color={pc.color} bg={pc.bg}/>
+      {/* Hero */}
+      <div style={{background:`linear-gradient(135deg,${sc.bg} 0%,var(--bg2) 100%)`,
+        border:`1.5px solid ${sc.color}33`,borderRadius:"var(--r-xl)",
+        padding:"24px 28px",marginBottom:20,boxShadow:"var(--shadow-sm)"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14}}>
+          <div style={{display:"flex",gap:12,alignItems:"center"}}>
+            <div style={{width:44,height:44,borderRadius:"var(--r-lg)",background:sc.color,
+              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              <span style={{color:"white",fontSize:13,fontWeight:800,fontFamily:"var(--font-mono)"}}>{sc.abbr}</span>
+            </div>
+            <div>
+              <div style={{fontWeight:800,fontSize:20,letterSpacing:"-.02em",marginBottom:4}}>{playbook.name}</div>
+              <div style={{display:"flex",gap:8}}>
+                <Badge label={playbook.scenario} color={sc.color} bg={sc.bg}/>
+                <Badge label={pc.label} color={pc.color} bg={pc.bg}/>
+                <span style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text3)",
+                  background:"var(--bg4)",padding:"2px 8px",borderRadius:99}}>
+                  {playbook.steps.length} steps
+                </span>
+              </div>
             </div>
           </div>
         </div>
-        <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.7,marginBottom:16}}>
+        <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.75,marginBottom:16}}>
           {playbook.summary}
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"10px 14px"}}>
+          <div style={{background:"rgba(255,255,255,0.6)",borderRadius:"var(--r)",padding:"10px 14px",backdropFilter:"blur(4px)"}}>
             <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",
-              textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Trigger</div>
-            <div style={{fontSize:12,color:"var(--text2)"}}>{playbook.trigger}</div>
+              textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>When to use</div>
+            <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{playbook.trigger}</div>
           </div>
-          <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"10px 14px"}}>
+          <div style={{background:"rgba(255,255,255,0.6)",borderRadius:"var(--r)",padding:"10px 14px",backdropFilter:"blur(4px)"}}>
             <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",
-              textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Success metric</div>
-            <div style={{fontSize:12,color:"var(--text2)"}}>{playbook.successMetric}</div>
+              textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Success looks like</div>
+            <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{playbook.successMetric}</div>
           </div>
         </div>
       </div>
 
+      {/* Triggered accounts */}
+      {triggeredAccounts.length > 0 && (
+        <div style={{background:"var(--amber-dim)",border:"1.5px solid rgba(217,119,6,0.25)",
+          borderRadius:"var(--r-lg)",padding:"14px 18px",marginBottom:20}}>
+          <div style={{fontSize:12,fontWeight:700,color:"var(--amber)",marginBottom:10}}>
+            {triggeredAccounts.length} account{triggeredAccounts.length!==1?"s":""} triggering this playbook
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {triggeredAccounts.slice(0,5).map(a=>(
+              <div key={a.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",
+                background:"white",borderRadius:"var(--r)",padding:"8px 12px"}}>
+                <div style={{display:"flex",alignItems:"center",gap:8}}>
+                  <Avatar name={a.name} size={24}/>
+                  <span style={{fontSize:13,fontWeight:600}}>{a.name}</span>
+                  <span style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text3)"}}>{a.plan}</span>
+                </div>
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:11,fontFamily:"var(--font-mono)",
+                    color:a.healthScore>=70?"var(--emerald)":a.healthScore>=45?"var(--amber)":"var(--rose)",
+                    fontWeight:600}}>Health {a.healthScore}</span>
+                  {onAccountClick && (
+                    <button onClick={()=>onAccountClick(a)}
+                      style={{fontSize:11,fontWeight:600,color:"var(--indigo)",background:"var(--indigo-dim)",
+                        border:"none",borderRadius:"var(--r-sm)",padding:"4px 10px",cursor:"pointer",
+                        fontFamily:"var(--font-display)"}}>
+                      Open →
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+            {triggeredAccounts.length > 5 && (
+              <div style={{fontSize:11,color:"var(--amber)",textAlign:"center",paddingTop:4}}>
+                +{triggeredAccounts.length-5} more accounts
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Read-only notice */}
+      {readOnly && (
+        <div style={{display:"flex",alignItems:"center",gap:10,background:"var(--indigo-dim)",
+          border:"1.5px solid rgba(67,97,238,0.2)",borderRadius:"var(--r)",
+          padding:"10px 14px",marginBottom:16,fontSize:12,color:"var(--indigo)"}}>
+          <Ic n="info" size={14} color="var(--indigo)"/>
+          To track step progress, open an account and go to the <strong style={{margin:"0 3px"}}>Health & Playbook</strong> tab, then activate this playbook.
+        </div>
+      )}
+
+      {/* Progress (only shown when active on an account) */}
       {completedCount > 0 && (
         <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
-          padding:"14px 18px",marginBottom:20,boxShadow:"var(--shadow-sm)"}}>
+          padding:"14px 18px",marginBottom:20}}>
           <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
-            <span style={{fontSize:13,fontWeight:600}}>Progress</span>
+            <span style={{fontSize:13,fontWeight:600}}>Your progress</span>
             <span style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--indigo)",fontWeight:600}}>
               {completedCount}/{playbook.steps.length} steps · {progress}%
             </span>
@@ -777,7 +840,7 @@ const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle }) 
 
       <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",
         textTransform:"uppercase",letterSpacing:".08em",marginBottom:12}}>
-        {playbook.steps.length} steps — click to expand
+        {playbook.steps.length} steps — click any step to expand the action guide
       </div>
 
       {playbook.steps.map(step=>(
@@ -794,11 +857,12 @@ const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle }) 
   );
 };
 
-const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
+const PlaybookLibraryPage = ({ accounts, onUpdate, onAccountClick }) => {
   const [selectedPlaybook, setSelectedPlaybook] = useState(null);
   const [filterScenario,   setFilterScenario]   = useState("All");
   const [filterPriority,   setFilterPriority]   = useState("All");
   const [search,           setSearch]           = useState("");
+  const [showAllAttention, setShowAllAttention] = useState(false);
 
   const scenarios  = ["All","Onboarding","Churn Risk","Renewal","Executive"];
   const priorities = ["All","Critical","High","Medium"];
@@ -808,70 +872,150 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
     if (filterPriority !== "All" && pb.priority !== filterPriority) return false;
     if (search) {
       const q = search.toLowerCase();
-      const match = pb.name.toLowerCase().includes(q)
-        || pb.scenario.toLowerCase().includes(q)
-        || pb.summary.toLowerCase().includes(q);
-      if (!match) return false;
+      if (![pb.name,pb.scenario,pb.summary].some(t=>t.toLowerCase().includes(q))) return false;
     }
     return true;
   });
 
-  // Count active playbooks across all accounts
+  // Per-playbook active account count
   const activeCountByPb = {};
-  accounts.forEach(a=>{
-    if(a.activePlaybookId) activeCountByPb[a.activePlaybookId] = (activeCountByPb[a.activePlaybookId]||0)+1;
+  accounts.forEach(a => {
+    if (a.activePlaybookId) activeCountByPb[a.activePlaybookId] = (activeCountByPb[a.activePlaybookId]||0)+1;
   });
 
+  // Accounts needing attention — triggered but no active playbook
+  const needsAttention = accounts.filter(a =>
+    getTriggeredPlaybooks(a).length > 0 && !a.activePlaybookId
+  );
+  const activeNow = accounts.filter(a => a.activePlaybookId);
+  const attentionVisible = showAllAttention ? needsAttention : needsAttention.slice(0, 4);
+
   if (selectedPlaybook) {
+    const triggeredAccounts = accounts.filter(a =>
+      getTriggeredPlaybooks(a).some(pb => pb.id === selectedPlaybook.id)
+    );
     return (
       <PlaybookDetailView
         playbook={selectedPlaybook}
         onBack={()=>setSelectedPlaybook(null)}
         activeSteps={{}}
         onStepToggle={null}
+        triggeredAccounts={triggeredAccounts}
+        onAccountClick={onAccountClick}
       />
     );
   }
 
   return (
-    <div style={{animation:"fadeUp .2s ease"}}>
-      <div style={{marginBottom:28}}>
-        <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Playbook Library</h1>
-        <div style={{fontSize:13,color:"var(--text3)"}}>
-          {PLAYBOOK_LIBRARY.length} world-class plays · sourced from Gainsight, ChurnZero, Totango & CS leaders
+    <div style={{maxWidth:900,animation:"fadeUp .2s ease"}}>
+
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+        <div>
+          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Playbooks</h1>
+          <div style={{fontSize:13,color:"var(--text3)"}}>
+            {PLAYBOOK_LIBRARY.length} plays sourced from Gainsight, ChurnZero & top CS leaders
+          </div>
         </div>
       </div>
 
       {/* Stats */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
         {[
-          {label:"Total Plays",  value:PLAYBOOK_LIBRARY.length,                                        color:"var(--indigo)" },
-          {label:"Scenarios",    value:4,                                                               color:"var(--teal)"   },
-          {label:"Active Now",   value:accounts.filter(a=>a.activePlaybookId).length,                  color:"var(--emerald)"},
-          {label:"Need Attention",value:accounts.filter(a=>getTriggeredPlaybooks(a).length>0).length,  color:"var(--amber)"  },
+          { label:"Total plays",     value:PLAYBOOK_LIBRARY.length, color:"var(--indigo)",  border:"var(--border)" },
+          { label:"Scenarios",       value:4,                       color:"var(--teal)",    border:"var(--border)" },
+          { label:"Active now",      value:activeNow.length,        color:"var(--emerald)", border:activeNow.length?"rgba(5,150,105,0.25)":"var(--border)" },
+          { label:"Need attention",  value:needsAttention.length,   color:"var(--amber)",   border:needsAttention.length?"rgba(217,119,6,0.3)":"var(--border)" },
         ].map(s=>(
-          <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+          <div key={s.label} style={{background:"var(--bg2)",border:`1.5px solid ${s.border}`,
             borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
-            <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:26,color:s.color,marginBottom:4}}>{s.value}</div>
+            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:28,color:s.color,marginBottom:4,letterSpacing:"-.02em"}}>
+              {s.value}
+            </div>
             <div style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>{s.label}</div>
           </div>
         ))}
       </div>
 
+      {/* Needs Attention panel */}
+      {needsAttention.length > 0 && (
+        <div style={{background:"var(--bg2)",border:"1.5px solid rgba(217,119,6,0.3)",
+          borderRadius:"var(--r-lg)",padding:"18px 20px",marginBottom:28,boxShadow:"var(--shadow-sm)"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              <div style={{width:8,height:8,borderRadius:"50%",background:"var(--amber)"}}/>
+              <span style={{fontWeight:700,fontSize:14}}>Accounts needing a playbook</span>
+              <span style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--amber)",
+                background:"var(--amber-dim)",padding:"1px 8px",borderRadius:99,fontWeight:600}}>
+                {needsAttention.length}
+              </span>
+            </div>
+            <span style={{fontSize:12,color:"var(--text3)"}}>Pulse detected signals — activate a playbook to act</span>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {attentionVisible.map(a => {
+              const suggested = getTriggeredPlaybooks(a)[0];
+              const sc = suggested ? SCENARIO_CFG[suggested.scenario]||SCENARIO_CFG["Onboarding"] : null;
+              return (
+                <div key={a.id} style={{display:"flex",alignItems:"center",gap:12,
+                  background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 14px",
+                  border:"1.5px solid var(--border)"}}>
+                  <Avatar name={a.name} size={32}/>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{fontWeight:600,fontSize:13,marginBottom:2}}>{a.name}</div>
+                    <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
+                      <span style={{fontSize:11,color:"var(--text3)"}}>{a.plan}</span>
+                      <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
+                      <span style={{fontSize:11,fontFamily:"var(--font-mono)",
+                        color:a.healthScore>=70?"var(--emerald)":a.healthScore>=45?"var(--amber)":"var(--rose)",
+                        fontWeight:600}}>Health {a.healthScore}</span>
+                    </div>
+                  </div>
+                  {suggested && sc && (
+                    <div style={{display:"flex",alignItems:"center",gap:6,flexShrink:0}}>
+                      <div style={{fontSize:11,fontWeight:600,padding:"3px 10px",borderRadius:"var(--r-sm)",
+                        background:sc.bg,color:sc.color,border:`1px solid ${sc.color}33`,
+                        maxWidth:180,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {suggested.name}
+                      </div>
+                    </div>
+                  )}
+                  {onAccountClick && (
+                    <button onClick={()=>onAccountClick(a)}
+                      style={{flexShrink:0,background:"var(--indigo)",color:"white",border:"none",
+                        borderRadius:"var(--r-sm)",padding:"7px 14px",fontSize:12,fontWeight:600,
+                        cursor:"pointer",fontFamily:"var(--font-display)",whiteSpace:"nowrap"}}>
+                      Open account
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          {needsAttention.length > 4 && (
+            <button onClick={()=>setShowAllAttention(v=>!v)}
+              style={{marginTop:10,background:"none",border:"none",color:"var(--indigo)",
+                fontSize:12,fontWeight:600,cursor:"pointer",padding:0}}>
+              {showAllAttention ? "Show less ↑" : `Show ${needsAttention.length-4} more ↓`}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Filters */}
-      <div style={{display:"flex",gap:16,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
-        <div style={{display:"flex",gap:6}}>
+      <div style={{display:"flex",gap:12,marginBottom:20,flexWrap:"wrap",alignItems:"center"}}>
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
           {scenarios.map(s=>{
             const cfg=SCENARIO_CFG[s];
-            const active=filterScenario===s;
+            const isActive=filterScenario===s;
             return (
               <button key={s} onClick={()=>setFilterScenario(s)} className="pill-btn"
-                style={{padding:"6px 12px",borderRadius:99,fontSize:11,cursor:"pointer",
-                  fontFamily:"var(--font-mono)",fontWeight:active?600:400,
-                  border:`1.5px solid ${active?(cfg?.color||"var(--indigo)"):"var(--border)"}`,
-                  background:active?(cfg?.bg||"var(--indigo-dim)"):"var(--bg2)",
-                  color:active?(cfg?.color||"var(--indigo)"):"var(--text2)"}}>
-                {s!=="All"&&<span style={{marginRight:4}}>{cfg?.icon}</span>}{s}
+                style={{padding:"6px 14px",borderRadius:99,fontSize:12,cursor:"pointer",
+                  fontFamily:"var(--font-display)",fontWeight:isActive?600:400,
+                  border:`1.5px solid ${isActive?(cfg?.color||"var(--indigo)"):"var(--border)"}`,
+                  background:isActive?(cfg?.bg||"var(--indigo-dim)"):"var(--bg2)",
+                  color:isActive?(cfg?.color||"var(--indigo)"):"var(--text2)"}}>
+                {s}
               </button>
             );
           })}
@@ -879,14 +1023,14 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
         <div style={{display:"flex",gap:6}}>
           {priorities.map(p=>{
             const pc=getPriorityConfig(p);
-            const active=filterPriority===p;
+            const isActive=filterPriority===p;
             return (
               <button key={p} onClick={()=>setFilterPriority(p)} className="pill-btn"
-                style={{padding:"6px 12px",borderRadius:99,fontSize:11,cursor:"pointer",
-                  fontFamily:"var(--font-mono)",fontWeight:active?600:400,
-                  border:`1.5px solid ${active?pc.color:"var(--border)"}`,
-                  background:active?pc.bg:"var(--bg2)",
-                  color:active?pc.color:"var(--text2)"}}>
+                style={{padding:"6px 14px",borderRadius:99,fontSize:12,cursor:"pointer",
+                  fontFamily:"var(--font-display)",fontWeight:isActive?600:400,
+                  border:`1.5px solid ${isActive?pc.color:"var(--border)"}`,
+                  background:isActive?pc.bg:"var(--bg2)",
+                  color:isActive?pc.color:"var(--text2)"}}>
                 {p}
               </button>
             );
@@ -906,44 +1050,70 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
         return (
           <div key={scenario} style={{marginBottom:32}}>
             <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-              <span style={{fontSize:18}}>{sc.abbr||""}</span>
-              <span style={{fontWeight:700,fontSize:16,color:sc.color}}>{scenario}</span>
+              <div style={{width:28,height:28,borderRadius:"var(--r-sm)",background:sc.color,
+                display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                <span style={{color:"white",fontSize:10,fontWeight:800,fontFamily:"var(--font-mono)"}}>{sc.abbr}</span>
+              </div>
+              <span style={{fontWeight:700,fontSize:15,color:sc.color}}>{scenario}</span>
               <span style={{fontSize:12,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
                 {scenarioPbs.length} play{scenarioPbs.length!==1?"s":""}
               </span>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(320px,1fr))",gap:12}}>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(300px,1fr))",gap:12}}>
               {scenarioPbs.map(pb=>{
-                const pc=getPriorityConfig(pb.priority);
-                const activeCount=activeCountByPb[pb.id]||0;
+                const pc = getPriorityConfig(pb.priority);
+                const activeCount = activeCountByPb[pb.id]||0;
+                const triggeredCount = accounts.filter(a=>
+                  getTriggeredPlaybooks(a).some(t=>t.id===pb.id)
+                ).length;
                 return (
                   <div key={pb.id} onClick={()=>setSelectedPlaybook(pb)}
                     className="card-hover"
-                    style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
-                      padding:"18px 20px",cursor:"pointer",boxShadow:"var(--shadow-sm)",
-                      position:"relative",overflow:"hidden"}}>
+                    style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+                      borderRadius:"var(--r-lg)",padding:"18px 20px",cursor:"pointer",
+                      boxShadow:"var(--shadow-sm)",position:"relative",overflow:"hidden",
+                      display:"flex",flexDirection:"column",gap:0}}>
+                    {/* Colour bar */}
                     <div style={{position:"absolute",top:0,left:0,right:0,height:3,
-                      background:`linear-gradient(90deg,${pc.color},transparent)`,opacity:0.7}}/>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                      <div style={{fontWeight:700,fontSize:14}}>{pb.name}</div>
+                      background:sc.color,opacity:0.6}}/>
+                    {/* Priority + scenario */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                      <Badge label={pb.scenario} color={sc.color} bg={sc.bg} small/>
                       <Badge label={pc.label} color={pc.color} bg={pc.bg} small/>
                     </div>
-                    <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:12}}>
-                      {pb.summary.slice(0,100)}…
+                    {/* Name */}
+                    <div style={{fontWeight:700,fontSize:14,marginBottom:6,lineHeight:1.3}}>{pb.name}</div>
+                    {/* Trigger condition */}
+                    <div style={{fontSize:11,color:"var(--text3)",marginBottom:8,fontStyle:"italic",lineHeight:1.5}}>
+                      Trigger: {pb.trigger}
                     </div>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                      <div style={{display:"flex",gap:8}}>
+                    {/* Summary */}
+                    <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6,marginBottom:14,flex:1}}>
+                      {pb.summary.slice(0,90)}…
+                    </div>
+                    {/* Footer */}
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                      paddingTop:10,borderTop:"1px solid var(--border)"}}>
+                      <div style={{display:"flex",gap:8,alignItems:"center"}}>
                         <span style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--text3)"}}>
                           {pb.steps.length} steps
                         </span>
-                        {activeCount>0&&(
-                          <span style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--emerald)",
+                        {triggeredCount > 0 && (
+                          <span style={{fontSize:10,fontWeight:600,color:"var(--amber)",
+                            background:"var(--amber-dim)",padding:"1px 7px",borderRadius:99}}>
+                            {triggeredCount} triggered
+                          </span>
+                        )}
+                        {activeCount > 0 && (
+                          <span style={{fontSize:10,fontWeight:600,color:"var(--emerald)",
                             background:"var(--emerald-dim)",padding:"1px 7px",borderRadius:99}}>
-                            Active on {activeCount} account{activeCount!==1?"s":""}
+                            {activeCount} active
                           </span>
                         )}
                       </div>
-                      <span style={{fontSize:11,color:"var(--indigo)",fontWeight:600}}>View →</span>
+                      <span style={{fontSize:12,color:"var(--indigo)",fontWeight:600,display:"flex",alignItems:"center",gap:4}}>
+                        View <Ic n="arrow_right" size={12} color="var(--indigo)"/>
+                      </span>
                     </div>
                   </div>
                 );
@@ -952,8 +1122,10 @@ const PlaybookLibraryPage = ({ accounts, onUpdate }) => {
           </div>
         );
       })}
+
       {filtered.length===0&&(
-        <div style={{textAlign:"center",padding:"60px 0",color:"var(--text3)",fontFamily:"var(--font-mono)",fontSize:13}}>
+        <div style={{textAlign:"center",padding:"60px 0",background:"var(--bg2)",
+          border:"1.5px dashed var(--border2)",borderRadius:"var(--r-lg)",color:"var(--text3)",fontSize:13}}>
           No playbooks match your filters
         </div>
       )}
@@ -8925,7 +9097,7 @@ export default function App() {
 
           {/* ── PLAYBOOKS VIEW ── */}
           {view==="playbooks"&&(
-            <PlaybookLibraryPage accounts={active} onUpdate={update}/>
+            <PlaybookLibraryPage accounts={active} onUpdate={update} onAccountClick={a=>{setSelected(a);setDetailTab("health");setView("portfolio");}}/>
           )}
 
           {/* ── AUTOMATION VIEW ── */}
