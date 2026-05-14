@@ -5,12 +5,12 @@ const STYLES = `
   @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@300;400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
-    /* Surfaces */
-    --bg:#F7F9FC; --bg2:#ffffff; --bg3:#F0F4FB; --bg4:#E4EBF8;
-    --border:#E2E8F2; --border2:#C8D2E9;
+    /* Surfaces — warm, Notion-inspired */
+    --bg:#FAFAF8; --bg2:#FFFFFF; --bg3:#F4F3F0; --bg4:#EEEDEA;
+    --border:#E5E4E0; --border2:#D4D2CD;
 
-    /* Primary — cobalt blue */
-    --indigo:#2563EB; --indigo-dim:rgba(37,99,235,0.07); --indigo-glow:rgba(37,99,235,0.22);
+    /* Primary — warm blue */
+    --indigo:#3B5EDE; --indigo-dim:rgba(59,94,222,0.07); --indigo-glow:rgba(59,94,222,0.20);
 
     /* Semantic */
     --emerald:#059669; --emerald-dim:rgba(5,150,105,0.07);
@@ -20,19 +20,19 @@ const STYLES = `
     --violet:#7C3AED;  --violet-dim:rgba(124,58,237,0.07);
     --teal:#0D9488;    --teal-dim:rgba(13,148,136,0.07);
 
-    /* Text */
-    --text:#0F172A; --text2:#475569; --text3:#94A3B8;
+    /* Text — warm stone */
+    --text:#1C1B18; --text2:#57534E; --text3:#A8A29E;
 
-    /* Sidebar — dark shell */
-    --sidebar-bg:#0F1623;
-    --sidebar-border:rgba(255,255,255,0.055);
-    --sidebar-active:rgba(37,99,235,0.18);
-    --sidebar-hover:rgba(255,255,255,0.05);
-    --sidebar-text:rgba(255,255,255,0.48);
-    --sidebar-text-active:rgba(255,255,255,0.92);
-    --sidebar-icon:rgba(255,255,255,0.32);
-    --sidebar-icon-active:#7EB3FF;
-    --sidebar-section:rgba(255,255,255,0.2);
+    /* Sidebar — warm light (Notion-style) */
+    --sidebar-bg:#F7F6F3;
+    --sidebar-border:#E5E4E0;
+    --sidebar-active:rgba(59,94,222,0.08);
+    --sidebar-hover:rgba(0,0,0,0.04);
+    --sidebar-text:#78716C;
+    --sidebar-text-active:#1C1B18;
+    --sidebar-icon:#B2ACA8;
+    --sidebar-icon-active:#3B5EDE;
+    --sidebar-section:#B2ACA8;
 
     /* Typography */
     --font-display:'Plus Jakarta Sans',sans-serif;
@@ -41,11 +41,11 @@ const STYLES = `
     /* Radius */
     --r-xs:4px; --r-sm:6px; --r:10px; --r-lg:14px; --r-xl:18px; --r-2xl:22px;
 
-    /* Shadows */
-    --shadow-xs:0 1px 2px rgba(15,23,42,0.05);
-    --shadow-sm:0 1px 3px rgba(15,23,42,0.07),0 1px 2px rgba(15,23,42,0.04);
-    --shadow:0 4px 18px rgba(15,23,42,0.09),0 2px 6px rgba(15,23,42,0.04);
-    --shadow-lg:0 20px 50px rgba(15,23,42,0.15),0 8px 18px rgba(15,23,42,0.07);
+    /* Shadows — soft, warm */
+    --shadow-xs:0 1px 2px rgba(0,0,0,0.04);
+    --shadow-sm:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.03);
+    --shadow:0 4px 16px rgba(0,0,0,0.07),0 2px 6px rgba(0,0,0,0.03);
+    --shadow-lg:0 20px 48px rgba(0,0,0,0.12),0 8px 16px rgba(0,0,0,0.05);
   }
   body { background:var(--bg); color:var(--text); font-family:var(--font-display); -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
   ::-webkit-scrollbar { width:5px; height:5px; }
@@ -61,14 +61,14 @@ const STYLES = `
   @keyframes spin      { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
 
   .card-hover { transition:box-shadow 0.2s,transform 0.2s,border-color 0.2s; }
-  .card-hover:hover { box-shadow:0 6px 28px rgba(15,23,42,0.11),0 2px 8px rgba(15,23,42,0.05)!important; transform:translateY(-2px); border-color:var(--border2)!important; }
+  .card-hover:hover { box-shadow:0 6px 24px rgba(0,0,0,0.09),0 2px 8px rgba(0,0,0,0.04)!important; transform:translateY(-2px); border-color:var(--border2)!important; }
   .nav-item { transition:background 0.1s; border-radius:var(--r); }
   .nav-item:hover { background:var(--sidebar-hover)!important; }
   .pill-btn { transition:all 0.12s; }
   .pill-btn:hover { filter:brightness(0.96); }
   .icon-btn { transition:background 0.12s; cursor:pointer; }
   .icon-btn:hover { background:var(--bg3)!important; }
-  .sidebar-icon-btn:hover { background:rgba(255,255,255,0.08)!important; }
+  .sidebar-icon-btn:hover { background:rgba(0,0,0,0.06)!important; }
   input:focus, select:focus, textarea:focus { border-color:var(--indigo)!important; box-shadow:0 0 0 3px var(--indigo-dim)!important; outline:none; }
   button:disabled { opacity:0.42; cursor:not-allowed; }
 `;
@@ -874,7 +874,7 @@ const PlaybookDetailView = ({ playbook, onBack, activeSteps={}, onStepToggle, tr
       {/* Read-only notice */}
       {readOnly && (
         <div style={{display:"flex",alignItems:"center",gap:10,background:"var(--indigo-dim)",
-          border:"1.5px solid rgba(37,99,235,0.2)",borderRadius:"var(--r)",
+          border:"1.5px solid rgba(59,94,222,0.2)",borderRadius:"var(--r)",
           padding:"10px 14px",marginBottom:16,fontSize:12,color:"var(--indigo)"}}>
           <Ic n="info" size={14} color="var(--indigo)"/>
           To track step progress, open an account and go to the <strong style={{margin:"0 3px"}}>Health & Playbook</strong> tab, then activate this playbook.
@@ -2794,7 +2794,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   ))}
                 </div>
               </div>
-              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,.15)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,.15)",borderRadius:"var(--r)",padding:"14px 16px"}}>
                 <div style={{fontSize:12,fontWeight:700,color:"var(--indigo)",marginBottom:6}}>Improvement opportunities</div>
                 {calcHealth(account).parts.filter(p=>p.pts<p.max).map(p=>(
                   <div key={p.label} style={{fontSize:12,color:"var(--text2)",marginBottom:4}}>
@@ -3378,7 +3378,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                   </div>
                 ))}
               </div>
-              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.2)",
+              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,0.2)",
                 borderRadius:"var(--r-lg)",padding:"16px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                 <div>
                   <div style={{fontWeight:700,fontSize:14,color:"var(--indigo)",marginBottom:4}}>Start with the template</div>
@@ -3454,7 +3454,7 @@ const BulkUpload = ({ onClose, onImport, existingNames, toast }) => {
                     return (
                       <div key={i} style={{display:"grid",gridTemplateColumns:"40px 28px 1.5fr 1fr 1fr 80px 70px 70px 80px",
                         padding:"10px 16px",fontSize:13,borderBottom:"1px solid var(--border)",alignItems:"center",
-                        background:hasError?"rgba(225,29,72,0.03)":r.selected?"rgba(37,99,235,0.02)":"var(--bg2)",
+                        background:hasError?"rgba(225,29,72,0.03)":r.selected?"rgba(59,94,222,0.02)":"var(--bg2)",
                         opacity:hasError?0.6:1}}>
                         <div style={{fontFamily:"var(--font-mono)",fontSize:10,color:"var(--text3)"}}>{r.rowNum}</div>
                         <input type="checkbox" checked={r.selected} disabled={hasError} onChange={()=>toggleRow(i)}
@@ -5252,7 +5252,7 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
       </div>
 
       {/* Info banner */}
-      <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.15)",
+      <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,0.15)",
         borderRadius:"var(--r-lg)",padding:"14px 18px",marginBottom:24,
         display:"flex",gap:12,alignItems:"flex-start"}}>
         <Ic n="info" size={16} color="var(--indigo)" style={{flexShrink:0,marginTop:1}}/>
@@ -6029,7 +6029,7 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
 
       {/* AI readiness note */}
       <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--indigo-dim)",
-        border:"1.5px solid rgba(37,99,235,0.2)",borderRadius:"var(--r)",
+        border:"1.5px solid rgba(59,94,222,0.2)",borderRadius:"var(--r)",
         padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--indigo)"}}>
         <Ic n="info" size={14} color="var(--indigo)"/>
         Drafts are currently template-based. Once the AI layer is enabled, each draft will be personalised to the account's history and context.
@@ -6525,7 +6525,7 @@ const SurveySchedulesSection = ({ session, toast }) => {
             </div>
 
             {/* Live preview */}
-            <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.2)",
+            <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,0.2)",
               borderRadius:"var(--r)",padding:"12px 16px",marginBottom:20}}>
               <div style={{fontSize:10,fontWeight:700,color:"var(--indigo)",textTransform:"uppercase",
                 letterSpacing:".08em",marginBottom:4}}>What this schedule will do</div>
@@ -7518,7 +7518,7 @@ popup.location.href = url;
                       Gmail
                       {acc.is_primary && (
                         <span style={{background:"var(--indigo-dim)",color:"var(--indigo)",
-                          border:"1px solid rgba(37,99,235,0.2)",borderRadius:4,
+                          border:"1px solid rgba(59,94,222,0.2)",borderRadius:4,
                           fontSize:9,fontWeight:700,padding:"1px 6px"}}>
                           PRIMARY
                         </span>
@@ -7694,7 +7694,7 @@ const HandoverPage = ({ token }) => {
     setConfirming(false);
   };
 
-  const s = { bg:"#f8fafc", card:"white", border:"#e2e8f0", text:"#0f172a", text2:"#475569", text3:"#94a3b8", indigo:"#2563EB", emerald:"#10b981" };
+  const s = { bg:"#FAFAF8", card:"white", border:"#E5E4E0", text:"#1C1B18", text2:"#57534E", text3:"#A8A29E", indigo:"#3B5EDE", emerald:"#059669" };
 
   if (loading) return (
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",background:s.bg,fontFamily:"system-ui,sans-serif"}}>
@@ -7808,7 +7808,7 @@ const PortalPage = ({ token }) => {
     }).catch(() => setTasks(ts => ts.map(t => t.id === task.id ? { ...t, status: task.status } : t)));
   };
 
-  const s = { bg: '#F7F9FC', card: 'white', border: '#E2E8F2', text: '#0f172a', text2: '#475569', text3: '#94a3b8', indigo: '#2563EB', emerald: '#059669', amber: '#D97706', rose: '#E11D48' };
+  const s = { bg: '#FAFAF8', card: 'white', border: '#E5E4E0', text: '#1C1B18', text2: '#57534E', text3: '#A8A29E', indigo: '#3B5EDE', emerald: '#059669', amber: '#D97706', rose: '#E11D48' };
 
   if (loading) return (
     <div style={{minHeight:'100vh',background:s.bg,display:'flex',alignItems:'center',justifyContent:'center'}}>
@@ -9735,12 +9735,15 @@ const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPend
   // ── Sub-components ────────────────────────────────────────────────────────────
   const StatPill = ({value, label, color}) => (
     <div style={{display:"flex",flexDirection:"column",alignItems:"flex-start",
-      background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
-      padding:"14px 18px",flex:1}}>
-      <div style={{fontFamily:"var(--font-mono)",fontWeight:800,fontSize:22,color,lineHeight:1,marginBottom:4}}>
+      background:"var(--bg2)",border:"1.5px solid var(--border)",
+      borderTop:`3px solid ${color}`,
+      borderRadius:"var(--r-lg)",padding:"16px 20px",flex:1,
+      boxShadow:"var(--shadow-sm)"}}>
+      <div style={{fontFamily:"var(--font-mono)",fontWeight:800,fontSize:26,color,
+        lineHeight:1,marginBottom:5,letterSpacing:"-.02em"}}>
         {value}
       </div>
-      <div style={{fontSize:11,color:"var(--text3)",lineHeight:1.3}}>{label}</div>
+      <div style={{fontSize:12,color:"var(--text3)",lineHeight:1.3,fontWeight:500}}>{label}</div>
     </div>
   );
 
@@ -9807,8 +9810,8 @@ const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPend
       {/* Header */}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
         <div>
-          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>{greeting}</h1>
-          <div style={{fontSize:13,color:"var(--text3)"}}>{dateStr}</div>
+          <h1 style={{fontWeight:800,fontSize:28,letterSpacing:"-.04em",marginBottom:5,color:"var(--text)"}}>{greeting}</h1>
+          <div style={{fontSize:13,color:"var(--text3)",fontWeight:500}}>{dateStr}</div>
         </div>
         <button onClick={load} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
           borderRadius:"var(--r)",padding:"8px 16px",fontSize:12,fontWeight:600,
@@ -9865,7 +9868,7 @@ const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPend
 
       {/* AI Summary */}
       {(aiSummary||aiSumLoading)&&(
-        <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.2)",
+        <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,0.2)",
           borderRadius:"var(--r-lg)",padding:"16px 20px",marginBottom:24,display:"flex",gap:12,alignItems:"flex-start"}}>
           <div style={{width:28,height:28,borderRadius:"var(--r-sm)",background:"var(--indigo)",
             display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,marginTop:1}}>
@@ -10760,14 +10763,14 @@ export default function App() {
           <div style={{padding:"22px 16px 18px",borderBottom:"1px solid var(--sidebar-border)"}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
               <div style={{width:32,height:32,borderRadius:"var(--r)",
-                background:"linear-gradient(135deg,rgba(126,179,255,0.18),rgba(37,99,235,0.30))",
-                border:"1px solid rgba(255,255,255,0.12)",
-                display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                background:"var(--indigo)",
+                display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,
+                boxShadow:"0 2px 10px var(--indigo-glow)"}}>
                 <svg width="18" height="10" viewBox="0 0 18 10" fill="none">
-                  <path d="M0 5H4L6 1L8 9L10 2L12 7L14 5H18" stroke="#7EB3FF" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                  <path d="M0 5H4L6 1L8 9L10 2L12 7L14 5H18" stroke="white" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
                 </svg>
               </div>
-              <span style={{fontWeight:800,fontSize:16,letterSpacing:"-.04em",color:"rgba(255,255,255,0.92)"}}>Pulse</span>
+              <span style={{fontWeight:800,fontSize:16,letterSpacing:"-.04em",color:"var(--text)"}}>Pulse</span>
             </div>
           </div>
 
@@ -10813,11 +10816,11 @@ export default function App() {
           <div style={{padding:"14px 12px",borderTop:"1px solid var(--sidebar-border)"}}>
             {session?.user && (
               <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,
-                padding:"8px 10px",background:"rgba(255,255,255,0.06)",borderRadius:"var(--r)"}}>
+                padding:"8px 10px",background:"rgba(0,0,0,0.04)",borderRadius:"var(--r)"}}>
                 <Avatar name={session.user.fullName||session.user.email} size={28}/>
                 <div style={{flex:1,minWidth:0}}>
                   <div style={{fontSize:12,fontWeight:600,overflow:"hidden",
-                    textOverflow:"ellipsis",whiteSpace:"nowrap",color:"rgba(255,255,255,0.85)"}}>
+                    textOverflow:"ellipsis",whiteSpace:"nowrap",color:"var(--text)"}}>
                     {session.user.fullName||session.user.email}
                   </div>
                   {session.user.company&&(
@@ -10947,7 +10950,7 @@ export default function App() {
             {/* Migration banner — shown when local data exists but DB is empty */}
             {apiReady&&API_URL&&accounts.length===0&&!migrateDone&&
               localStorage.getItem("pulse_v4")&&JSON.parse(localStorage.getItem("pulse_v4")||"[]").length>0&&(
-              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(37,99,235,0.2)",
+              <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,0.2)",
                 borderRadius:"var(--r-lg)",padding:"18px 22px",marginBottom:24,
                 display:"flex",justifyContent:"space-between",alignItems:"center",gap:16,
                 animation:"fadeUp .2s ease"}}>
