@@ -490,6 +490,8 @@ const Ic = ({ n, size=16, color="currentColor", style={} }) => {
     pipeline:   <><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></>,
     playbooks:  <><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></>,
     briefing:   <><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></>,
+    email:      <><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></>,
+    overview:   <><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></>,
     integrations:<><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></>,
     // Actions
     edit:       <><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></>,
@@ -10108,7 +10110,7 @@ export default function App() {
     { id:"tasks",       icon:"tasks",        label:"Tasks",             active:true, badge:taskAlerts>0?taskAlerts:null },
     // ── Manage ──────────────────────────────────────────────────────────────────
     { divider:"Manage" },
-    { id:"overview",    icon:"portfolio",    label:"Overview",          active:true  },
+    { id:"overview",    icon:"overview",     label:"Overview",          active:true  },
     { id:"pipeline",    icon:"pipeline",     label:"Renewal Pipeline",  active:true  },
     { id:"playbooks",   icon:"playbooks",    label:"Playbooks",         active:true, badge:playbookAlerts>0?playbookAlerts:null },
     { id:"onboarding",  icon:"onboarding",   label:"Onboarding",        active:true },
@@ -10156,7 +10158,7 @@ export default function App() {
                   background:view===n.id?"var(--indigo-dim)":"none",
                   cursor:n.active?"pointer":"not-allowed",opacity:n.active?1:0.4}}>
                 <div style={{display:"flex",alignItems:"center",gap:9}}>
-                  <Ic n={n.id} size={15} color={view===n.id?"var(--indigo)":"var(--text3)"}/>
+                  <Ic n={n.icon||n.id} size={15} color={view===n.id?"var(--indigo)":"var(--text3)"}/>
                   <span style={{fontSize:13,color:view===n.id?"var(--indigo)":"var(--text2)",fontWeight:view===n.id?600:400}}>{n.label}</span>
                 </div>
                 {n.badge&&(
