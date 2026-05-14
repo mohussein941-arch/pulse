@@ -2019,6 +2019,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const [digestEnabled,  setDigestEnabled]  = useState(false);
   const [digestId,       setDigestId]       = useState(null);
   const [digestFreq,     setDigestFreq]     = useState("monthly");
+  const [digestToggling, setDigestToggling] = useState(false);
 
   useEffect(()=>{
     if (!call || !account.id) return;
@@ -2088,7 +2089,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const saveAct=()=>{ onUpdate(account.id,{nextAction:actDraft}); setEditAct(false); toast("Next action saved","success"); };
 
   const toggleDigest = async () => {
-    if (!call) return;
+    if (!call || digestToggling) return;
+    setDigestToggling(true);
     try {
       if (digestId) {
         if (digestEnabled) {
@@ -2103,9 +2105,10 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
       } else {
         const d = await call("POST", "/api/schedules/digests", { account_id: account.id, frequency: digestFreq });
         setDigestId(d.schedule.id); setDigestEnabled(true);
-        toast("Monthly health digest activated","success");
+        toast(`${digestFreq.charAt(0).toUpperCase()+digestFreq.slice(1)} health digest activated`,"success");
       }
     } catch { toast("Could not update digest settings","error"); }
+    finally { setDigestToggling(false); }
   };
 
   const TABS = [
@@ -2784,21 +2787,22 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                     </div>
                   </div>
                   <div style={{display:"flex",alignItems:"center",gap:10}}>
-                    {digestEnabled&&(
-                      <select value={digestFreq}
-                        onChange={async e=>{ const f=e.target.value; setDigestFreq(f);
-                          if (digestId) await call("PATCH",`/api/schedules/digests/${digestId}`,{frequency:f}); }}
-                        style={{fontSize:11,padding:"4px 8px",background:"var(--bg3)",
-                          border:"1.5px solid var(--border)",borderRadius:"var(--r-sm)",
-                          color:"var(--text)",fontFamily:"var(--font-display)"}}>
-                        <option value="monthly">Monthly</option>
-                        <option value="quarterly">Quarterly</option>
-                      </select>
-                    )}
+                    <select value={digestFreq}
+                      onChange={async e=>{ const f=e.target.value; setDigestFreq(f);
+                        if (digestId) await call("PATCH",`/api/schedules/digests/${digestId}`,{frequency:f}); }}
+                      style={{fontSize:11,padding:"4px 8px",background:"var(--bg3)",
+                        border:"1.5px solid var(--border)",borderRadius:"var(--r-sm)",
+                        color:"var(--text)",fontFamily:"var(--font-display)",
+                        opacity:digestEnabled?1:0.45}}>
+                      <option value="monthly">Monthly</option>
+                      <option value="quarterly">Quarterly</option>
+                    </select>
                     <div onClick={toggleDigest}
-                      style={{width:36,height:20,borderRadius:99,cursor:"pointer",flexShrink:0,
+                      style={{width:36,height:20,borderRadius:99,
+                        cursor:digestToggling?"not-allowed":"pointer",flexShrink:0,
                         background:digestEnabled?"var(--indigo)":"var(--bg4)",
-                        position:"relative",transition:"background .15s"}}>
+                        opacity:digestToggling?0.6:1,
+                        position:"relative",transition:"background .15s, opacity .15s"}}>
                       <div style={{width:16,height:16,borderRadius:"50%",background:"white",
                         position:"absolute",top:2,left:digestEnabled?18:2,transition:"left .15s"}}/>
                     </div>
@@ -5656,6 +5660,10 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
                     <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,
                       background:"rgba(5,150,105,.1)",color:"var(--emerald)"}}>Approved</span>
                   )}
+                  {item.status==="dismissed"&&(
+                    <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,
+                      background:"var(--bg4)",color:"var(--text3)"}}>Dismissed</span>
+                  )}
                 </div>
                 <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:8}}>
                   {new Date(item.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}
@@ -5762,6 +5770,22 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
                   </button>
                 </div>
               )}
+              {item.status==="dismissed" && (
+                <div style={{display:"flex",gap:8,paddingTop:4,borderTop:"1px solid var(--border)"}}>
+                  <button onClick={()=>{ patch(item.id,{status:"pending"}); toast?.("Restored to queue","success"); }}
+                    style={{background:"var(--bg3)",color:"var(--text2)",border:"1.5px solid var(--border)",
+                      borderRadius:"var(--r-sm)",padding:"8px 14px",fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Restore
+                  </button>
+                  <button onClick={()=>{ remove(item.id); toast?.("Draft deleted","info"); }}
+                    style={{background:"none",color:"var(--rose)",border:"1.5px solid rgba(225,29,72,.2)",
+                      borderRadius:"var(--r-sm)",padding:"8px 14px",fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Delete
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
@@ -5811,13 +5835,6 @@ const OutreachQueuePage = ({ call, accounts, toast }) => {
 };
 
 // ── Survey Schedules section ───────────────────────────────────────────────────
-const SCHEDULE_TRIGGERS = {
-  onboarding_complete: { label:"After Onboarding",  desc:"Send X days after account is created" },
-  recurring:           { label:"Recurring",          desc:"Send every X days on repeat"          },
-  renewal_approaching: { label:"Before Renewal",    desc:"Send X days before renewal date"       },
-  health_recovery:     { label:"Health Recovery",   desc:"Send when health score reaches X+"     },
-};
-
 const SurveySchedulesSection = ({ session, toast }) => {
   const [schedules, setSchedules] = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -6109,6 +6126,12 @@ const SurveySchedulesSection = ({ session, toast }) => {
                   color:"var(--indigo)",background:"var(--indigo-dim)",
                   padding:"2px 8px",borderRadius:99}}>{s.survey_type}</span>
                 <span style={{fontSize:11,color:"var(--text3)"}}>{triggerDesc(s)}</span>
+                {(s.segment_config?.plan||s.segment_config?.stage)&&(
+                  <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,
+                    background:"var(--bg4)",color:"var(--text2)"}}>
+                    {[s.segment_config.plan, s.segment_config.stage].filter(Boolean).join(" · ")}
+                  </span>
+                )}
               </div>
             </div>
             {/* Toggle */}
