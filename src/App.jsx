@@ -2433,22 +2433,24 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
 
 // ─── Bulk upload ──────────────────────────────────────────────────────────────
 const TEMPLATE_FIELDS = [
-  { key:"name",         label:"Company Name",      required:true,  hint:"e.g. Noon E-Commerce" },
-  { key:"industry",     label:"Industry",          required:false, hint:"e.g. E-Commerce"       },
-  { key:"plan",         label:"Plan",              required:false, hint:"Starter / Growth / Enterprise" },
-  { key:"arr",          label:"ARR ($)",           required:false, hint:"e.g. 84000"             },
-  { key:"renewalDate",  label:"Renewal Date",      required:false, hint:"YYYY-MM-DD"             },
-  { key:"nps",          label:"NPS (0-100)",       required:false, hint:"e.g. 65"                },
-  { key:"ces",          label:"CES (1-5)",         required:false, hint:"e.g. 3.8"               },
-  { key:"productUsage", label:"Product Usage (%)", required:false, hint:"e.g. 75"                },
-  { key:"openTickets",  label:"Open Tickets",      required:false, hint:"e.g. 2"                 },
-  { key:"nextAction",   label:"Next Action",       required:false, hint:"e.g. Book QBR by Feb 1" },
-  { key:"notes",        label:"Notes",             required:false, hint:"Key context, risks…"    },
+  { key:"name",         label:"Company Name",      required:true,  hint:"e.g. Noon E-Commerce"           },
+  { key:"domain",       label:"Company Domain",    required:false, hint:"e.g. noon.com (for email match)" },
+  { key:"industry",     label:"Industry",          required:false, hint:"e.g. E-Commerce"                 },
+  { key:"plan",         label:"Plan",              required:false, hint:"Starter / Growth / Enterprise"   },
+  { key:"arr",          label:"ARR ($)",           required:false, hint:"e.g. 84000"                      },
+  { key:"renewalDate",  label:"Renewal Date",      required:false, hint:"YYYY-MM-DD"                      },
+  { key:"lastContact",  label:"Last Contact",      required:false, hint:"YYYY-MM-DD"                      },
+  { key:"nps",          label:"NPS (0-100)",       required:false, hint:"e.g. 65"                         },
+  { key:"ces",          label:"CES (1-5)",         required:false, hint:"e.g. 3.8"                        },
+  { key:"productUsage", label:"Product Usage (%)", required:false, hint:"e.g. 75"                         },
+  { key:"openTickets",  label:"Open Tickets",      required:false, hint:"e.g. 2"                          },
+  { key:"nextAction",   label:"Next Action",       required:false, hint:"e.g. Book QBR by Feb 1"          },
+  { key:"notes",        label:"Notes",             required:false, hint:"Key context, risks…"             },
 ];
 
 const downloadTemplate = () => {
   const header  = TEMPLATE_FIELDS.map(f=>f.label).join(",");
-  const example = ["Noon E-Commerce","E-Commerce","Enterprise","120000","2026-09-15","72","4.2","88","2","Send renewal proposal to Sara","Strong relationship with Sara"].join(",");
+  const example = ["Noon E-Commerce","noon.com","E-Commerce","Enterprise","120000","2026-09-15","2026-04-10","72","4.2","88","2","Send renewal proposal to Sara","Strong relationship with Sara"].join(",");
   const hint    = TEMPLATE_FIELDS.map(f=>f.hint).join(",");
   const csv     = [header, example, `# Hints: ${hint}`].join("\n");
   const blob    = new Blob([csv],{type:"text/csv"});
@@ -2516,11 +2518,14 @@ const validateRow = (raw, headerMap) => {
   }
   const ces=parseFloat(r.ces)||3.5, nps=parseInt(r.nps)||50, usage=parseInt(r.productUsage)||60, tickets=parseInt(r.openTickets)||0;
   const {total,stage}=calcHealth({nps,ces,productUsage:usage,openTickets:tickets});
+  if(r.lastContact){const d=new Date(r.lastContact);if(isNaN(d.getTime()))errors.push("Last Contact must be YYYY-MM-DD");}
   const account={
-    id:Date.now()+Math.random(), name:r.name, industry:r.industry||"", plan:r.plan,
+    id:Date.now()+Math.random(), name:r.name, domain:r.domain?.trim().toLowerCase()||"",
+    industry:r.industry||"", plan:r.plan,
     arr:parseInt(r.arr)||0, renewalDate:r.renewalDate||"", nps, ces,
     cesHistory:[{date:todayStr(),value:ces}], productUsage:usage, openTickets:tickets,
-    healthScore:total, churnRisk:100-total, stage, lastContact:todayStr(), archived:false,
+    healthScore:total, churnRisk:100-total, stage,
+    lastContact:r.lastContact||todayStr(), archived:false,
     nextAction:r.nextAction||"", notes:r.notes||"",
     stakeholders:[], activityLog:[], successPlan:{goal:"",milestones:[]},
     activePlaybookId:null, activePlaybookSteps:{}, snoozedPlaybooks:[], prepNotes:"",
