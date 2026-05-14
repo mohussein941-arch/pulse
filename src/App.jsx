@@ -527,6 +527,10 @@ const Ic = ({ n, size=16, color="currentColor", style={} }) => {
     automation:  <><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/><circle cx="12" cy="12" r="3"/></>,
     onboarding:  <><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/><circle cx="12" cy="12" r="3" fill="none"/></>,
     settings:    <><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></>,
+    perf:        <><path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/></>,
+    escalate:    <><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></>,
+    expand:      <><polyline points="15 3 21 3 21 9"/><polyline points="9 21 3 21 3 15"/><line x1="21" y1="3" x2="14" y2="10"/><line x1="3" y1="21" x2="10" y2="14"/></>,
+    archive:     <><polyline points="21 8 21 21 3 21 3 8"/><rect x="1" y="3" width="22" height="5"/><line x1="10" y1="12" x2="14" y2="12"/></>,
   };
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
@@ -2044,12 +2048,22 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
 const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab="overview", manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
-  const [showStk,    setShowStk]    = useState(false);
-  const [showEdit,   setShowEdit]   = useState(false);
-  const [showDel,    setShowDel]    = useState(false);
-  const [showCES,    setShowCES]    = useState(false);
-  const [showPrep,   setShowPrep]   = useState(false);
-  const [showPortal, setShowPortal] = useState(false);
+  const [showStk,      setShowStk]      = useState(false);
+  const [showEdit,     setShowEdit]     = useState(false);
+  const [showDel,      setShowDel]      = useState(false);
+  const [showChurn,    setShowChurn]    = useState(false);
+  const [showCES,      setShowCES]      = useState(false);
+  const [showPrep,     setShowPrep]     = useState(false);
+  const [showPortal,   setShowPortal]   = useState(false);
+  const [showEscalate, setShowEscalate] = useState(false);
+  const [escReasonDraft, setEscReasonDraft] = useState("");
+  const [escNotesDraft,  setEscNotesDraft]  = useState("");
+  const [showExpand,   setShowExpand]   = useState(false);
+  const [expDraft, setExpDraft] = useState({
+    arr:   account.expansionArr   || 0,
+    stage: account.expansionStage || "",
+    notes: account.expansionNotes || "",
+  });
   const [tab,setTab]             = useState(initialTab);
   const [logF,setLogF]           = useState({type:"Call",note:"",date:todayStr(),title:"",attendees:"",actionItems:""});
   const [digestEnabled,  setDigestEnabled]  = useState(false);
@@ -2230,13 +2244,21 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
               <button onClick={()=>setShowPortal(true)}
                 style={{background:"var(--indigo-dim)",border:"none",color:"var(--indigo)",
                   cursor:"pointer",padding:"6px 12px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600}}>Portal</button>
+              <button onClick={()=>{setEscReasonDraft(account.escalationReason||"");setEscNotesDraft(account.escalationNotes||"");setShowEscalate(true);}}
+                style={{background:account.escalationStatus==="open"?"var(--rose-dim)":"var(--bg3)",
+                  border:"none",color:account.escalationStatus==="open"?"var(--rose)":"var(--text2)",
+                  cursor:"pointer",padding:"6px 10px",borderRadius:"var(--r-sm)",display:"flex",alignItems:"center",gap:5,
+                  fontSize:12,fontWeight:600}}>
+                <Ic n="escalate" size={13} color={account.escalationStatus==="open"?"var(--rose)":"var(--text2)"}/>
+                {account.escalationStatus==="open"?"Escalated":"Escalate"}
+              </button>
               <button onClick={()=>setShowEdit(true)}
                 style={{background:"var(--bg3)",border:"none",color:"var(--text2)",
                   cursor:"pointer",padding:"6px 12px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600}}>Edit</button>
-              <button onClick={()=>setShowDel(true)}
+              <button onClick={()=>setShowChurn(true)}
                 style={{background:"var(--rose-dim)",border:"none",color:"var(--rose)",
                   cursor:"pointer",padding:"6px 10px",borderRadius:"var(--r-sm)",display:"flex",alignItems:"center"}}>
-                <Ic n="trash" size={14} color="var(--rose)"/></button>
+                <Ic n="archive" size={14} color="var(--rose)"/></button>
             </div>
           </div>
 
@@ -2379,6 +2401,114 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                 <div style={{fontSize:12,color:"var(--text)",lineHeight:1.6}}>{account.notes}</div>
               </div>
             )}
+
+            {/* Escalation banner */}
+            {account.escalationStatus==="open"&&(
+              <div style={{background:"var(--rose-dim)",border:"1.5px solid rgba(225,29,72,0.3)",
+                borderRadius:"var(--r)",padding:"12px 14px",marginTop:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7}}>
+                    <Ic n="escalate" size={13} color="var(--rose)"/>
+                    <span style={{fontSize:11,fontWeight:700,color:"var(--rose)",textTransform:"uppercase",letterSpacing:".06em"}}>Escalated</span>
+                    {account.escalationSince&&(
+                      <span style={{fontSize:10,color:"var(--rose)",opacity:.7}}>since {account.escalationSince}</span>
+                    )}
+                  </div>
+                  <button onClick={()=>onUpdate(account.id,{escalationStatus:"resolved"})}
+                    style={{fontSize:11,fontWeight:600,color:"var(--rose)",background:"none",border:"1px solid rgba(225,29,72,0.4)",
+                      borderRadius:"var(--r-sm)",padding:"3px 10px",cursor:"pointer"}}>
+                    Resolve
+                  </button>
+                </div>
+                {account.escalationReason&&(
+                  <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{account.escalationReason}</div>
+                )}
+              </div>
+            )}
+
+            {/* Expansion opportunity */}
+            {(account.expansionPotential||showExpand)&&(
+              <div style={{background:"rgba(5,150,105,.06)",border:"1.5px solid rgba(5,150,105,.25)",
+                borderRadius:"var(--r)",padding:"12px 14px",marginTop:14}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7}}>
+                    <Ic n="expand" size={13} color="var(--emerald)"/>
+                    <span style={{fontSize:11,fontWeight:700,color:"var(--emerald)",textTransform:"uppercase",letterSpacing:".06em"}}>Expansion Opportunity</span>
+                  </div>
+                  {!showExpand&&(
+                    <button onClick={()=>{setExpDraft({arr:account.expansionArr||0,stage:account.expansionStage||"",notes:account.expansionNotes||""});setShowExpand(true);}}
+                      style={{fontSize:11,color:"var(--emerald)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Edit</button>
+                  )}
+                </div>
+                {showExpand?(
+                  <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:3}}>Potential ARR ($)</div>
+                        <input type="number" value={expDraft.arr} onChange={e=>setExpDraft(d=>({...d,arr:e.target.value}))}
+                          style={{width:"100%",padding:"6px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--border)",
+                            background:"var(--bg2)",color:"var(--text)",fontSize:13,fontFamily:"var(--font-display)"}}/>
+                      </div>
+                      <div>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:3}}>Stage</div>
+                        <select value={expDraft.stage} onChange={e=>setExpDraft(d=>({...d,stage:e.target.value}))}
+                          style={{width:"100%",padding:"6px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--border)",
+                            background:"var(--bg2)",color:"var(--text)",fontSize:13}}>
+                          <option value="">Select…</option>
+                          {["Identified","Qualifying","Proposing","Negotiating","Closed Won"].map(s=><option key={s}>{s}</option>)}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <div style={{fontSize:10,color:"var(--text3)",marginBottom:3}}>Notes</div>
+                      <textarea value={expDraft.notes} onChange={e=>setExpDraft(d=>({...d,notes:e.target.value}))}
+                        placeholder="Which products, expansion trigger…"
+                        style={{width:"100%",padding:"6px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--border)",
+                          background:"var(--bg2)",color:"var(--text)",fontSize:12,resize:"vertical",minHeight:52,
+                          fontFamily:"var(--font-display)"}}/>
+                    </div>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>{
+                        onUpdate(account.id,{expansionPotential:true,expansionArr:parseFloat(expDraft.arr)||0,expansionStage:expDraft.stage,expansionNotes:expDraft.notes});
+                        setShowExpand(false);toast("Expansion opportunity saved","success");
+                      }} style={{flex:1,padding:"7px 0",borderRadius:"var(--r-sm)",border:"none",
+                        background:"var(--emerald)",color:"white",fontSize:12,fontWeight:600,cursor:"pointer"}}>Save</button>
+                      <button onClick={()=>setShowExpand(false)}
+                        style={{padding:"7px 14px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--border)",
+                          background:"none",color:"var(--text2)",fontSize:12,cursor:"pointer"}}>Cancel</button>
+                    </div>
+                  </div>
+                ):(
+                  <div style={{display:"flex",gap:16,flexWrap:"wrap"}}>
+                    {account.expansionArr>0&&(
+                      <div>
+                        <div style={{fontSize:10,color:"var(--text3)"}}>Potential ARR</div>
+                        <div style={{fontSize:14,fontWeight:700,color:"var(--emerald)",fontFamily:"var(--font-mono)"}}>{fmtMoney(account.expansionArr)}</div>
+                      </div>
+                    )}
+                    {account.expansionStage&&(
+                      <div>
+                        <div style={{fontSize:10,color:"var(--text3)"}}>Stage</div>
+                        <div style={{fontSize:13,fontWeight:600,color:"var(--emerald)"}}>{account.expansionStage}</div>
+                      </div>
+                    )}
+                    {account.expansionNotes&&(
+                      <div style={{width:"100%",fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{account.expansionNotes}</div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+            {!account.expansionPotential&&!showExpand&&(
+              <button onClick={()=>{setExpDraft({arr:0,stage:"",notes:""});setShowExpand(true);}}
+                style={{width:"100%",marginTop:10,padding:"6px 0",border:"1.5px dashed rgba(5,150,105,.3)",
+                  borderRadius:"var(--r-sm)",background:"none",color:"var(--emerald)",fontSize:11,fontWeight:600,
+                  cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+                <Ic n="expand" size={12} color="var(--emerald)"/>
+                Mark as expansion opportunity
+              </button>
+            )}
+
           </div>
         </div>
 
@@ -2613,11 +2743,19 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
               <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-                  <div>
+                  <div style={{flex:1}}>
                     <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Overall Health</div>
                     <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:32,color:hColor(account.healthScore)}}>
                       {account.healthScore}<span style={{fontSize:16,color:"var(--text3)",fontWeight:400}}>/100</span>
                     </div>
+                    {(account.healthHistory||[]).length>=2&&(
+                      <div style={{marginTop:10}}>
+                        <div style={{fontSize:10,color:"var(--text3)",marginBottom:5}}>Trend ({(account.healthHistory||[]).length} snapshots)</div>
+                        <Sparkline
+                          data={(account.healthHistory||[]).map(h=>({value:h.score}))}
+                          color={hColor(account.healthScore)} width={180} height={36}/>
+                      </div>
+                    )}
                   </div>
                   <Ring score={account.healthScore} size={64}/>
                 </div>
@@ -2860,7 +2998,167 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
       {showDel &&<Confirm msg={`Permanently delete "${account.name}"? This cannot be undone.`}
         onConfirm={()=>{onDelete(account.id);setShowDel(false);toast("Account deleted","info");}}
         onCancel={()=>setShowDel(false)}/>}
+      {showChurn&&<ChurnModal account={account} call={call} toast={toast}
+        onClose={()=>setShowChurn(false)}
+        onChurned={()=>{onUpdate(account.id,{archived:true});setShowChurn(false);onClose();}}/>}
+      {showEscalate&&(
+        <div onClick={e=>e.target===e.currentTarget&&setShowEscalate(false)}
+          style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",backdropFilter:"blur(6px)",
+            display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
+          <div style={{background:"var(--bg2)",borderRadius:"var(--r-2xl)",width:"100%",maxWidth:460,
+            padding:28,boxShadow:"var(--shadow-lg)",animation:"scaleIn .2s ease"}}>
+            <div style={{fontWeight:800,fontSize:17,marginBottom:6}}>
+              {account.escalationStatus==="open"?"Manage Escalation":"Escalate Account"}
+            </div>
+            <div style={{fontSize:13,color:"var(--text3)",marginBottom:20}}>
+              {account.escalationStatus==="open"
+                ?"Update the escalation or mark it resolved."
+                :`Flag ${account.name} as an active escalation visible in your Daily Briefing.`}
+            </div>
+            <div style={{marginBottom:14}}>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:6}}>Reason / Description</div>
+              <textarea value={escReasonDraft} onChange={e=>setEscReasonDraft(e.target.value)}
+                placeholder="What's the issue? e.g. Executive sponsor churned, SLA breach, critical bug…"
+                style={{width:"100%",padding:"9px 12px",borderRadius:"var(--r)",border:"1.5px solid var(--border)",
+                  background:"var(--bg3)",color:"var(--text)",fontSize:13,resize:"vertical",minHeight:80,
+                  fontFamily:"var(--font-display)"}}/>
+            </div>
+            <div style={{marginBottom:20}}>
+              <div style={{fontSize:11,color:"var(--text3)",marginBottom:6}}>Internal notes (optional)</div>
+              <textarea value={escNotesDraft} onChange={e=>setEscNotesDraft(e.target.value)}
+                placeholder="Stakeholders involved, action plan…"
+                style={{width:"100%",padding:"9px 12px",borderRadius:"var(--r)",border:"1.5px solid var(--border)",
+                  background:"var(--bg3)",color:"var(--text)",fontSize:13,resize:"vertical",minHeight:60,
+                  fontFamily:"var(--font-display)"}}/>
+            </div>
+            <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>
+              {account.escalationStatus==="open"&&(
+                <button onClick={()=>{
+                  onUpdate(account.id,{escalationStatus:"resolved",escalationReason:escReasonDraft,escalationNotes:escNotesDraft});
+                  setShowEscalate(false);toast("Escalation resolved","success");
+                }} style={{padding:"9px 18px",borderRadius:"var(--r)",border:"1.5px solid rgba(5,150,105,.4)",
+                  background:"rgba(5,150,105,.08)",color:"var(--emerald)",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                  Mark Resolved
+                </button>
+              )}
+              <button onClick={()=>{
+                if (!escReasonDraft.trim()) return;
+                onUpdate(account.id,{
+                  escalationStatus:"open",
+                  escalationReason:escReasonDraft,
+                  escalationNotes:escNotesDraft,
+                  escalationSince:account.escalationSince||new Date().toISOString().split("T")[0],
+                });
+                setShowEscalate(false);toast("Account escalated","success");
+              }} style={{flex:1,padding:"9px 18px",borderRadius:"var(--r)",border:"none",
+                background:"var(--rose)",color:"white",fontSize:13,fontWeight:600,cursor:"pointer"}}>
+                {account.escalationStatus==="open"?"Update Escalation":"Escalate Account"}
+              </button>
+              <button onClick={()=>setShowEscalate(false)}
+                style={{padding:"9px 18px",borderRadius:"var(--r)",border:"1.5px solid var(--border)",
+                  background:"none",color:"var(--text2)",fontSize:13,cursor:"pointer"}}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
+  );
+};
+
+// ─── Churn modal ─────────────────────────────────────────────────────────────
+const CHURN_REASONS = [
+  "Contract ended — not renewed",
+  "Budget cut / downsizing",
+  "Chose a competitor",
+  "Product not the right fit",
+  "Merger / acquisition",
+  "Company shut down",
+  "Low adoption / no value realised",
+  "Other",
+];
+
+const ChurnModal = ({ account, call, toast, onClose, onChurned }) => {
+  const [reason,     setReason]     = useState("");
+  const [notes,      setNotes]      = useState("");
+  const [churnedAt,  setChurnedAt]  = useState(new Date().toISOString().split("T")[0]);
+  const [saving,     setSaving]     = useState(false);
+
+  const submit = async () => {
+    if (!reason) return;
+    setSaving(true);
+    // Try to log churn event — best effort, don't block archive if it fails
+    if (call) {
+      try {
+        await call("POST", `/api/accounts/${account.id}/churn`, { reason, notes, churnedAt });
+      } catch {
+        // Log failed — account still archived via onChurned
+      }
+    }
+    toast(`${account.name} archived`, "success");
+    onChurned();
+    setSaving(false);
+  };
+
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()}
+      style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.45)",backdropFilter:"blur(6px)",
+        display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
+      <div style={{background:"var(--bg2)",borderRadius:"var(--r-2xl)",width:"100%",maxWidth:480,
+        padding:28,boxShadow:"var(--shadow-lg)",animation:"scaleIn .2s ease"}}>
+
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:20}}>
+          <div style={{width:38,height:38,borderRadius:"var(--r)",background:"var(--rose-dim)",
+            display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+            <Ic n="archive" size={18} color="var(--rose)"/>
+          </div>
+          <div>
+            <div style={{fontWeight:800,fontSize:16}}>Archive Account</div>
+            <div style={{fontSize:12,color:"var(--text3)",marginTop:2}}>{account.name} · {fmtMoney(account.arr)} ARR</div>
+          </div>
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:11,color:"var(--text3)",fontWeight:600,marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>Churn reason *</div>
+          <select value={reason} onChange={e=>setReason(e.target.value)}
+            style={{width:"100%",padding:"9px 12px",borderRadius:"var(--r)",border:`1.5px solid ${reason?"var(--border)":"rgba(225,29,72,0.4)"}`,
+              background:"var(--bg3)",color:reason?"var(--text)":"var(--text3)",fontSize:13,fontFamily:"var(--font-display)"}}>
+            <option value="">Select a reason…</option>
+            {CHURN_REASONS.map(r=><option key={r} value={r}>{r}</option>)}
+          </select>
+        </div>
+
+        <div style={{marginBottom:14}}>
+          <div style={{fontSize:11,color:"var(--text3)",fontWeight:600,marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>Churn date</div>
+          <input type="date" value={churnedAt} onChange={e=>setChurnedAt(e.target.value)}
+            style={{width:"100%",padding:"9px 12px",borderRadius:"var(--r)",border:"1.5px solid var(--border)",
+              background:"var(--bg3)",color:"var(--text)",fontSize:13,fontFamily:"var(--font-mono)"}}/>
+        </div>
+
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:11,color:"var(--text3)",fontWeight:600,marginBottom:6,textTransform:"uppercase",letterSpacing:".05em"}}>Notes (optional)</div>
+          <textarea value={notes} onChange={e=>setNotes(e.target.value)}
+            placeholder="What happened? Lessons learned for future accounts…"
+            style={{width:"100%",padding:"9px 12px",borderRadius:"var(--r)",border:"1.5px solid var(--border)",
+              background:"var(--bg3)",color:"var(--text)",fontSize:13,resize:"vertical",minHeight:70,
+              fontFamily:"var(--font-display)"}}/>
+        </div>
+
+        <div style={{display:"flex",gap:10}}>
+          <button onClick={submit} disabled={!reason||saving}
+            style={{flex:1,padding:"10px 0",borderRadius:"var(--r)",border:"none",
+              background:reason?"var(--rose)":"var(--bg4)",color:reason?"white":"var(--text3)",
+              fontSize:13,fontWeight:700,cursor:reason?"pointer":"not-allowed",
+              opacity:saving?0.7:1}}>
+            {saving?"Saving…":"Archive & Log Churn"}
+          </button>
+          <button onClick={onClose}
+            style={{padding:"10px 18px",borderRadius:"var(--r)",border:"1.5px solid var(--border)",
+              background:"none",color:"var(--text2)",fontSize:13,cursor:"pointer"}}>
+            Cancel
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
@@ -3251,14 +3549,29 @@ const Card = ({ account, onClick, index }) => {
           <Avatar name={account.name} size={36}/>
           <div>
             <div style={{fontWeight:800,fontSize:14,marginBottom:4}}>{account.name}</div>
-            <div style={{display:"flex",gap:5,alignItems:"center"}}>
+            <div style={{display:"flex",gap:5,alignItems:"center",flexWrap:"wrap"}}>
               <span style={{fontSize:10,color:"var(--text3)"}}>{account.industry}</span>
               <span style={{fontSize:10,color:"var(--text3)"}}>·</span>
               <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
+              {account.escalationStatus==="open"&&(
+                <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:99,
+                  background:"var(--rose-dim)",color:"var(--rose)"}}>Escalated</span>
+              )}
+              {account.expansionPotential&&(
+                <span style={{fontSize:10,fontWeight:700,padding:"2px 7px",borderRadius:99,
+                  background:"rgba(5,150,105,.1)",color:"var(--emerald)"}}>Expansion</span>
+              )}
             </div>
           </div>
         </div>
-        <Ring score={account.healthScore} size={46}/>
+        <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:4}}>
+          <Ring score={account.healthScore} size={46}/>
+          {(account.healthHistory||[]).length>=2&&(
+            <Sparkline
+              data={(account.healthHistory||[]).map(h=>({value:h.score}))}
+              color={hColor(account.healthScore)} width={46} height={16}/>
+          )}
+        </div>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:12,
@@ -9484,12 +9797,50 @@ const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPend
       </div>
 
       {/* Stat row */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:10,marginBottom:28}}>
-        <StatPill value={topItems.length}          label="need attention"    color={topItems.length>0?"var(--rose)":"var(--emerald)"}/>
-        <StatPill value={outreachPending}           label="outreach drafts"  color={outreachPending>0?"var(--amber)":"var(--text3)"}/>
-        <StatPill value={tasksDue}                  label="tasks due"        color={tasksDue>0?"var(--amber)":"var(--text3)"}/>
-        <StatPill value={renewalsThisWeek.length}   label="renewing this week" color={renewalsThisWeek.length>0?"var(--indigo)":"var(--text3)"}/>
-      </div>
+      {(()=>{
+        const escalatedAccts = accounts.filter(a=>a.escalationStatus==="open");
+        return (
+          <div style={{display:"grid",gridTemplateColumns:"repeat(5,1fr)",gap:10,marginBottom:28}}>
+            <StatPill value={topItems.length}          label="need attention"     color={topItems.length>0?"var(--rose)":"var(--emerald)"}/>
+            <StatPill value={outreachPending}           label="outreach drafts"   color={outreachPending>0?"var(--amber)":"var(--text3)"}/>
+            <StatPill value={tasksDue}                  label="tasks due"         color={tasksDue>0?"var(--amber)":"var(--text3)"}/>
+            <StatPill value={renewalsThisWeek.length}   label="renewing this week" color={renewalsThisWeek.length>0?"var(--indigo)":"var(--text3)"}/>
+            <StatPill value={escalatedAccts.length}     label="escalations open"  color={escalatedAccts.length>0?"var(--rose)":"var(--text3)"}/>
+          </div>
+        );
+      })()}
+
+      {/* Escalated accounts banner */}
+      {(()=>{
+        const escalatedAccts = accounts.filter(a=>a.escalationStatus==="open");
+        if (!escalatedAccts.length) return null;
+        return (
+          <div style={{background:"var(--rose-dim)",border:"1.5px solid rgba(225,29,72,0.3)",
+            borderRadius:"var(--r-lg)",padding:"14px 18px",marginBottom:24}}>
+            <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:10}}>
+              <Ic n="escalate" size={14} color="var(--rose)"/>
+              <span style={{fontSize:12,fontWeight:700,color:"var(--rose)",textTransform:"uppercase",letterSpacing:".06em"}}>
+                Active Escalations ({escalatedAccts.length})
+              </span>
+            </div>
+            {escalatedAccts.map(a=>(
+              <div key={a.id} onClick={()=>onAccountClick&&onAccountClick(a.id)}
+                style={{display:"flex",justifyContent:"space-between",alignItems:"center",
+                  padding:"8px 0",borderTop:"1px solid rgba(225,29,72,.15)",cursor:"pointer"}}>
+                <div>
+                  <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{a.name}</span>
+                  {a.escalationReason&&(
+                    <span style={{fontSize:12,color:"var(--text3)",marginLeft:8}}>{a.escalationReason}</span>
+                  )}
+                </div>
+                {a.escalationSince&&(
+                  <span style={{fontSize:11,color:"var(--rose)",fontFamily:"var(--font-mono)"}}>since {a.escalationSince}</span>
+                )}
+              </div>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* AI Summary */}
       {(aiSummary||aiSumLoading)&&(
@@ -9671,6 +10022,150 @@ const ItemActions = ({item, onUpdate}) => {
           </button>
         </div>
       )}
+    </div>
+  );
+};
+
+// ─── My Performance ──────────────────────────────────────────────────────────
+const MyPerformancePage = ({ accounts, call }) => {
+  const [data,    setData]    = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [churnEvents, setChurnEvents] = useState([]);
+
+  useEffect(() => {
+    Promise.all([
+      call ? call("GET", "/api/performance").catch(() => null) : Promise.resolve(null),
+      call ? call("GET", "/api/accounts/churn").catch(() => ({ events:[] })) : Promise.resolve({ events:[] }),
+    ]).then(([perf, churn]) => {
+      setData(perf);
+      setChurnEvents(churn?.events || []);
+      setLoading(false);
+    });
+  }, [call]);
+
+  const active = (accounts || []).filter(a => !a.archived);
+
+  // Compute local portfolio stats as fallback
+  const scores    = active.filter(a => a.healthScore != null).map(a => a.healthScore);
+  const avgHealth = scores.length ? Math.round(scores.reduce((s,v)=>s+v,0)/scores.length) : null;
+  const atRisk    = active.filter(a => a.stage==="At Risk"||a.stage==="Needs Attention").length;
+  const escalated = active.filter(a => a.escalationStatus==="open").length;
+  const expansion = active.filter(a => a.expansionPotential).length;
+  const totalARR  = active.reduce((s,a)=>s+(a.arr||0),0);
+
+  const perf   = data;
+  const week   = perf?.week   || {};
+  const month  = perf?.month  || {};
+  const portf  = perf?.portfolio || {};
+
+  const StatBox = ({ value, label, sub, color="var(--text)" }) => (
+    <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"18px 20px"}}>
+      <div style={{fontFamily:"var(--font-mono)",fontWeight:800,fontSize:28,color,lineHeight:1,marginBottom:5}}>
+        {value ?? "—"}
+      </div>
+      <div style={{fontSize:13,fontWeight:600,color:"var(--text)",marginBottom:2}}>{label}</div>
+      {sub&&<div style={{fontSize:11,color:"var(--text3)"}}>{sub}</div>}
+    </div>
+  );
+
+  const SectionHeader = ({ title }) => (
+    <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",
+      letterSpacing:".08em",paddingTop:8,paddingBottom:2}}>{title}</div>
+  );
+
+  return (
+    <div style={{maxWidth:860,animation:"fadeUp .2s ease"}}>
+      <div style={{marginBottom:24}}>
+        <h2 style={{fontWeight:800,fontSize:22,letterSpacing:"-.02em",marginBottom:4}}>My Performance</h2>
+        <div style={{fontSize:13,color:"var(--text3)"}}>
+          {loading ? "Loading…" : `Week of ${week.start || "—"} · ${month.start ? `Month from ${month.start}` : ""}`}
+        </div>
+      </div>
+
+      {/* This week */}
+      <SectionHeader title="This week"/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24,marginTop:10}}>
+        <StatBox value={week.activitiesTotal}
+          label="Activities logged"
+          sub={Object.entries(week.activitiesByType||{}).map(([t,n])=>`${n} ${t}`).join(" · ")||"No activity yet"}
+          color={week.activitiesTotal>0?"var(--indigo)":"var(--text3)"}/>
+        <StatBox value={week.surveysSent}
+          label="Surveys sent"
+          color={week.surveysSent>0?"var(--violet)":"var(--text3)"}/>
+        <StatBox value={week.outreachSent}
+          label="Outreach sent"
+          sub={week.outreachPending>0?`${week.outreachPending} drafts pending`:""}
+          color={week.outreachSent>0?"var(--indigo)":"var(--text3)"}/>
+        <StatBox value={week.outreachPending}
+          label="Drafts pending"
+          sub="Need your review"
+          color={week.outreachPending>0?"var(--amber)":"var(--text3)"}/>
+      </div>
+
+      {/* This month */}
+      <SectionHeader title="This month"/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:24,marginTop:10}}>
+        <StatBox value={month.activitiesTotal}
+          label="Activities total"
+          sub={Object.entries(month.activitiesByType||{}).slice(0,3).map(([t,n])=>`${n} ${t}`).join(" · ")||""}
+          color="var(--text)"/>
+        <StatBox value={portf.total ?? active.length}
+          label="Accounts managed"
+          sub={`${fmtMoney(portf.totalARR ?? totalARR)} total ARR`}
+          color="var(--text)"/>
+        <StatBox value={portf.avgHealth ?? avgHealth}
+          label="Avg portfolio health"
+          sub="/100"
+          color={hColor((portf.avgHealth??avgHealth)??50)}/>
+        <StatBox value={portf.atRisk ?? atRisk}
+          label="At risk / needs attention"
+          color={(portf.atRisk??atRisk)>0?"var(--rose)":"var(--emerald)"}/>
+      </div>
+
+      {/* Portfolio health */}
+      <SectionHeader title="Portfolio snapshot"/>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:28,marginTop:10}}>
+        <StatBox value={portf.escalated ?? escalated}
+          label="Active escalations"
+          sub="Accounts flagged as escalated"
+          color={(portf.escalated??escalated)>0?"var(--rose)":"var(--text3)"}/>
+        <StatBox value={portf.expansion ?? expansion}
+          label="Expansion opportunities"
+          sub="Flagged for upsell"
+          color={(portf.expansion??expansion)>0?"var(--emerald)":"var(--text3)"}/>
+        <StatBox value={active.filter(a=>renewalRisk(a).label==="Critical"||renewalRisk(a).label==="At Risk").length}
+          label="Renewal risks"
+          sub="Critical or at risk"
+          color="var(--amber)"/>
+      </div>
+
+      {/* Churn log */}
+      <SectionHeader title="Churn log"/>
+      <div style={{marginTop:10}}>
+        {churnEvents.length===0?(
+          <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+            padding:"24px 20px",textAlign:"center",color:"var(--text3)",fontSize:13}}>
+            No churned accounts logged yet.
+          </div>
+        ):(
+          <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",overflow:"hidden"}}>
+            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 2fr",gap:0,
+              background:"var(--bg3)",padding:"8px 16px",
+              fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em"}}>
+              <span>Account</span><span>ARR</span><span>Date</span><span>Reason</span>
+            </div>
+            {churnEvents.map((ev,i)=>(
+              <div key={ev.id||i} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 2fr",gap:0,
+                padding:"12px 16px",borderTop:"1px solid var(--border)",alignItems:"center"}}>
+                <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{ev.account_name}</span>
+                <span style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--rose)"}}>{fmtMoney(ev.arr||0)}</span>
+                <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{(ev.churned_at||"").slice(0,10)}</span>
+                <span style={{fontSize:12,color:"var(--text2)"}}>{ev.reason}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
@@ -10224,6 +10719,7 @@ export default function App() {
     { id:"pipeline",    icon:"pipeline",     label:"Renewal Pipeline",  active:true  },
     { id:"playbooks",   icon:"playbooks",    label:"Playbooks",         active:true, badge:playbookAlerts>0?playbookAlerts:null },
     { id:"onboarding",  icon:"onboarding",   label:"Onboarding",        active:true },
+    { id:"performance", icon:"perf",         label:"My Performance",    active:true  },
     // ── Configure ───────────────────────────────────────────────────────────────
     { divider:"Configure" },
     { id:"surveys",     icon:"survey",       label:"Surveys",           active:true  },
@@ -10389,6 +10885,11 @@ export default function App() {
           {view==="onboarding"&&(
             <OnboardingPage call={call} toast={toast} accounts={active}
               onAccountClick={a=>{setSelected(a);setDetailTab("onboarding");}}/>
+          )}
+
+          {/* ── PERFORMANCE VIEW ── */}
+          {view==="performance"&&(
+            <MyPerformancePage accounts={active} call={call}/>
           )}
 
           {/* ── BRIEFING VIEW ── */}
