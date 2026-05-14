@@ -5885,51 +5885,210 @@ const SurveySchedulesSection = ({ session, toast }) => {
         </Btn>
       </div>
 
-      {showForm && (
-        <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
-          padding:"20px",marginBottom:20}}>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-            <div>
-              <label style={{fontSize:11,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:5}}>Name</label>
-              <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="90-Day Check-In NPS"
-                style={{width:"100%",padding:"8px 12px",background:"var(--bg2)",border:"1.5px solid var(--border)",
-                  borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:13,boxSizing:"border-box"}}/>
+      {showForm && (()=>{
+        const cfg = form.trigger_config || {};
+        const seg = form.segment_config || {};
+
+        // Live preview sentence — shows exactly what will happen in plain English
+        const surveyLabels = { NPS:"Net Promoter Score (NPS)", CES:"Customer Effort Score (CES)", CSAT:"Customer Satisfaction (CSAT)" };
+        const segDesc = seg.plan ? ` on ${seg.plan} accounts` : " on all accounts";
+        let whenDesc = "";
+        switch (form.trigger_type) {
+          case "onboarding_complete":
+            whenDesc = `${cfg.days||30} days after an account is created`; break;
+          case "recurring":
+            whenDesc = `every ${cfg.recurrence_days||90} days`; break;
+          case "renewal_approaching":
+            whenDesc = `${cfg.days_before||30} days before the renewal date`; break;
+          case "health_recovery":
+            whenDesc = `when health score reaches ${cfg.min_health||70} or above`; break;
+        }
+
+        const inputStyle = {
+          width:"100%", padding:"9px 12px", background:"var(--bg2)",
+          border:"1.5px solid var(--border)", borderRadius:"var(--r)",
+          color:"var(--text)", fontFamily:"var(--font-display)",
+          fontSize:13, boxSizing:"border-box",
+        };
+        const labelStyle = { fontSize:11, fontWeight:600, color:"var(--text2)", display:"block", marginBottom:5 };
+        const hintStyle  = { fontSize:11, color:"var(--text3)", marginTop:4 };
+
+        return (
+          <div style={{background:"var(--bg3)",border:"1.5px solid var(--indigo)",borderRadius:"var(--r-lg)",
+            padding:"24px",marginBottom:20}}>
+
+            {/* Row 1 — Name + Survey type */}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+              <div>
+                <label style={labelStyle}>Schedule name</label>
+                <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))}
+                  placeholder="e.g. 90-Day NPS Check-In"
+                  style={inputStyle}/>
+                <div style={hintStyle}>Give it a name you'll recognise</div>
+              </div>
+              <div>
+                <label style={labelStyle}>Survey type</label>
+                <select value={form.survey_type} onChange={e=>setForm(f=>({...f,survey_type:e.target.value}))}
+                  style={inputStyle}>
+                  <option value="NPS">NPS — How likely to recommend?</option>
+                  <option value="CES">CES — How easy was it to use?</option>
+                  <option value="CSAT">CSAT — How satisfied are you?</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <label style={{fontSize:11,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:5}}>Survey Type</label>
-              <select value={form.survey_type} onChange={e=>setForm(f=>({...f,survey_type:e.target.value}))}
-                style={{width:"100%",padding:"8px 12px",background:"var(--bg2)",border:"1.5px solid var(--border)",
-                  borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:13}}>
-                {["NPS","CES","CSAT"].map(t=><option key={t}>{t}</option>)}
-              </select>
+
+            {/* Row 2 — Trigger type */}
+            <div style={{marginBottom:16}}>
+              <label style={labelStyle}>When to send</label>
+              <div style={{display:"grid",gridTemplateColumns:"repeat(2,1fr)",gap:8}}>
+                {[
+                  { key:"onboarding_complete", icon:"🚀", label:"After onboarding",    desc:"X days after account is created"  },
+                  { key:"recurring",           icon:"🔁", label:"On a repeat schedule", desc:"Every X days automatically"       },
+                  { key:"renewal_approaching", icon:"📅", label:"Before renewal",       desc:"X days before the renewal date"   },
+                  { key:"health_recovery",     icon:"💚", label:"After health improves", desc:"When health score reaches X+"    },
+                ].map(opt=>{
+                  const active = form.trigger_type === opt.key;
+                  return (
+                    <div key={opt.key} onClick={()=>setForm(f=>({...f, trigger_type:opt.key,
+                      trigger_config:
+                        opt.key==="recurring"?{recurrence_days:90}:
+                        opt.key==="onboarding_complete"?{days:30}:
+                        opt.key==="renewal_approaching"?{days_before:30}:
+                        {min_health:70}}))}
+                      style={{padding:"12px 14px",borderRadius:"var(--r)",cursor:"pointer",
+                        border:`1.5px solid ${active?"var(--indigo)":"var(--border)"}`,
+                        background:active?"var(--indigo-dim)":"var(--bg2)",
+                        transition:"all .12s"}}>
+                      <div style={{fontSize:16,marginBottom:4}}>{opt.icon}</div>
+                      <div style={{fontSize:13,fontWeight:600,color:active?"var(--indigo)":"var(--text)",marginBottom:2}}>{opt.label}</div>
+                      <div style={{fontSize:11,color:"var(--text3)"}}>{opt.desc}</div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Row 3 — Dynamic config fields */}
+            <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+              padding:"16px",marginBottom:16}}>
+              <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",
+                letterSpacing:".07em",marginBottom:12}}>Configure trigger</div>
+
+              {form.trigger_type==="onboarding_complete"&&(
+                <div style={{display:"flex",alignItems:"center",gap:10}}>
+                  <span style={{fontSize:13,color:"var(--text2)"}}>Send survey</span>
+                  <input type="number" min={1} max={365}
+                    value={cfg.days||30}
+                    onChange={e=>setForm(f=>({...f,trigger_config:{...cfg,days:Math.max(1,Number(e.target.value))}}))}
+                    style={{...inputStyle,width:80,textAlign:"center"}}/>
+                  <span style={{fontSize:13,color:"var(--text2)"}}>days after the account is created</span>
+                </div>
+              )}
+
+              {form.trigger_type==="recurring"&&(
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    <span style={{fontSize:13,color:"var(--text2)"}}>Send every</span>
+                    <input type="number" min={7} max={365}
+                      value={cfg.recurrence_days||90}
+                      onChange={e=>setForm(f=>({...f,trigger_config:{...cfg,recurrence_days:Math.max(7,Number(e.target.value))}}))}
+                      style={{...inputStyle,width:80,textAlign:"center"}}/>
+                    <span style={{fontSize:13,color:"var(--text2)"}}>days</span>
+                  </div>
+                  <div style={hintStyle}>Minimum 7 days. A 90-day cadence works well for NPS.</div>
+                </div>
+              )}
+
+              {form.trigger_type==="renewal_approaching"&&(
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    <span style={{fontSize:13,color:"var(--text2)"}}>Send</span>
+                    <input type="number" min={7} max={180}
+                      value={cfg.days_before||30}
+                      onChange={e=>setForm(f=>({...f,trigger_config:{...cfg,days_before:Math.max(7,Number(e.target.value))}}))}
+                      style={{...inputStyle,width:80,textAlign:"center"}}/>
+                    <span style={{fontSize:13,color:"var(--text2)"}}>days before the renewal date</span>
+                  </div>
+                  <div style={hintStyle}>30–60 days is the ideal window to capture sentiment before renewal conversations.</div>
+                </div>
+              )}
+
+              {form.trigger_type==="health_recovery"&&(
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                    <span style={{fontSize:13,color:"var(--text2)"}}>Send when health score reaches</span>
+                    <input type="number" min={50} max={100}
+                      value={cfg.min_health||70}
+                      onChange={e=>setForm(f=>({...f,trigger_config:{...cfg,min_health:Math.min(100,Math.max(50,Number(e.target.value)))}}))}
+                      style={{...inputStyle,width:80,textAlign:"center"}}/>
+                    <span style={{fontSize:13,color:"var(--text2)"}}>or above</span>
+                  </div>
+                  <div style={hintStyle}>Use this to capture sentiment after an account recovers from a low-health period. 70+ recommended.</div>
+                </div>
+              )}
+            </div>
+
+            {/* Row 4 — Optional segment filter */}
+            <div style={{marginBottom:16}}>
+              <label style={labelStyle}>Apply to (optional — leave blank for all accounts)</label>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+                <div>
+                  <div style={{fontSize:11,color:"var(--text3)",marginBottom:4}}>Plan</div>
+                  <select value={seg.plan||""}
+                    onChange={e=>setForm(f=>({...f,segment_config:{...seg,plan:e.target.value||undefined}}))}
+                    style={inputStyle}>
+                    <option value="">All plans</option>
+                    <option value="Starter">Starter only</option>
+                    <option value="Growth">Growth only</option>
+                    <option value="Enterprise">Enterprise only</option>
+                  </select>
+                </div>
+                <div>
+                  <div style={{fontSize:11,color:"var(--text3)",marginBottom:4}}>Stage</div>
+                  <select value={seg.stage||""}
+                    onChange={e=>setForm(f=>({...f,segment_config:{...seg,stage:e.target.value||undefined}}))}
+                    style={inputStyle}>
+                    <option value="">All stages</option>
+                    <option value="Healthy">Healthy</option>
+                    <option value="Stable">Stable</option>
+                    <option value="Needs Attention">Needs Attention</option>
+                    <option value="At Risk">At Risk</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* Row 5 — Custom question */}
+            <div style={{marginBottom:20}}>
+              <label style={labelStyle}>Custom follow-up question (optional)</label>
+              <input value={form.custom_question}
+                onChange={e=>setForm(f=>({...f,custom_question:e.target.value}))}
+                placeholder="e.g. What could we do to improve your experience?"
+                style={inputStyle}/>
+              <div style={hintStyle}>Added as an open-text field below the score question</div>
+            </div>
+
+            {/* Live preview */}
+            <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(67,97,238,0.2)",
+              borderRadius:"var(--r)",padding:"12px 16px",marginBottom:20}}>
+              <div style={{fontSize:10,fontWeight:700,color:"var(--indigo)",textTransform:"uppercase",
+                letterSpacing:".08em",marginBottom:4}}>What this schedule will do</div>
+              <div style={{fontSize:13,color:"var(--text)",lineHeight:1.6}}>
+                Automatically send a <strong>{surveyLabels[form.survey_type]}</strong> survey{segDesc} — <strong>{whenDesc}</strong>. The primary stakeholder on each qualifying account will receive the survey by email.
+              </div>
+            </div>
+
+            <div style={{display:"flex",gap:10,alignItems:"center"}}>
+              <Btn onClick={create} style={{fontSize:13,padding:"10px 24px"}}>Create Schedule</Btn>
+              <button onClick={()=>setShowForm(false)}
+                style={{background:"none",border:"none",color:"var(--text3)",fontSize:13,
+                  cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                Cancel
+              </button>
             </div>
           </div>
-          <div style={{marginBottom:12}}>
-            <label style={{fontSize:11,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:5}}>Trigger</label>
-            <select value={form.trigger_type}
-              onChange={e=>{ const t=e.target.value;
-                setForm(f=>({...f,trigger_type:t,trigger_config:
-                  t==="recurring"?{recurrence_days:90}:
-                  t==="onboarding_complete"?{days:30}:
-                  t==="renewal_approaching"?{days_before:30}:
-                  {min_health:70}})); }}
-              style={{width:"100%",padding:"8px 12px",background:"var(--bg2)",border:"1.5px solid var(--border)",
-                borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:13}}>
-              {Object.entries(SCHEDULE_TRIGGERS).map(([k,v])=><option key={k} value={k}>{v.label} — {v.desc}</option>)}
-            </select>
-          </div>
-          <div style={{marginBottom:14}}>
-            <label style={{fontSize:11,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:5}}>
-              Custom question (optional)
-            </label>
-            <input value={form.custom_question} onChange={e=>setForm(f=>({...f,custom_question:e.target.value}))}
-              placeholder="Is there anything else you'd like to share?"
-              style={{width:"100%",padding:"8px 12px",background:"var(--bg2)",border:"1.5px solid var(--border)",
-                borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:13,boxSizing:"border-box"}}/>
-          </div>
-          <Btn onClick={create} style={{fontSize:12,padding:"9px 20px"}}>Create Schedule</Btn>
-        </div>
-      )}
+        );
+      })()}
 
       {loading && <div style={{fontSize:13,color:"var(--text3)",padding:"12px 0"}}>Loading schedules…</div>}
 
