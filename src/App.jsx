@@ -2016,6 +2016,18 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const [showPortal, setShowPortal] = useState(false);
   const [tab,setTab]             = useState(initialTab);
   const [logF,setLogF]           = useState({type:"Call",note:"",date:todayStr(),title:"",attendees:"",actionItems:""});
+  const [digestEnabled,  setDigestEnabled]  = useState(false);
+  const [digestId,       setDigestId]       = useState(null);
+  const [digestFreq,     setDigestFreq]     = useState("monthly");
+
+  useEffect(()=>{
+    if (!call || !account.id) return;
+    call("GET","/api/schedules/digests")
+      .then(d=>{
+        const found=(d?.schedules||[]).find(s=>s.account_id===account.id);
+        if (found){ setDigestEnabled(found.enabled); setDigestId(found.id); setDigestFreq(found.frequency||"monthly"); }
+      }).catch(()=>{});
+  },[call, account.id]);
   const [newMs,setNewMs]         = useState("");
   const [editGoal,setEditGoal]   = useState(false);
   const [goalDraft,setGoalDraft] = useState(account.successPlan.goal);
@@ -2074,6 +2086,27 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const delMs=id=>onUpdate(account.id,{successPlan:{...account.successPlan,milestones:account.successPlan.milestones.filter(m=>m.id!==id)}});
   const saveGoal=()=>{ onUpdate(account.id,{successPlan:{...account.successPlan,goal:goalDraft}}); setEditGoal(false); toast("Goal saved","success"); };
   const saveAct=()=>{ onUpdate(account.id,{nextAction:actDraft}); setEditAct(false); toast("Next action saved","success"); };
+
+  const toggleDigest = async () => {
+    if (!call) return;
+    try {
+      if (digestId) {
+        if (digestEnabled) {
+          await call("DELETE", `/api/schedules/digests/${digestId}`);
+          setDigestEnabled(false); setDigestId(null);
+          toast("Health digest disabled","info");
+        } else {
+          await call("PATCH", `/api/schedules/digests/${digestId}`, { enabled: true });
+          setDigestEnabled(true);
+          toast("Health digest enabled","success");
+        }
+      } else {
+        const d = await call("POST", "/api/schedules/digests", { account_id: account.id, frequency: digestFreq });
+        setDigestId(d.schedule.id); setDigestEnabled(true);
+        toast("Monthly health digest activated","success");
+      }
+    } catch { toast("Could not update digest settings","error"); }
+  };
 
   const TABS = [
     {key:"activity",   label:"Activity"},
@@ -2447,9 +2480,23 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                     ) : (
                       <div key={item.id} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
                         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                          <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
-                            color:ACT_COLORS[item.type]||"var(--text2)",background:"var(--bg3)",
-                            padding:"2px 8px",borderRadius:"var(--r-sm)"}}>{item.type}</span>
+                          <div style={{display:"flex",alignItems:"center",gap:6}}>
+                            <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
+                              color:ACT_COLORS[item.type]||"var(--text2)",background:"var(--bg3)",
+                              padding:"2px 8px",borderRadius:"var(--r-sm)"}}>{item.type}</span>
+                            {item.source==="gmail_auto"&&(
+                              <span style={{fontSize:10,fontWeight:600,padding:"1px 7px",borderRadius:99,
+                                background:"rgba(234,67,53,.1)",color:"#ea4335"}}>Gmail</span>
+                            )}
+                            {item.source==="fireflies_auto"&&(
+                              <span style={{fontSize:10,fontWeight:600,padding:"1px 7px",borderRadius:99,
+                                background:"rgba(255,79,0,.1)",color:"#ff4f00"}}>Fireflies</span>
+                            )}
+                            {item.source==="automation"&&(
+                              <span style={{fontSize:10,fontWeight:600,padding:"1px 7px",borderRadius:99,
+                                background:"var(--indigo-dim)",color:"var(--indigo)"}}>Auto</span>
+                            )}
+                          </div>
                           <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>{item.date}</span>
                         </div>
                         <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>{item.note}</div>
@@ -2722,6 +2769,40 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   <Inp value={newMs} onChange={e=>setNewMs(e.target.value)} placeholder="Add a milestone…"
                     onKeyDown={e=>e.key==="Enter"&&addMs()} style={{flex:1,fontSize:13,padding:"8px 12px"}}/>
                   <Btn onClick={addMs} style={{padding:"8px 16px",fontSize:13}}>+</Btn>
+                </div>
+              </div>
+
+              {/* Health Digest toggle */}
+              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                  <div>
+                    <div style={{fontWeight:600,fontSize:13,marginBottom:3}}>Stakeholder Health Digest</div>
+                    <div style={{fontSize:11,color:"var(--text3)",lineHeight:1.5}}>
+                      {digestEnabled
+                        ? `A ${digestFreq} health summary is queued for CSM review before sending`
+                        : "Auto-prepare a health summary for this account's stakeholders"}
+                    </div>
+                  </div>
+                  <div style={{display:"flex",alignItems:"center",gap:10}}>
+                    {digestEnabled&&(
+                      <select value={digestFreq}
+                        onChange={async e=>{ const f=e.target.value; setDigestFreq(f);
+                          if (digestId) await call("PATCH",`/api/schedules/digests/${digestId}`,{frequency:f}); }}
+                        style={{fontSize:11,padding:"4px 8px",background:"var(--bg3)",
+                          border:"1.5px solid var(--border)",borderRadius:"var(--r-sm)",
+                          color:"var(--text)",fontFamily:"var(--font-display)"}}>
+                        <option value="monthly">Monthly</option>
+                        <option value="quarterly">Quarterly</option>
+                      </select>
+                    )}
+                    <div onClick={toggleDigest}
+                      style={{width:36,height:20,borderRadius:99,cursor:"pointer",flexShrink:0,
+                        background:digestEnabled?"var(--indigo)":"var(--bg4)",
+                        position:"relative",transition:"background .15s"}}>
+                      <div style={{width:16,height:16,borderRadius:"50%",background:"white",
+                        position:"absolute",top:2,left:digestEnabled?18:2,transition:"left .15s"}}/>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -5402,6 +5483,492 @@ const SurveySendModal = ({ survey, accounts, onClose, toast, session, onGoToSett
   );
 };
 
+// ── Outreach Queue page ───────────────────────────────────────────────────────
+const TRIGGER_META = {
+  health_drop:         { label:"Health Drop",       color:"var(--rose)",    bg:"var(--rose-dim)"    },
+  no_contact:          { label:"No Contact",         color:"var(--amber)",   bg:"var(--amber-dim)"   },
+  renewal_approaching: { label:"Renewal Due",        color:"var(--indigo)",  bg:"var(--indigo-dim)"  },
+  nps_drop:            { label:"NPS Drop",           color:"var(--rose)",    bg:"var(--rose-dim)"    },
+  usage_drop:          { label:"Usage Drop",         color:"var(--amber)",   bg:"var(--amber-dim)"   },
+  playbook_suggested:  { label:"Playbook Signal",    color:"var(--teal)",    bg:"rgba(20,184,166,.1)"},
+  digest:              { label:"Health Digest",      color:"var(--emerald)", bg:"rgba(5,150,105,.1)" },
+};
+
+const OutreachQueuePage = ({ call, accounts, toast }) => {
+  const [items,      setItems]      = useState([]);
+  const [loading,    setLoading]    = useState(true);
+  const [tab,        setTab]        = useState("pending");
+  const [expanded,   setExpanded]   = useState(null);
+  const [editing,    setEditing]    = useState(null); // { id, subject, body }
+  const [sendModal,  setSendModal]  = useState(null); // item
+  const [sendEmail,  setSendEmail]  = useState("");
+  const [sending,    setSending]    = useState(false);
+
+  const load = useCallback(async () => {
+    try {
+      const d = await call("GET", "/api/outreach");
+      setItems(d?.items || []);
+    } catch { toast?.("Could not load outreach queue","error"); }
+    finally { setLoading(false); }
+  }, [call, toast]);
+
+  useEffect(()=>{ load(); }, [load]);
+
+  const patch = async (id, body) => {
+    await call("PATCH", `/api/outreach/${id}`, body);
+    setItems(its => its.map(i => i.id===id ? {...i,...body} : i));
+  };
+
+  const remove = async (id) => {
+    await call("DELETE", `/api/outreach/${id}`);
+    setItems(its => its.filter(i => i.id!==id));
+  };
+
+  const send = async () => {
+    if (!sendModal) return;
+    const to = sendEmail || sendModal.recipient_email;
+    if (!to) { toast?.("Enter a recipient email","error"); return; }
+    setSending(true);
+    try {
+      await call("POST", `/api/outreach/${sendModal.id}/send`, { recipientEmail: to });
+      toast?.("Outreach sent","success");
+      setItems(its => its.map(i => i.id===sendModal.id ? {...i, status:"sent", recipient_email:to} : i));
+      setSendModal(null); setSendEmail("");
+    } catch (e) {
+      toast?.(e?.message || "Send failed","error");
+    } finally { setSending(false); }
+  };
+
+  const saveEdit = async () => {
+    if (!editing) return;
+    await patch(editing.id, { subject: editing.subject, body_draft: editing.body });
+    toast?.("Draft saved","success");
+    setEditing(null);
+  };
+
+  const shown = items.filter(i => tab==="all" ? true : i.status===tab);
+  const pending = items.filter(i=>i.status==="pending").length;
+  const approved = items.filter(i=>i.status==="approved").length;
+  const sentCount = items.filter(i=>i.status==="sent").length;
+
+  return (
+    <div style={{maxWidth:820,animation:"fadeUp .2s ease"}}>
+      {/* Header */}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:28}}>
+        <div>
+          <h1 style={{fontWeight:800,fontSize:24,letterSpacing:"-.03em",marginBottom:4}}>Outreach Queue</h1>
+          <div style={{fontSize:13,color:"var(--text3)"}}>
+            Pulse drafts outreach when it detects signals — review, edit, and send with one click
+          </div>
+        </div>
+        {pending > 0 && (
+          <div style={{background:"var(--amber-dim)",border:"1.5px solid rgba(217,119,6,0.3)",
+            borderRadius:"var(--r)",padding:"10px 18px",fontSize:13,fontWeight:600,color:"var(--amber)"}}>
+            {pending} draft{pending!==1?"s":""} waiting
+          </div>
+        )}
+      </div>
+
+      {/* Stats */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:12,marginBottom:24}}>
+        {[
+          {label:"Pending review", value:pending,    color:pending>0?"var(--amber)":"var(--text3)"},
+          {label:"Approved",       value:approved,   color:approved>0?"var(--emerald)":"var(--text3)"},
+          {label:"Sent",           value:sentCount,  color:"var(--indigo)"},
+        ].map(s=>(
+          <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+            borderRadius:"var(--r-lg)",padding:"16px 20px",boxShadow:"var(--shadow-sm)"}}>
+            <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:26,color:s.color,marginBottom:3}}>{s.value}</div>
+            <div style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Tabs */}
+      <div style={{display:"flex",gap:4,borderBottom:"1.5px solid var(--border)",marginBottom:20,paddingBottom:2}}>
+        {["pending","approved","sent","all"].map(t=>(
+          <button key={t} onClick={()=>setTab(t)}
+            style={{padding:"7px 18px",borderRadius:"var(--r-sm) var(--r-sm) 0 0",fontSize:13,
+              fontFamily:"var(--font-display)",fontWeight:600,border:"none",cursor:"pointer",
+              background:tab===t?"var(--indigo)":"transparent",
+              color:tab===t?"white":"var(--text2)"}}>
+            {t.charAt(0).toUpperCase()+t.slice(1)}
+            {t!=="all"&&<span style={{marginLeft:6,fontSize:11,fontFamily:"var(--font-mono)",
+              opacity:.8}}>
+              {t==="pending"?pending:t==="approved"?approved:sentCount}
+            </span>}
+          </button>
+        ))}
+      </div>
+
+      {/* AI readiness note */}
+      <div style={{display:"flex",alignItems:"center",gap:8,background:"var(--indigo-dim)",
+        border:"1.5px solid rgba(67,97,238,0.2)",borderRadius:"var(--r)",
+        padding:"10px 14px",marginBottom:20,fontSize:12,color:"var(--indigo)"}}>
+        <Ic n="info" size={14} color="var(--indigo)"/>
+        Drafts are currently template-based. Once the AI layer is enabled, each draft will be personalised to the account's history and context.
+      </div>
+
+      {loading && <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"40px 0"}}>Loading…</div>}
+
+      {!loading && shown.length===0 && (
+        <div style={{textAlign:"center",padding:"48px 0"}}>
+          <div style={{fontSize:36,marginBottom:12}}>✉️</div>
+          <div style={{fontSize:15,fontWeight:600,marginBottom:6}}>
+            {tab==="pending" ? "No drafts waiting" : `No ${tab} outreach`}
+          </div>
+          <div style={{fontSize:13,color:"var(--text3)"}}>
+            {tab==="pending"
+              ? "Pulse will queue drafts when it detects signals like health drops, no contact, or upcoming renewals."
+              : "Items you send or approve will appear here."}
+          </div>
+        </div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:12}}>
+        {shown.map(item => {
+          const meta   = TRIGGER_META[item.trigger_type] || TRIGGER_META["no_contact"];
+          const isOpen = expanded===item.id;
+          const isEdit = editing?.id===item.id;
+          return (
+            <div key={item.id} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+              borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)",
+              transition:"border-color .15s"}}
+              onMouseEnter={e=>e.currentTarget.style.borderColor="var(--indigo)"}
+              onMouseLeave={e=>e.currentTarget.style.borderColor="var(--border)"}>
+
+              {/* Item header */}
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+                  <Avatar name={item.account_name} size={28}/>
+                  <span style={{fontWeight:700,fontSize:14}}>{item.account_name}</span>
+                  <span style={{fontSize:11,fontWeight:600,padding:"2px 9px",borderRadius:99,
+                    background:meta.bg,color:meta.color}}>{meta.label}</span>
+                  {item.ai_generated&&(
+                    <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,
+                      background:"var(--indigo-dim)",color:"var(--indigo)"}}>AI</span>
+                  )}
+                  {item.status==="sent"&&(
+                    <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,
+                      background:"rgba(5,150,105,.1)",color:"var(--emerald)"}}>Sent</span>
+                  )}
+                  {item.status==="approved"&&(
+                    <span style={{fontSize:10,fontWeight:600,padding:"2px 8px",borderRadius:99,
+                      background:"rgba(5,150,105,.1)",color:"var(--emerald)"}}>Approved</span>
+                  )}
+                </div>
+                <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",flexShrink:0,marginLeft:8}}>
+                  {new Date(item.created_at).toLocaleDateString("en-GB",{day:"numeric",month:"short"})}
+                </span>
+              </div>
+
+              {/* Subject */}
+              {isEdit ? (
+                <input value={editing.subject} onChange={e=>setEditing(ed=>({...ed,subject:e.target.value}))}
+                  style={{width:"100%",fontWeight:600,fontSize:14,padding:"7px 10px",
+                    background:"var(--bg3)",border:"1.5px solid var(--indigo)",borderRadius:"var(--r-sm)",
+                    color:"var(--text)",fontFamily:"var(--font-display)",marginBottom:8,boxSizing:"border-box"}}/>
+              ) : (
+                <div style={{fontWeight:600,fontSize:14,marginBottom:6,color:"var(--text)"}}>{item.subject}</div>
+              )}
+
+              {/* Body preview / edit */}
+              {isEdit ? (
+                <textarea value={editing.body} onChange={e=>setEditing(ed=>({...ed,body:e.target.value}))}
+                  rows={8}
+                  style={{width:"100%",fontSize:13,padding:"9px 12px",
+                    background:"var(--bg3)",border:"1.5px solid var(--indigo)",borderRadius:"var(--r-sm)",
+                    color:"var(--text2)",fontFamily:"var(--font-display)",lineHeight:1.6,
+                    resize:"vertical",boxSizing:"border-box",marginBottom:10}}/>
+              ) : (
+                <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6,
+                  maxHeight:isOpen?undefined:"3.8em",overflow:isOpen?undefined:"hidden",
+                  display:isOpen?undefined:"-webkit-box",WebkitLineClamp:isOpen?undefined:3,
+                  WebkitBoxOrient:isOpen?undefined:"vertical",
+                  whiteSpace:"pre-wrap",marginBottom:8}}>
+                  {item.body_draft}
+                </div>
+              )}
+
+              {!isEdit && item.body_draft.split('\n').length > 3 && (
+                <button onClick={()=>setExpanded(isOpen?null:item.id)}
+                  style={{background:"none",border:"none",color:"var(--indigo)",fontSize:12,
+                    fontWeight:600,cursor:"pointer",padding:0,marginBottom:8}}>
+                  {isOpen?"Show less ↑":"Show full draft ↓"}
+                </button>
+              )}
+
+              {item.recipient_email && item.status!=="sent" && (
+                <div style={{fontSize:11,color:"var(--text3)",marginBottom:10}}>
+                  To: {item.recipient_name||item.recipient_email} &lt;{item.recipient_email}&gt;
+                </div>
+              )}
+
+              {/* Actions */}
+              {item.status==="pending" && !isEdit && (
+                <div style={{display:"flex",gap:8,flexWrap:"wrap",paddingTop:4,borderTop:"1px solid var(--border)"}}>
+                  <button onClick={()=>setSendModal(item)}
+                    style={{flex:1,minWidth:100,background:"var(--indigo)",color:"white",border:"none",
+                      borderRadius:"var(--r-sm)",padding:"8px 16px",fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Send Now
+                  </button>
+                  <button onClick={()=>{ patch(item.id,{status:"approved"}); toast?.("Marked as approved","success"); }}
+                    style={{flex:1,minWidth:80,background:"rgba(5,150,105,.1)",color:"var(--emerald)",
+                      border:"1.5px solid rgba(5,150,105,.2)",borderRadius:"var(--r-sm)",
+                      padding:"8px 14px",fontSize:12,fontWeight:600,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Approve
+                  </button>
+                  <button onClick={()=>setEditing({id:item.id,subject:item.subject,body:item.body_draft})}
+                    style={{background:"var(--bg3)",color:"var(--text2)",border:"1.5px solid var(--border)",
+                      borderRadius:"var(--r-sm)",padding:"8px 14px",fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Edit
+                  </button>
+                  <button onClick={()=>{ patch(item.id,{status:"dismissed"}); toast?.("Dismissed","info"); }}
+                    style={{background:"none",color:"var(--text3)",border:"none",
+                      padding:"8px 10px",fontSize:12,cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Dismiss
+                  </button>
+                </div>
+              )}
+              {item.status==="approved" && !isEdit && (
+                <div style={{display:"flex",gap:8,paddingTop:4,borderTop:"1px solid var(--border)"}}>
+                  <button onClick={()=>setSendModal(item)}
+                    style={{background:"var(--indigo)",color:"white",border:"none",
+                      borderRadius:"var(--r-sm)",padding:"8px 18px",fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Send
+                  </button>
+                  <button onClick={()=>setEditing({id:item.id,subject:item.subject,body:item.body_draft})}
+                    style={{background:"var(--bg3)",color:"var(--text2)",border:"1.5px solid var(--border)",
+                      borderRadius:"var(--r-sm)",padding:"8px 14px",fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Edit
+                  </button>
+                </div>
+              )}
+              {isEdit && (
+                <div style={{display:"flex",gap:8,paddingTop:4,borderTop:"1px solid var(--border)"}}>
+                  <button onClick={saveEdit}
+                    style={{background:"var(--indigo)",color:"white",border:"none",
+                      borderRadius:"var(--r-sm)",padding:"8px 18px",fontSize:12,fontWeight:600,
+                      cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                    Save
+                  </button>
+                  <button onClick={()=>setEditing(null)}
+                    style={{background:"none",color:"var(--text3)",border:"none",fontSize:12,cursor:"pointer"}}>
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Send modal */}
+      {sendModal && (
+        <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.45)",display:"flex",
+          alignItems:"center",justifyContent:"center",zIndex:1000}}
+          onClick={e=>{if(e.target===e.currentTarget){setSendModal(null);setSendEmail("")}}}>
+          <div style={{background:"var(--bg2)",borderRadius:"var(--r-xl)",padding:"28px 32px",
+            width:"100%",maxWidth:440,boxShadow:"var(--shadow-lg)"}}>
+            <h3 style={{fontWeight:700,fontSize:17,marginBottom:4}}>Send outreach</h3>
+            <div style={{fontSize:13,color:"var(--text3)",marginBottom:20}}>
+              {sendModal.account_name} — {sendModal.subject}
+            </div>
+            <label style={{fontSize:12,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:6}}>
+              Recipient email
+            </label>
+            <input
+              value={sendEmail||sendModal.recipient_email||""}
+              onChange={e=>setSendEmail(e.target.value)}
+              placeholder="customer@company.com"
+              style={{width:"100%",padding:"10px 14px",background:"var(--bg3)",border:"1.5px solid var(--border)",
+                borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",
+                fontSize:13,marginBottom:16,boxSizing:"border-box",outline:"none"}}
+            />
+            <div style={{fontSize:11,color:"var(--text3)",marginBottom:20,lineHeight:1.5}}>
+              The email will be sent from your connected Gmail or Outlook account.
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <Btn onClick={send} disabled={sending} style={{flex:1}}>
+                {sending ? "Sending…" : "Send"}
+              </Btn>
+              <button onClick={()=>{setSendModal(null);setSendEmail("")}}
+                style={{flex:1,background:"var(--bg3)",border:"1.5px solid var(--border)",
+                  borderRadius:"var(--r)",padding:"10px",fontSize:13,fontWeight:600,
+                  cursor:"pointer",fontFamily:"var(--font-display)",color:"var(--text2)"}}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ── Survey Schedules section ───────────────────────────────────────────────────
+const SCHEDULE_TRIGGERS = {
+  onboarding_complete: { label:"After Onboarding",  desc:"Send X days after account is created" },
+  recurring:           { label:"Recurring",          desc:"Send every X days on repeat"          },
+  renewal_approaching: { label:"Before Renewal",    desc:"Send X days before renewal date"       },
+  health_recovery:     { label:"Health Recovery",   desc:"Send when health score reaches X+"     },
+};
+
+const SurveySchedulesSection = ({ session, toast }) => {
+  const [schedules, setSchedules] = useState([]);
+  const [loading,   setLoading]   = useState(true);
+  const [showForm,  setShowForm]  = useState(false);
+  const [form,      setForm]      = useState({
+    name:"", survey_type:"NPS", trigger_type:"recurring",
+    trigger_config:{ recurrence_days:90 }, custom_question:"",
+  });
+
+  const callApi = useCallback((m,p,b) => api(m,p,b,session?.token), [session]);
+
+  const load = useCallback(async () => {
+    try {
+      const d = await callApi("GET", "/api/schedules/surveys");
+      setSchedules(d?.schedules || []);
+    } catch {} finally { setLoading(false); }
+  }, [callApi]);
+
+  useEffect(()=>{ if (API_URL && session?.token) load(); else setLoading(false); },[load]);
+
+  const create = async () => {
+    if (!form.name || !form.trigger_type) { toast?.("Name and trigger are required","error"); return; }
+    try {
+      await callApi("POST", "/api/schedules/surveys", form);
+      toast?.("Schedule created","success");
+      setShowForm(false);
+      setForm({name:"",survey_type:"NPS",trigger_type:"recurring",trigger_config:{recurrence_days:90},custom_question:""});
+      load();
+    } catch { toast?.("Could not create schedule","error"); }
+  };
+
+  const toggle = async (id, enabled) => {
+    await callApi("PATCH", `/api/schedules/surveys/${id}`, { enabled: !enabled });
+    setSchedules(ss => ss.map(s => s.id===id ? {...s, enabled:!enabled} : s));
+  };
+
+  const del = async (id) => {
+    await callApi("DELETE", `/api/schedules/surveys/${id}`);
+    setSchedules(ss => ss.filter(s => s.id!==id));
+    toast?.("Schedule deleted","success");
+  };
+
+  const triggerDesc = (s) => {
+    const cfg = s.trigger_config || {};
+    switch (s.trigger_type) {
+      case "onboarding_complete": return `${cfg.days||30} days after account creation`;
+      case "recurring":           return `Every ${cfg.recurrence_days||90} days`;
+      case "renewal_approaching": return `${cfg.days_before||30} days before renewal`;
+      case "health_recovery":     return `When health reaches ${cfg.min_health||70}+`;
+      default: return s.trigger_type;
+    }
+  };
+
+  return (
+    <div style={{marginTop:32,paddingTop:24,borderTop:"1.5px solid var(--border)"}}>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div>
+          <div style={{fontWeight:700,fontSize:16,marginBottom:3}}>Auto-Survey Schedules</div>
+          <div style={{fontSize:12,color:"var(--text3)"}}>
+            Automatically send surveys when conditions are met — no manual work needed
+          </div>
+        </div>
+        <Btn onClick={()=>setShowForm(v=>!v)} style={{fontSize:12,padding:"8px 16px"}}>
+          {showForm ? "Cancel" : "+ New Schedule"}
+        </Btn>
+      </div>
+
+      {showForm && (
+        <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+          padding:"20px",marginBottom:20}}>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:5}}>Name</label>
+              <input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} placeholder="90-Day Check-In NPS"
+                style={{width:"100%",padding:"8px 12px",background:"var(--bg2)",border:"1.5px solid var(--border)",
+                  borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:13,boxSizing:"border-box"}}/>
+            </div>
+            <div>
+              <label style={{fontSize:11,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:5}}>Survey Type</label>
+              <select value={form.survey_type} onChange={e=>setForm(f=>({...f,survey_type:e.target.value}))}
+                style={{width:"100%",padding:"8px 12px",background:"var(--bg2)",border:"1.5px solid var(--border)",
+                  borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:13}}>
+                {["NPS","CES","CSAT"].map(t=><option key={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+          <div style={{marginBottom:12}}>
+            <label style={{fontSize:11,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:5}}>Trigger</label>
+            <select value={form.trigger_type}
+              onChange={e=>{ const t=e.target.value;
+                setForm(f=>({...f,trigger_type:t,trigger_config:
+                  t==="recurring"?{recurrence_days:90}:
+                  t==="onboarding_complete"?{days:30}:
+                  t==="renewal_approaching"?{days_before:30}:
+                  {min_health:70}})); }}
+              style={{width:"100%",padding:"8px 12px",background:"var(--bg2)",border:"1.5px solid var(--border)",
+                borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:13}}>
+              {Object.entries(SCHEDULE_TRIGGERS).map(([k,v])=><option key={k} value={k}>{v.label} — {v.desc}</option>)}
+            </select>
+          </div>
+          <div style={{marginBottom:14}}>
+            <label style={{fontSize:11,fontWeight:600,color:"var(--text2)",display:"block",marginBottom:5}}>
+              Custom question (optional)
+            </label>
+            <input value={form.custom_question} onChange={e=>setForm(f=>({...f,custom_question:e.target.value}))}
+              placeholder="Is there anything else you'd like to share?"
+              style={{width:"100%",padding:"8px 12px",background:"var(--bg2)",border:"1.5px solid var(--border)",
+                borderRadius:"var(--r)",color:"var(--text)",fontFamily:"var(--font-display)",fontSize:13,boxSizing:"border-box"}}/>
+          </div>
+          <Btn onClick={create} style={{fontSize:12,padding:"9px 20px"}}>Create Schedule</Btn>
+        </div>
+      )}
+
+      {loading && <div style={{fontSize:13,color:"var(--text3)",padding:"12px 0"}}>Loading schedules…</div>}
+
+      {!loading && schedules.length===0 && !showForm && (
+        <div style={{textAlign:"center",padding:"28px 0",color:"var(--text3)",fontSize:13}}>
+          No schedules yet — create one to start automating surveys
+        </div>
+      )}
+
+      <div style={{display:"flex",flexDirection:"column",gap:8}}>
+        {schedules.map(s=>(
+          <div key={s.id} style={{display:"flex",alignItems:"center",gap:12,
+            background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+            <div style={{flex:1,minWidth:0}}>
+              <div style={{fontWeight:600,fontSize:13,marginBottom:3}}>{s.name}</div>
+              <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:700,
+                  color:"var(--indigo)",background:"var(--indigo-dim)",
+                  padding:"2px 8px",borderRadius:99}}>{s.survey_type}</span>
+                <span style={{fontSize:11,color:"var(--text3)"}}>{triggerDesc(s)}</span>
+              </div>
+            </div>
+            {/* Toggle */}
+            <div onClick={()=>toggle(s.id, s.enabled)}
+              style={{width:36,height:20,borderRadius:99,cursor:"pointer",flexShrink:0,
+                background:s.enabled?"var(--indigo)":"var(--bg4)",position:"relative",transition:"background .15s"}}>
+              <div style={{width:16,height:16,borderRadius:"50%",background:"white",
+                position:"absolute",top:2,left:s.enabled?18:2,transition:"left .15s"}}/>
+            </div>
+            <button onClick={()=>del(s.id)}
+              style={{background:"none",border:"none",color:"var(--text3)",cursor:"pointer",
+                fontSize:18,padding:"0 4px",lineHeight:1}}>×</button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ── Surveys page ──────────────────────────────────────────────────────────────
 const SurveysPage = ({ accounts, session, toast, onGoToSettings }) => {
   const [surveys,     setSurveys]     = useState([]);
@@ -5701,6 +6268,9 @@ const SurveysPage = ({ accounts, session, toast, onGoToSettings }) => {
       {showCreate&&<SurveyCreateModal accounts={accounts} onClose={()=>setShowCreate(false)}
         onCreate={createSurvey} toast={toast}/>}
       {showSend&&<SurveySendModal survey={showSend} accounts={accounts} onClose={()=>setShowSend(null)} toast={toast} session={session} onGoToSettings={onGoToSettings}/>}
+
+      {/* Auto-Survey Schedules */}
+      <SurveySchedulesSection session={session} toast={toast}/>
     </div>
   );
 };
@@ -8922,6 +9492,13 @@ export default function App() {
   const allAutoTasks    = generateAutoTasks(active);
   const taskAlerts      = [...allAutoTasks,...manualTasks].filter(t=>!t.done&&t.dueDate<=todayStr()).length;
   const briefingAlerts  = 0; // populated after BriefingPage loads its own data
+  const [outreachPending, setOutreachPending] = useState(0);
+  useEffect(()=>{
+    if (!session?.token || !API_URL) return;
+    call("GET","/api/outreach?status=pending&limit=50")
+      .then(d=>setOutreachPending(d?.items?.length ?? 0))
+      .catch(()=>{});
+  },[session, call]);
 
   const filtered = active
     .filter(a=>filter==="All"||a.stage===filter)
@@ -8964,6 +9541,7 @@ export default function App() {
     { id:"tasks",        icon:"tasks",        label:"Tasks",            active:true, badge:taskAlerts>0?taskAlerts:null },
     { id:"pipeline",     icon:"pipeline",     label:"Renewal Pipeline", active:true  },
     { id:"playbooks",    icon:"playbooks",    label:"Playbooks",        active:true, badge:playbookAlerts>0?playbookAlerts:null },
+    { id:"outreach",     icon:"email",        label:"Outreach Queue",   active:true, badge:outreachPending>0?outreachPending:null },
     { id:"surveys",      icon:"survey",       label:"Surveys",          active:true  },
     { id:"integrations", icon:"integrations", label:"Integrations",     active:true  },
     { id:"settings",    icon:"settings",    label:"Settings",       active:true },
@@ -9051,6 +9629,11 @@ export default function App() {
 
         {/* Main */}
         <div style={{flex:1,overflow:"auto",padding:"32px"}}>
+
+          {/* ── OUTREACH QUEUE VIEW ── */}
+          {view==="outreach"&&(
+            <OutreachQueuePage call={call} accounts={active} toast={toast}/>
+          )}
 
           {/* ── SURVEYS VIEW ── */}
           {view==="surveys"&&(
