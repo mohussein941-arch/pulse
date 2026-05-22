@@ -4988,8 +4988,8 @@ const CRMFieldMapModal = ({ crm, config, onSave, onClose }) => {
 };
 
 // ── Sync modal ──
-const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
-  const [phase, setPhase]     = useState("confirm"); // confirm | running | done
+const CRMSyncModal = ({ crm, config, onSync, onClose, call }) => {
+  const [phase, setPhase]     = useState("confirm"); // confirm | running | done | error
   const [progress, setProgress] = useState(0);
   const [log, setLog]         = useState([]);
   const [results, setResults] = useState(null);
@@ -4999,39 +4999,48 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
     window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
   },[onClose,phase]);
 
-  const runSync = () => {
+  const runSync = async () => {
+    if (!call) {
+      setLog(["No backend configured — sync unavailable in local mode."]);
+      setPhase("error");
+      return;
+    }
     setPhase("running");
-    setProgress(0);
-    setLog([]);
-
-    const steps = [
-      { pct:10, msg:`Authenticating with ${crm.name}…`            },
-      { pct:25, msg:"Fetching account records…"                    },
-      { pct:45, msg:"Applying field mapping…"                      },
-      { pct:60, msg:"Checking for duplicate accounts…"             },
-      { pct:78, msg:"Importing ticket and activity data…"          },
-      { pct:90, msg:"Calculating health scores…"                   },
-      { pct:100,msg:"Sync complete."                               },
-    ];
-
-    let i = 0;
-    const tick = () => {
-      if (i >= steps.length) {
-        // Mock results
-        const created  = Math.floor(Math.random()*8)+2;
-        const updated  = Math.floor(Math.random()*5)+1;
-        const skipped  = Math.floor(Math.random()*3);
-        setResults({ created, updated, skipped, total: created+updated+skipped });
-        setPhase("done");
-        onSync({ created, updated, skipped });
-        return;
+    setProgress(20);
+    setLog([`Connecting to ${crm.name}…`]);
+    try {
+      let created, updated, skipped;
+      if (crm.id === "fireflies") {
+        setLog(p=>[...p, "Fetching Fireflies transcripts…"]);
+        setProgress(55);
+        const data = await call("POST", "/api/meetings/sync");
+        const synced  = data.synced  || 0;
+        const matched = data.matched || 0;
+        created = synced;
+        updated = matched;
+        skipped = Math.max(0, synced - matched);
+        setLog(p=>[...p, `Synced ${synced} transcript${synced!==1?"s":""}, ${matched} matched to accounts.`]);
+      } else {
+        setLog(p=>[...p, "Fetching account records…"]);
+        setProgress(40);
+        const data = await call("POST", "/api/sync/run", { connectorId: crm.id });
+        setLog(p=>[...p, "Applying field mapping…"]);
+        setProgress(75);
+        created = data.created || 0;
+        updated = data.updated || 0;
+        skipped = data.skipped || 0;
+        setLog(p=>[...p, `Processed ${created+updated+skipped} records.`]);
       }
-      setProgress(steps[i].pct);
-      setLog(p=>[...p, steps[i].msg]);
-      i++;
-      setTimeout(tick, 420 + Math.random()*280);
-    };
-    setTimeout(tick, 300);
+      setProgress(100);
+      setLog(p=>[...p, "Sync complete."]);
+      const total = created + updated + skipped;
+      setResults({ created, updated, skipped, total });
+      setPhase("done");
+      onSync({ created, updated, skipped });
+    } catch (e) {
+      setLog(p=>[...p, `Error: ${e.message || "Sync failed"}`]);
+      setPhase("error");
+    }
   };
 
   return (
@@ -5155,6 +5164,25 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
               <Btn onClick={onClose} style={{width:"100%"}}>View portfolio</Btn>
             </>
           )}
+
+          {/* ERROR */}
+          {phase==="error"&&(
+            <>
+              <div style={{textAlign:"center",marginBottom:24}}>
+                <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
+                  <Ic n="alert" size={40} color="var(--red)"/>
+                </div>
+                <div style={{fontWeight:700,fontSize:18,marginBottom:4}}>Sync failed</div>
+              </div>
+              <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 14px",
+                marginBottom:20,display:"flex",flexDirection:"column",gap:6}}>
+                {log.map((l,i)=>(
+                  <div key={i} style={{fontSize:12,color:"var(--text2)"}}>{l}</div>
+                ))}
+              </div>
+              <Btn variant="ghost" onClick={onClose} style={{width:"100%"}}>Close</Btn>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -5168,7 +5196,6 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
   const [showFieldMap, setShowFieldMap] = useState(null);
   const [showSync, setShowSync]         = useState(null);
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [syncingId, setSyncingId]       = useState(null);
 
   // Load real connection status from backend on mount
   useEffect(() => {
@@ -5195,32 +5222,15 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
 
   useEffect(()=>{ saveIntegrations(configs); },[configs]);
 
-  const updateConfig = (id, patch) => {
+  const updateConfig = (id, patch, persist = false) => {
     setConfigs(p=>({...p,[id]:{...p[id],...patch}}));
+    if (persist && patch.fieldMap && call) {
+      call("PATCH", "/api/sync/field-map", { connectorId: id, fieldMap: patch.fieldMap })
+        .catch(()=>{});
+    }
   };
 
   const crm_by_id = id => CRM_CATALOG.find(c=>c.id===id);
-
-  const handleSyncNow = async (id) => {
-    if (!call || syncingId) return;
-    setSyncingId(id);
-    try {
-      const ts = new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
-      if (id === "fireflies") {
-        const results = await call("POST", "/api/meetings/sync");
-        updateConfig(id, { lastSync: ts });
-        toast(`Fireflies sync complete — ${results.synced} meetings synced, ${results.matched} matched to accounts`, "success");
-      } else {
-        const results = await call("POST", "/api/sync/run", { connectorId: id });
-        updateConfig(id, { lastSync: ts, syncCount: (configs[id].syncCount||0) + results.created + results.updated });
-        toast(`${crm_by_id(id).name} sync complete — ${results.created} created, ${results.updated} updated`, "success");
-      }
-    } catch (e) {
-      toast(`Sync failed: ${e.message || "unknown error"}`, "error");
-    } finally {
-      setSyncingId(null);
-    }
-  };
 
   const connectedCount = Object.values(configs).filter(c=>c.connected).length;
 
@@ -5462,7 +5472,7 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
           <CRMFieldMapModal
             crm={crm}
             config={configs[showFieldMap]}
-            onSave={patch=>{ updateConfig(showFieldMap,patch); toast("Field mapping saved","success"); }}
+            onSave={patch=>{ updateConfig(showFieldMap,patch,true); toast("Field mapping saved","success"); }}
             onClose={()=>setShowFieldMap(null)}
           />
         );
@@ -5474,7 +5484,11 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
           <CRMSyncModal
             crm={crm}
             config={configs[showSync]}
-            onSync={results=>handleSync(showSync,results)}
+            call={call}
+            onSync={results=>{
+              const ts = new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+              updateConfig(showSync,{lastSync:ts,syncCount:(configs[showSync].syncCount||0)+results.created+results.updated});
+            }}
             onClose={()=>setShowSync(null)}
           />
         );
