@@ -4792,15 +4792,19 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
 
   const save = async () => {
     const allFilled = crm.credentials.every(f => creds[f.key]?.trim());
-    if (!allFilled) return;
+    // Never save when test explicitly failed; new connections must pass the test first
+    if (!allFilled || testResult === "fail") return;
+    if (!config.connected && testResult !== "ok") return;
+    // Editing an already-connected integration without re-testing preserves connected=true
+    const isConnected = testResult === "ok" || (testResult === null && config.connected === true);
     try {
       await call("POST", "/api/sync/configure", {
         connectorId: crm.id,
         credentials: creds,
         fieldMap: config.fieldMap || {},
-        connected: testResult === "ok",
+        connected: isConnected,
       });
-      onSave({ connected: testResult === "ok", credentials: {} });
+      onSave({ connected: isConnected, credentials: {} });
       onClose();
     } catch {}
   };
@@ -4889,7 +4893,11 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
                 ? <><span style={{width:13,height:13,border:"2px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>Testing…</>
                 : <><Ic n="activity" size={14} color="var(--text2)"/>Test connection</>}
             </button>
-            <Btn onClick={save} style={{flex:1}} disabled={!crm.credentials.every(f=>creds[f.key]?.trim())}>
+            <Btn onClick={save} style={{flex:1}} disabled={
+              !crm.credentials.every(f=>creds[f.key]?.trim())
+              || testResult === "fail"
+              || (!config.connected && testResult !== "ok")
+            }>
               {config.connected?"Save changes":"Connect"}
             </Btn>
           </div>
@@ -5459,7 +5467,7 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
           <CRMConnectModal
             crm={crm}
             config={configs[showConnect]}
-            onSave={patch=>{ updateConfig(showConnect,patch); toast(`${crm.name} connected`,"success"); }}
+            onSave={patch=>{ updateConfig(showConnect,patch); toast(patch.connected?`${crm.name} connected`:`${crm.name} credentials saved`,"success"); }}
             onClose={()=>setShowConnect(null)}
             call={call}
           />
