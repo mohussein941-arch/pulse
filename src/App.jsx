@@ -4768,9 +4768,11 @@ const saveIntegrations = d => {
 // ── Connect / Edit credentials modal ──
 const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
   const [creds, setCreds] = useState({...config.credentials});
-  const [testing, setTesting] = useState(false);
+  const [testing, setTesting]   = useState(false);
+  const [saving, setSaving]     = useState(false);
   const [testResult, setTestResult] = useState(null); // null | "ok" | "fail"
-  const [testError, setTestError] = useState(null);
+  const [testError, setTestError]   = useState(null);
+  const [saveError, setSaveError]   = useState(null);
 
   useEffect(()=>{
     const h=e=>e.key==="Escape"&&onClose();
@@ -4792,17 +4794,27 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
 
   const save = async () => {
     const allFilled = crm.credentials.every(f => creds[f.key]?.trim());
-    if (!allFilled) return;
+    // Never save when test explicitly failed; new connections must pass the test first
+    if (!allFilled || testResult === "fail") return;
+    if (!config.connected && testResult !== "ok") return;
+    // Editing an already-connected integration without re-testing preserves connected=true
+    const isConnected = testResult === "ok" || (testResult === null && config.connected === true);
+    setSaving(true);
+    setSaveError(null);
     try {
       await call("POST", "/api/sync/configure", {
         connectorId: crm.id,
         credentials: creds,
         fieldMap: config.fieldMap || {},
-        connected: testResult === "ok",
+        connected: isConnected,
       });
-      onSave({ connected: testResult === "ok", credentials: {} });
+      onSave({ connected: isConnected, credentials: {} });
       onClose();
-    } catch {}
+    } catch (err) {
+      setSaveError(err?.message || "Failed to save — check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -4878,9 +4890,19 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
             </a>
           </div>
 
+          {/* Save error */}
+          {saveError&&(
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,padding:"10px 14px",
+              borderRadius:"var(--r)",background:"var(--rose-dim)",
+              border:"1.5px solid rgba(225,29,72,0.2)"}}>
+              <Ic n="alert" size={14} color="var(--rose)"/>
+              <span style={{fontSize:13,fontWeight:600,color:"var(--rose)"}}>{saveError}</span>
+            </div>
+          )}
+
           {/* Actions */}
           <div style={{display:"flex",gap:10}}>
-            <button onClick={testConnection} disabled={testing}
+            <button onClick={testConnection} disabled={testing||saving}
               style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
                 background:"var(--bg3)",color:"var(--text2)",border:"1.5px solid var(--border)",
                 borderRadius:"var(--r)",padding:"10px",fontWeight:600,fontSize:13,cursor:"pointer",
@@ -4889,8 +4911,15 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
                 ? <><span style={{width:13,height:13,border:"2px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>Testing…</>
                 : <><Ic n="activity" size={14} color="var(--text2)"/>Test connection</>}
             </button>
-            <Btn onClick={save} style={{flex:1}} disabled={!crm.credentials.every(f=>creds[f.key]?.trim())}>
-              {config.connected?"Save changes":"Connect"}
+            <Btn onClick={save} style={{flex:1}} disabled={
+              saving
+              || !crm.credentials.every(f=>creds[f.key]?.trim())
+              || testResult === "fail"
+              || (!config.connected && testResult !== "ok")
+            }>
+              {saving
+                ? <><span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.4)",borderTopColor:"white",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>Saving…</>
+                : (config.connected?"Save changes":"Connect")}
             </Btn>
           </div>
         </div>
@@ -4988,8 +5017,8 @@ const CRMFieldMapModal = ({ crm, config, onSave, onClose }) => {
 };
 
 // ── Sync modal ──
-const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
-  const [phase, setPhase]     = useState("confirm"); // confirm | running | done
+const CRMSyncModal = ({ crm, config, onSync, onClose, call }) => {
+  const [phase, setPhase]     = useState("confirm"); // confirm | running | done | error
   const [progress, setProgress] = useState(0);
   const [log, setLog]         = useState([]);
   const [results, setResults] = useState(null);
@@ -4999,39 +5028,48 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
     window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
   },[onClose,phase]);
 
-  const runSync = () => {
+  const runSync = async () => {
+    if (!call) {
+      setLog(["No backend configured — sync unavailable in local mode."]);
+      setPhase("error");
+      return;
+    }
     setPhase("running");
-    setProgress(0);
-    setLog([]);
-
-    const steps = [
-      { pct:10, msg:`Authenticating with ${crm.name}…`            },
-      { pct:25, msg:"Fetching account records…"                    },
-      { pct:45, msg:"Applying field mapping…"                      },
-      { pct:60, msg:"Checking for duplicate accounts…"             },
-      { pct:78, msg:"Importing ticket and activity data…"          },
-      { pct:90, msg:"Calculating health scores…"                   },
-      { pct:100,msg:"Sync complete."                               },
-    ];
-
-    let i = 0;
-    const tick = () => {
-      if (i >= steps.length) {
-        // Mock results
-        const created  = Math.floor(Math.random()*8)+2;
-        const updated  = Math.floor(Math.random()*5)+1;
-        const skipped  = Math.floor(Math.random()*3);
-        setResults({ created, updated, skipped, total: created+updated+skipped });
-        setPhase("done");
-        onSync({ created, updated, skipped });
-        return;
+    setProgress(20);
+    setLog([`Connecting to ${crm.name}…`]);
+    try {
+      let created, updated, skipped;
+      if (crm.id === "fireflies") {
+        setLog(p=>[...p, "Fetching Fireflies transcripts…"]);
+        setProgress(55);
+        const data = await call("POST", "/api/meetings/sync");
+        const synced  = data.synced  || 0;
+        const matched = data.matched || 0;
+        created = synced;
+        updated = matched;
+        skipped = Math.max(0, synced - matched);
+        setLog(p=>[...p, `Synced ${synced} transcript${synced!==1?"s":""}, ${matched} matched to accounts.`]);
+      } else {
+        setLog(p=>[...p, "Fetching account records…"]);
+        setProgress(40);
+        const data = await call("POST", "/api/sync/run", { connectorId: crm.id });
+        setLog(p=>[...p, "Applying field mapping…"]);
+        setProgress(75);
+        created = data.created || 0;
+        updated = data.updated || 0;
+        skipped = data.skipped || 0;
+        setLog(p=>[...p, `Processed ${created+updated+skipped} records.`]);
       }
-      setProgress(steps[i].pct);
-      setLog(p=>[...p, steps[i].msg]);
-      i++;
-      setTimeout(tick, 420 + Math.random()*280);
-    };
-    setTimeout(tick, 300);
+      setProgress(100);
+      setLog(p=>[...p, "Sync complete."]);
+      const total = created + updated + skipped;
+      setResults({ created, updated, skipped, total });
+      setPhase("done");
+      onSync({ created, updated, skipped });
+    } catch (e) {
+      setLog(p=>[...p, `Error: ${e.message || "Sync failed"}`]);
+      setPhase("error");
+    }
   };
 
   return (
@@ -5155,6 +5193,25 @@ const CRMSyncModal = ({ crm, config, onSync, onClose }) => {
               <Btn onClick={onClose} style={{width:"100%"}}>View portfolio</Btn>
             </>
           )}
+
+          {/* ERROR */}
+          {phase==="error"&&(
+            <>
+              <div style={{textAlign:"center",marginBottom:24}}>
+                <div style={{display:"flex",justifyContent:"center",marginBottom:12}}>
+                  <Ic n="alert" size={40} color="var(--red)"/>
+                </div>
+                <div style={{fontWeight:700,fontSize:18,marginBottom:4}}>Sync failed</div>
+              </div>
+              <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 14px",
+                marginBottom:20,display:"flex",flexDirection:"column",gap:6}}>
+                {log.map((l,i)=>(
+                  <div key={i} style={{fontSize:12,color:"var(--text2)"}}>{l}</div>
+                ))}
+              </div>
+              <Btn variant="ghost" onClick={onClose} style={{width:"100%"}}>Close</Btn>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -5168,7 +5225,6 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
   const [showFieldMap, setShowFieldMap] = useState(null);
   const [showSync, setShowSync]         = useState(null);
   const [categoryFilter, setCategoryFilter] = useState("All");
-  const [syncingId, setSyncingId]       = useState(null);
 
   // Load real connection status from backend on mount
   useEffect(() => {
@@ -5195,32 +5251,15 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
 
   useEffect(()=>{ saveIntegrations(configs); },[configs]);
 
-  const updateConfig = (id, patch) => {
+  const updateConfig = (id, patch, persist = false) => {
     setConfigs(p=>({...p,[id]:{...p[id],...patch}}));
+    if (persist && patch.fieldMap && call) {
+      call("PATCH", "/api/sync/field-map", { connectorId: id, fieldMap: patch.fieldMap })
+        .catch(()=>{});
+    }
   };
 
   const crm_by_id = id => CRM_CATALOG.find(c=>c.id===id);
-
-  const handleSyncNow = async (id) => {
-    if (!call || syncingId) return;
-    setSyncingId(id);
-    try {
-      const ts = new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
-      if (id === "fireflies") {
-        const results = await call("POST", "/api/meetings/sync");
-        updateConfig(id, { lastSync: ts });
-        toast(`Fireflies sync complete — ${results.synced} meetings synced, ${results.matched} matched to accounts`, "success");
-      } else {
-        const results = await call("POST", "/api/sync/run", { connectorId: id });
-        updateConfig(id, { lastSync: ts, syncCount: (configs[id].syncCount||0) + results.created + results.updated });
-        toast(`${crm_by_id(id).name} sync complete — ${results.created} created, ${results.updated} updated`, "success");
-      }
-    } catch (e) {
-      toast(`Sync failed: ${e.message || "unknown error"}`, "error");
-    } finally {
-      setSyncingId(null);
-    }
-  };
 
   const connectedCount = Object.values(configs).filter(c=>c.connected).length;
 
@@ -5449,7 +5488,7 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
           <CRMConnectModal
             crm={crm}
             config={configs[showConnect]}
-            onSave={patch=>{ updateConfig(showConnect,patch); toast(`${crm.name} connected`,"success"); }}
+            onSave={patch=>{ updateConfig(showConnect,patch); toast(patch.connected?`${crm.name} connected`:`${crm.name} credentials saved`,"success"); }}
             onClose={()=>setShowConnect(null)}
             call={call}
           />
@@ -5462,7 +5501,7 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
           <CRMFieldMapModal
             crm={crm}
             config={configs[showFieldMap]}
-            onSave={patch=>{ updateConfig(showFieldMap,patch); toast("Field mapping saved","success"); }}
+            onSave={patch=>{ updateConfig(showFieldMap,patch,true); toast("Field mapping saved","success"); }}
             onClose={()=>setShowFieldMap(null)}
           />
         );
@@ -5474,7 +5513,11 @@ const IntegrationsPage = ({ onImport, toast, call }) => {
           <CRMSyncModal
             crm={crm}
             config={configs[showSync]}
-            onSync={results=>handleSync(showSync,results)}
+            call={call}
+            onSync={results=>{
+              const ts = new Date().toLocaleString("en-US",{month:"short",day:"numeric",hour:"2-digit",minute:"2-digit"});
+              updateConfig(showSync,{lastSync:ts,syncCount:(configs[showSync].syncCount||0)+results.created+results.updated});
+            }}
             onClose={()=>setShowSync(null)}
           />
         );
