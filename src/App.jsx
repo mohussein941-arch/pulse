@@ -4768,9 +4768,11 @@ const saveIntegrations = d => {
 // ── Connect / Edit credentials modal ──
 const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
   const [creds, setCreds] = useState({...config.credentials});
-  const [testing, setTesting] = useState(false);
+  const [testing, setTesting]   = useState(false);
+  const [saving, setSaving]     = useState(false);
   const [testResult, setTestResult] = useState(null); // null | "ok" | "fail"
-  const [testError, setTestError] = useState(null);
+  const [testError, setTestError]   = useState(null);
+  const [saveError, setSaveError]   = useState(null);
 
   useEffect(()=>{
     const h=e=>e.key==="Escape"&&onClose();
@@ -4797,6 +4799,8 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
     if (!config.connected && testResult !== "ok") return;
     // Editing an already-connected integration without re-testing preserves connected=true
     const isConnected = testResult === "ok" || (testResult === null && config.connected === true);
+    setSaving(true);
+    setSaveError(null);
     try {
       await call("POST", "/api/sync/configure", {
         connectorId: crm.id,
@@ -4806,7 +4810,11 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
       });
       onSave({ connected: isConnected, credentials: {} });
       onClose();
-    } catch {}
+    } catch (err) {
+      setSaveError(err?.message || "Failed to save — check your connection and try again.");
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -4882,9 +4890,19 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
             </a>
           </div>
 
+          {/* Save error */}
+          {saveError&&(
+            <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:16,padding:"10px 14px",
+              borderRadius:"var(--r)",background:"var(--rose-dim)",
+              border:"1.5px solid rgba(225,29,72,0.2)"}}>
+              <Ic n="alert" size={14} color="var(--rose)"/>
+              <span style={{fontSize:13,fontWeight:600,color:"var(--rose)"}}>{saveError}</span>
+            </div>
+          )}
+
           {/* Actions */}
           <div style={{display:"flex",gap:10}}>
-            <button onClick={testConnection} disabled={testing}
+            <button onClick={testConnection} disabled={testing||saving}
               style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:7,
                 background:"var(--bg3)",color:"var(--text2)",border:"1.5px solid var(--border)",
                 borderRadius:"var(--r)",padding:"10px",fontWeight:600,fontSize:13,cursor:"pointer",
@@ -4894,11 +4912,14 @@ const CRMConnectModal = ({ crm, config, onSave, onClose, call }) => {
                 : <><Ic n="activity" size={14} color="var(--text2)"/>Test connection</>}
             </button>
             <Btn onClick={save} style={{flex:1}} disabled={
-              !crm.credentials.every(f=>creds[f.key]?.trim())
+              saving
+              || !crm.credentials.every(f=>creds[f.key]?.trim())
               || testResult === "fail"
               || (!config.connected && testResult !== "ok")
             }>
-              {config.connected?"Save changes":"Connect"}
+              {saving
+                ? <><span style={{width:13,height:13,border:"2px solid rgba(255,255,255,0.4)",borderTopColor:"white",borderRadius:"50%",display:"inline-block",animation:"spin .7s linear infinite"}}/>Saving…</>
+                : (config.connected?"Save changes":"Connect")}
             </Btn>
           </div>
         </div>
