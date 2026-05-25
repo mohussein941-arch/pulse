@@ -7349,11 +7349,15 @@ const AuthScreen = ({ onAuth }) => {
 };
 
 const EmailSettingsPage = ({ session }) => {
-  const [emailAccounts, setEmailAccounts] = useState([]);
-  const [loading,       setLoading]       = useState(true);
-  const [connecting,    setConnecting]    = useState(null);
-  const [actionLoading, setActionLoading] = useState(null);
-  const [pageToast,     setPageToast]     = useState(null);
+  const [emailAccounts,    setEmailAccounts]    = useState([]);
+  const [loading,          setLoading]          = useState(true);
+  const [connecting,       setConnecting]       = useState(null);
+  const [actionLoading,    setActionLoading]    = useState(null);
+  const [pageToast,        setPageToast]        = useState(null);
+  const [calendarAccounts, setCalendarAccounts] = useState([]);
+  const [calLoading,       setCalLoading]       = useState(true);
+  const [connectingCal,    setConnectingCal]    = useState(false);
+  const [calActionLoading, setCalActionLoading] = useState(null);
 
   const showPageToast = (msg, type = "success") => {
     setPageToast({ msg, type });
@@ -7486,7 +7490,90 @@ popup.location.href = url;
     }
   };
 
-  const hasGmail = emailAccounts.some(a => a.provider === "gmail");
+  const fetchCalendarAccounts = useCallback(async () => {
+    if (!API_URL) { setCalLoading(false); return; }
+    try {
+      const res = await fetch(`${API_URL}/api/calendar/accounts`, {
+        headers: {
+          "x-pulse-secret": API_SECRET,
+          ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+        },
+      });
+      const data = await res.json();
+      setCalendarAccounts(data.accounts || []);
+    } catch {
+      showPageToast("Failed to load calendar accounts", "error");
+    } finally {
+      setCalLoading(false);
+    }
+  }, [session]);
+
+  useEffect(() => {
+    fetchCalendarAccounts();
+    const handleCalMsg = e => {
+      if (e.data?.type === "OAUTH_SUCCESS_CALENDAR") fetchCalendarAccounts();
+    };
+    window.addEventListener("message", handleCalMsg);
+    return () => window.removeEventListener("message", handleCalMsg);
+  }, [fetchCalendarAccounts]);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("connected") === "google_calendar") {
+      fetchCalendarAccounts();
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, [fetchCalendarAccounts]);
+
+  const connectCalendar = async () => {
+    if (!API_URL) { showPageToast("Backend not configured", "error"); return; }
+    setConnectingCal(true);
+    try {
+      const popup = window.open("", "connect_calendar",
+        "width=520,height=640,scrollbars=yes,resizable=yes");
+      const res = await fetch(`${API_URL}/api/calendar/auth`, {
+        headers: {
+          "x-pulse-secret": API_SECRET,
+          ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+        },
+      });
+      const { url } = await res.json();
+      popup.location.href = url;
+      const timer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(timer);
+          setConnectingCal(false);
+          fetchCalendarAccounts();
+        }
+      }, 500);
+    } catch {
+      showPageToast("Failed to start Calendar connection", "error");
+      setConnectingCal(false);
+    }
+  };
+
+  const disconnectCalendar = async (id, email) => {
+    if (!confirm(`Disconnect ${email}?`)) return;
+    setCalActionLoading(id + "_disconnect");
+    try {
+      await fetch(`${API_URL}/api/calendar/accounts/${id}`, {
+        method: "DELETE",
+        headers: {
+          "x-pulse-secret": API_SECRET,
+          ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
+        },
+      });
+      await fetchCalendarAccounts();
+      showPageToast("Calendar disconnected");
+    } catch {
+      showPageToast("Failed to disconnect", "error");
+    } finally {
+      setCalActionLoading(null);
+    }
+  };
+
+  const hasGmail    = emailAccounts.some(a => a.provider === "gmail");
+  const hasCalendar = calendarAccounts.length > 0;
 
   return (
     <div style={{animation:"fadeUp .2s ease",maxWidth:640}}>
@@ -7628,6 +7715,111 @@ popup.location.href = url;
           </div>
           <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
             Connect Gmail above to start sending surveys from your own address.
+          </div>
+        </div>
+      )}
+
+      {/* ── Calendar Settings ─────────────────────────────── */}
+      <div style={{borderTop:"1.5px solid var(--border)",margin:"28px 0 24px"}}/>
+      <h2 style={{fontWeight:800,fontSize:20,letterSpacing:"-.03em",marginBottom:4}}>Calendar Settings</h2>
+      <p style={{fontSize:13,color:"var(--text3)",marginBottom:20,lineHeight:1.6}}>
+        Connect your Google Calendar so Pulse can detect upcoming customer meetings and generate pre-meeting briefs.
+      </p>
+
+      {/* Connect Calendar card */}
+      <div style={{background:hasCalendar?"rgba(26,115,232,0.04)":"var(--bg2)",
+        border:`1.5px solid ${hasCalendar?"rgba(26,115,232,0.25)":"var(--border)"}`,
+        borderRadius:"var(--r-lg)",padding:"18px 20px",marginBottom:12,
+        display:"flex",alignItems:"center",justifyContent:"space-between",gap:16}}>
+        <div style={{display:"flex",alignItems:"center",gap:12}}>
+          <div style={{width:40,height:40,borderRadius:"var(--r)",
+            border:"1.5px solid",borderColor:hasCalendar?"rgba(26,115,232,0.3)":"var(--border)",
+            display:"flex",alignItems:"center",justifyContent:"center",background:"white"}}>
+            <svg viewBox="0 0 24 24" width="22" height="22" fill="none">
+              <rect x="3" y="4" width="18" height="17" rx="2" fill="white" stroke="#1a73e8" strokeWidth="1.5"/>
+              <rect x="3" y="4" width="18" height="6" rx="2" fill="#1a73e8"/>
+              <line x1="16" y1="2" x2="16" y2="6" stroke="#1a73e8" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="8" y1="2" x2="8" y2="6" stroke="#1a73e8" strokeWidth="1.5" strokeLinecap="round"/>
+              <line x1="3" y1="10" x2="21" y2="10" stroke="#1a73e8" strokeWidth="1.5"/>
+              <circle cx="12" cy="16" r="2" fill="#1a73e8"/>
+            </svg>
+          </div>
+          <div>
+            <div style={{fontWeight:600,fontSize:14}}>Google Calendar</div>
+            <div style={{fontSize:12,color:"var(--text3)",marginTop:1}}>
+              {hasCalendar
+                ? `${calendarAccounts.length} calendar connected`
+                : "Detect upcoming meetings for pre-meeting briefs"}
+            </div>
+          </div>
+        </div>
+        <button onClick={connectCalendar} disabled={connectingCal}
+          style={{padding:"8px 16px",borderRadius:"var(--r-sm)",fontSize:13,fontWeight:600,
+            border:`1.5px solid ${hasCalendar?"rgba(26,115,232,0.3)":"#1a73e8"}`,
+            background:hasCalendar?"white":"#1a73e8",
+            color:hasCalendar?"#1a73e8":"white",cursor:"pointer",
+            opacity:connectingCal?0.7:1,
+            transition:"all .15s",whiteSpace:"nowrap",fontFamily:"var(--font-display)"}}>
+          {connectingCal ? "Opening…" : hasCalendar ? "+ Add another" : "+ Connect Calendar"}
+        </button>
+      </div>
+
+      {/* Connected calendars list */}
+      {calendarAccounts.length > 0 && (
+        <div style={{marginBottom:24}}>
+          <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
+            textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>
+            Connected calendars
+          </div>
+          <div style={{border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",overflow:"hidden"}}>
+            {calLoading ? (
+              <div style={{padding:"20px",textAlign:"center",color:"var(--text3)",fontSize:13}}>Loading…</div>
+            ) : calendarAccounts.map((acc, i) => (
+              <div key={acc.id} style={{display:"flex",alignItems:"center",
+                justifyContent:"space-between",padding:"12px 16px",
+                borderBottom:i<calendarAccounts.length-1?"1px solid var(--border)":"none",
+                background:"var(--bg2)",gap:12}}>
+                <div style={{display:"flex",alignItems:"center",gap:10,minWidth:0}}>
+                  <div style={{width:32,height:32,borderRadius:"var(--r-sm)",
+                    background:"rgba(26,115,232,0.08)",
+                    border:"1.5px solid rgba(26,115,232,0.2)",
+                    display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none">
+                      <rect x="3" y="4" width="18" height="17" rx="2" stroke="#1a73e8" strokeWidth="1.5"/>
+                      <line x1="16" y1="2" x2="16" y2="6" stroke="#1a73e8" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="8" y1="2" x2="8" y2="6" stroke="#1a73e8" strokeWidth="1.5" strokeLinecap="round"/>
+                      <line x1="3" y1="10" x2="21" y2="10" stroke="#1a73e8" strokeWidth="1.5"/>
+                    </svg>
+                  </div>
+                  <div>
+                    <div style={{fontSize:14,fontWeight:500,color:"var(--text)"}}>{acc.email}</div>
+                    <div style={{fontSize:11,color:"var(--text3)",marginTop:1}}>Google Calendar</div>
+                  </div>
+                </div>
+                <button onClick={() => disconnectCalendar(acc.id, acc.email)}
+                  disabled={calActionLoading===acc.id+"_disconnect"}
+                  style={{padding:"5px 12px",borderRadius:"var(--r-sm)",
+                    border:"1px solid rgba(225,29,72,0.2)",background:"var(--rose-dim)",
+                    color:"var(--rose)",fontSize:12,fontWeight:500,cursor:"pointer",
+                    fontFamily:"var(--font-display)"}}>
+                  {calActionLoading===acc.id+"_disconnect" ? "…" : "Disconnect"}
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Calendar empty state */}
+      {!calLoading && calendarAccounts.length === 0 && (
+        <div style={{textAlign:"center",padding:"32px 20px",
+          borderRadius:"var(--r-lg)",border:"1.5px dashed var(--border)",marginBottom:24}}>
+          <div style={{fontSize:28,marginBottom:8}}>📅</div>
+          <div style={{fontSize:14,fontWeight:600,color:"var(--text2)",marginBottom:6}}>
+            No calendars connected
+          </div>
+          <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
+            Connect Google Calendar above to enable pre-meeting briefs.
           </div>
         </div>
       )}
