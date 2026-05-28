@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from "react";
+﻿import { useState, useEffect, useCallback, useRef } from "react";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -2185,6 +2185,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
     {key:"onboarding", label:"Onboarding"},
     {key:"health",     label:"Health & Playbook"},
     {key:"ai",         label:"Ask AI"},
+    {key:"brief",      label:"Account Brief"},
   ];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
   const tabHasAlert = {
@@ -2192,6 +2193,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
     onboarding: false,
     health:     account.healthScore < 55 || (triggeredPbs.length > 0 && !account.activePlaybookId),
     ai:         false,
+    brief:      false,
   };
 
   const [emailThreads,    setEmailThreads]    = useState([]);
@@ -2226,6 +2228,15 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const [aiQuestion, setAiQuestion] = useState("");
   const [aiChatLoading, setAiChatLoading] = useState(false);
 
+  const [briefData,      setBriefData]      = useState(null);
+  const [briefLoading,   setBriefLoading]   = useState(false);
+  const [briefError,     setBriefError]     = useState(null);
+  const [briefCache,     setBriefCache]     = useState(null);
+  const [briefSlowHint,  setBriefSlowHint]  = useState(false);
+  const briefSlowTimer   = useRef(null);
+  const briefFetchedRef  = useRef(false);
+  const briefInflightRef = useRef(false);
+
   const askAI = async () => {
     const q = aiQuestion.trim();
     if (!q || aiChatLoading) return;
@@ -2243,6 +2254,68 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
       setAiMessages(p => [...p, { role:"assistant", content: msg }]);
     } finally { setAiChatLoading(false); }
   };
+
+  useEffect(() => {
+    setBriefData(null);
+    setBriefError(null);
+    briefFetchedRef.current = false;
+    briefInflightRef.current = false;
+    setBriefLoading(false);
+    setBriefCache(null);
+    setBriefSlowHint(false);
+  }, [account.id]);
+
+  useEffect(() => {
+    if (tab !== "brief" || briefFetchedRef.current) return;
+    let cancelled = false;
+    setBriefLoading(true);
+    briefFetchedRef.current = true;
+    briefInflightRef.current = true;
+    briefSlowTimer.current = setTimeout(() => { if (!cancelled) setBriefSlowHint(true); }, 2000);
+    const s = loadSession();
+    fetch(`${API_URL}/api/accounts/${account.id}/brief`, {
+      method: "GET",
+      headers: {
+        "Content-Type":   "application/json",
+        "x-pulse-secret": API_SECRET,
+        ...(s?.token ? { Authorization: `Bearer ${s.token}` } : {}),
+      },
+    }).then(async res => {
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ error: res.statusText }));
+        const error = new Error(err.error || "API error");
+        error.status = res.status;
+        throw error;
+      }
+      const data = res.status === 204 ? null : await res.json();
+      const cacheStatus = res.headers.get("X-Brief-Cache");
+      return { data, cacheStatus };
+    }).then(({ data, cacheStatus }) => {
+      if (cancelled) return;
+      setBriefData(data);
+      setBriefCache(cacheStatus);
+      setBriefError(null);
+    }).catch(e => {
+      if (!cancelled) setBriefError(e.status || 500);
+    }).finally(() => {
+      briefInflightRef.current = false;
+      if (!cancelled) {
+        clearTimeout(briefSlowTimer.current);
+        setBriefSlowHint(false);
+        setBriefLoading(false);
+      }
+    });
+    return () => {
+      cancelled = true;
+      clearTimeout(briefSlowTimer.current);
+      setBriefSlowHint(false);
+      if (briefInflightRef.current) {
+        briefFetchedRef.current = false;
+        briefInflightRef.current = false;
+        setBriefLoading(false);
+      }
+    };
+  }, [tab, account.id]);
 
   return (
     <>
@@ -3002,6 +3075,119 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* ACCOUNT BRIEF TAB */}
+          {tab==="brief"&&(
+            <div style={{display:"flex",flexDirection:"column",gap:14}}>
+
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
+                <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Account Brief</div>
+                {briefCache&&(
+                  <span style={{fontSize:12,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
+                    {briefCache==="hit"?"cached":"generated just now"}
+                  </span>
+                )}
+              </div>
+
+              {briefLoading&&(
+                <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:"48px 0",gap:12}}>
+                  <div style={{width:20,height:20,border:"2.5px solid var(--border2)",borderTopColor:"var(--indigo)",borderRadius:"50%",animation:"spin .7s linear infinite"}}/>
+                  <div style={{fontSize:13,color:"var(--text3)"}}>
+                    {briefSlowHint
+                      ? "Generating fresh brief — this usually takes 10–15 seconds."
+                      : "Loading brief…"}
+                  </div>
+                </div>
+              )}
+
+              {briefError!==null&&!briefLoading&&(
+                <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"48px 0"}}>
+                  {briefError===503
+                    ? "Brief generation is temporarily unavailable."
+                    : "Couldn't generate brief. Reopen the account to retry."}
+                </div>
+              )}
+
+              {briefData&&!briefLoading&&(
+                <>
+                  {/* Summary */}
+                  <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>Summary</div>
+                    <div style={{fontSize:14,color:"var(--text)",lineHeight:1.6}}>{briefData.summary}</div>
+                  </div>
+
+                  {/* Themes */}
+                  <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Themes</div>
+                    {briefData.themes.map((theme,i)=>(
+                      <div key={i} style={{paddingBottom:i<briefData.themes.length-1?12:0,marginBottom:i<briefData.themes.length-1?12:0,borderBottom:i<briefData.themes.length-1?"1px solid var(--border)":"none"}}>
+                        <div style={{display:"flex",alignItems:"center",gap:8}}>
+                          <div style={{width:8,height:8,borderRadius:"50%",flexShrink:0,
+                            background:theme.sentiment==="positive"?"var(--emerald)":theme.sentiment==="negative"?"var(--rose)":"var(--text3)"}}/>
+                          <span style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{theme.topic}</span>
+                        </div>
+                        <div style={{fontSize:12,color:"var(--text3)",marginTop:4,marginLeft:16}}>{theme.evidence}</div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Talking Points */}
+                  <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Talking Points</div>
+                    {briefData.talking_points.map((tp,i)=>(
+                      <div key={i} style={{display:"flex",gap:10,marginTop:i>0?12:0}}>
+                        <div style={{width:4,height:4,borderRadius:1,background:"var(--indigo)",marginTop:6,flexShrink:0}}/>
+                        <div>
+                          <div style={{fontSize:13,fontWeight:600,color:"var(--text)"}}>{tp.point}</div>
+                          <div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic",marginTop:4}}>{tp.rationale}</div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Risks — omit section if no risks have a description */}
+                  {briefData.risks.filter(r=>r.description!=null).length>0&&(
+                    <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                      <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Risks</div>
+                      {briefData.risks.filter(r=>r.description!=null).map((risk,i)=>{
+                        const sevColor=risk.severity==="high"?"var(--rose)":risk.severity==="medium"?"var(--amber)":"var(--text3)";
+                        const sevBg   =risk.severity==="high"?"var(--rose-dim)":risk.severity==="medium"?"var(--amber-dim)":"var(--bg3)";
+                        return (
+                          <div key={i} style={{marginTop:i>0?10:0}}>
+                            <div style={{display:"flex",alignItems:"center",gap:8}}>
+                              <span style={{fontSize:10,fontWeight:700,color:sevColor,background:sevBg,padding:"2px 8px",borderRadius:99,flexShrink:0}}>{risk.severity.toUpperCase()}</span>
+                              <span style={{fontSize:13,color:"var(--text)"}}>{risk.description}</span>
+                            </div>
+                            {risk.owner&&<div style={{fontSize:11,color:"var(--text3)",marginTop:3}}>Owner: {risk.owner}</div>}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Recommended Playbooks — omit section if empty */}
+                  {briefData.playbooks.length>0&&(
+                    <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                      <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Recommended Playbooks</div>
+                      {briefData.playbooks.map((pb,i)=>(
+                        <div key={i} style={{marginTop:i>0?10:0}}>
+                          <span style={{fontSize:12,fontWeight:600,color:"var(--indigo)",background:"var(--indigo-dim)",padding:"2px 10px",borderRadius:99}}>{pb.name}</span>
+                          <div style={{fontSize:12,color:"var(--text3)",marginTop:4}}>{pb.trigger_reason}</div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Next Action — distinct indigo-dim background to make it the primary CTA */}
+                  <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,0.15)",borderRadius:"var(--r-lg)",padding:16}}>
+                    <div style={{fontSize:11,fontWeight:600,color:"var(--indigo)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>Next Action</div>
+                    <div style={{fontSize:14,fontWeight:600,color:"var(--text)",lineHeight:1.5}}>{briefData.next_action}</div>
+                  </div>
+                </>
+              )}
+
             </div>
           )}
 
@@ -9768,6 +9954,90 @@ const AuditLogSection = ({ call }) => {
   );
 };
 
+const ProfileSettings = ({ call, toast }) => {
+  const [profile, setProfile] = useState(null);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    call("GET", "/api/csm-profile").then(setProfile).catch(()=>{});
+  }, [call]);
+
+  if (!profile) return <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>Loading…</div>;
+
+  const update = async patch => {
+    const next = { ...profile, ...patch };
+    setProfile(next);
+    setSaving(true);
+    try { await call("PATCH", "/api/csm-profile", patch); }
+    catch { toast("Failed to save settings", "error"); }
+    finally { setSaving(false); }
+  };
+
+  const updateWS = (key, value) => {
+    const nextWS = { ...(profile.working_style || {}) };
+    if (value === '') delete nextWS[key];
+    else nextWS[key] = value;
+    update({ working_style: nextWS });
+  };
+
+  return (
+    <div>
+      <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"16px 20px",marginBottom:14}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+          <Fld label="Career Stage">
+            <Slct value={profile.career_stage} onChange={e=>update({career_stage:e.target.value})}>
+              <option value="junior">Junior</option>
+              <option value="mid">Mid-level</option>
+              <option value="senior">Senior</option>
+              <option value="lead">Lead</option>
+            </Slct>
+          </Fld>
+          <Fld label="Specialty">
+            <Slct value={profile.specialty} onChange={e=>update({specialty:e.target.value})}>
+              <option value="general_csm">General</option>
+              <option value="technical_csm">Technical</option>
+              <option value="enterprise_csm">Enterprise</option>
+              <option value="growth_csm">Growth</option>
+            </Slct>
+          </Fld>
+        </div>
+      </div>
+      <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"16px 20px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
+          <Fld label="Communication">
+            <Slct value={profile.working_style?.communication_preference || ""}
+                  onChange={e=>updateWS('communication_preference', e.target.value)}>
+              <option value="">—</option>
+              <option value="async">Async-first</option>
+              <option value="sync">Sync-first</option>
+              <option value="mixed">Mixed</option>
+            </Slct>
+          </Fld>
+          <Fld label="Meeting Length">
+            <Slct value={profile.working_style?.meeting_length || ""}
+                  onChange={e=>updateWS('meeting_length', e.target.value)}>
+              <option value="">—</option>
+              <option value="15min">15 min</option>
+              <option value="30min">30 min</option>
+              <option value="60min">60 min</option>
+            </Slct>
+          </Fld>
+          <Fld label="Risk Tolerance">
+            <Slct value={profile.working_style?.risk_tolerance || ""}
+                  onChange={e=>updateWS('risk_tolerance', e.target.value)}>
+              <option value="">—</option>
+              <option value="low">Low</option>
+              <option value="medium">Medium</option>
+              <option value="high">High</option>
+            </Slct>
+          </Fld>
+        </div>
+      </div>
+      {saving && <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",marginTop:12}}>Saving…</div>}
+    </div>
+  );
+};
+
 const BriefingSettings = ({ call, toast, hasGmail }) => {
   const [cfg, setCfg] = useState(null);
   const [saving, setSaving] = useState(false);
@@ -11098,7 +11368,9 @@ export default function App() {
           {view==="settings"&&(
             <div style={{maxWidth:600}}>
               <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:28}}>Settings</h1>
-              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Email</div>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Profile</div>
+              <ProfileSettings call={call} toast={toast}/>
+              <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Email</div>
               <EmailSettingsPage session={session}/>
               <div style={{fontSize:13,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".08em",margin:"32px 0 14px"}}>Product Usage</div>
               <WebhookSettings call={call} toast={toast}/>
