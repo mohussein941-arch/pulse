@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from "react";
+﻿import { useState, useEffect, useCallback, useRef, Component } from "react";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -10920,6 +10920,38 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
   );
 };
 
+class ErrorBoundary extends Component {
+  constructor(props) {
+    super(props);
+    this.state = { error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+  componentDidCatch(error, info) {
+    console.error("[ErrorBoundary] Caught:", error, info?.componentStack);
+  }
+  reset = () => this.setState({ error: null });
+  render() {
+    if (!this.state.error) return this.props.children;
+    return (
+      <div style={{padding:"40px 24px",maxWidth:520,margin:"0 auto"}}>
+        <div style={{fontSize:18,fontWeight:700,color:"var(--text)",marginBottom:8}}>Something went wrong</div>
+        <div style={{fontSize:13,color:"var(--text3)",lineHeight:1.6,marginBottom:16}}>
+          The app hit an unexpected error. Your data is safe.
+        </div>
+        <div style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--text3)",background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:"12px 14px",marginBottom:16,wordBreak:"break-word"}}>
+          {String(this.state.error?.message || this.state.error)}
+        </div>
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={this.reset} style={{fontSize:13,fontWeight:600,padding:"8px 16px",background:"var(--indigo)",color:"#fff",border:"none",borderRadius:"var(--r-lg)",cursor:"pointer"}}>Try again</button>
+          <button onClick={()=>window.location.reload()} style={{fontSize:13,fontWeight:600,padding:"8px 16px",background:"var(--bg2)",color:"var(--text)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",cursor:"pointer"}}>Reload page</button>
+        </div>
+      </div>
+    );
+  }
+}
+
 export default function App() {
   const [session,      setSession]      = useState(loadSession);
   const [accounts,     setAccounts]     = useState([]);
@@ -11263,6 +11295,7 @@ export default function App() {
   ];
 
   return (
+    <ErrorBoundary>
     <>
       <style>{STYLES}</style>
       <div style={{minHeight:"100vh",display:"flex",background:"var(--bg)"}}>
@@ -11607,5 +11640,6 @@ export default function App() {
 
       <ToastBar toasts={toasts}/>
     </>
+    </ErrorBoundary>
   );
 }
