@@ -2272,10 +2272,15 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const [editAct,setEditAct]     = useState(false);
   const [actDraft,setActDraft]   = useState(account.nextAction||"");
 
-  useEffect(()=>{
-    const h=e=>e.key==="Escape"&&onClose();
-    window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
-  },[onClose]);
+  useEffect(() => {
+    const h = e => {
+      if (e.key !== "Escape") return;
+      if (closeoutMeeting !== null) return; // m3d.1c: defer to CloseoutModal's own Escape handler
+      onClose();
+    };
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, [onClose, closeoutMeeting]);
 
   const sc=STAGE_CFG[account.stage]||STAGE_CFG["Stable"];
   const days=ago(account.lastContact);
