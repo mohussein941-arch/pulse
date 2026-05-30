@@ -731,11 +731,13 @@ const Confirm = ({ msg, onConfirm, onCancel }) => {
 
 // m3d.1c — Detail Escape handler defers to CloseoutModal (see TECH_DEBT for broader Modal Escape conflict)
 const CloseoutModal = ({ meeting, onClose, call, toast }) => {
-  const [data,      setData]      = useState(null);
-  const [loading,   setLoading]   = useState(false);
-  const [error,     setError]     = useState(null);
-  const [fromCache, setFromCache] = useState(null);
-  const [slowHint,  setSlowHint]  = useState(false);
+  const [data,          setData]          = useState(null);
+  const [loading,       setLoading]       = useState(false);
+  const [error,         setError]         = useState(null);
+  const [fromCache,     setFromCache]     = useState(null);
+  const [slowHint,      setSlowHint]      = useState(false);
+  const [healthLogged,  setHealthLogged]  = useState(false);
+  const [healthLogging, setHealthLogging] = useState(false);
   const slowTimer                 = useRef(null);
 
   const fetchCloseout = useCallback(async (force = false) => {
@@ -747,6 +749,7 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
       const result = await call("POST", `/api/meetings/${meeting.id}/closeout`, body);
       setData(result.content);
       setFromCache(result.fromCache);
+      setHealthLogged(false);
     } catch (err) {
       setError(err);
     } finally {
@@ -755,6 +758,24 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
       setLoading(false);
     }
   }, [call, meeting.id]);
+
+  const logHealthSignal = async () => {
+    if (!data?.health_signal || healthLogging || healthLogged) return;
+    setHealthLogging(true);
+    try {
+      await call("POST", `/api/meetings/${meeting.id}/log-health-signal`, {
+        direction: data.health_signal.direction,
+        magnitude: data.health_signal.magnitude,
+        rationale: data.health_signal.rationale,
+      });
+      setHealthLogged(true);
+      toast("Health signal logged to account", "success");
+    } catch (err) {
+      toast(err.status === 402 ? "AI usage limit reached." : "Couldn't log health signal — try again.", "error");
+    } finally {
+      setHealthLogging(false);
+    }
+  };
 
   useEffect(() => {
     if (meeting.has_closeout) fetchCloseout(false);
@@ -867,6 +888,18 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
                   </span>
                 </div>
                 <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>{data.health_signal.rationale}</div>
+                {!healthLogged ? (
+                  <button onClick={logHealthSignal} disabled={healthLogging}
+                    style={{ alignSelf:"flex-start", marginTop:8, background:"var(--bg3)", color:"var(--text2)",
+                      border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"6px 12px",
+                      fontSize:12, fontWeight:600, cursor:healthLogging?"wait":"pointer" }}>
+                    {healthLogging ? "Logging…" : "Log to account"}
+                  </button>
+                ) : (
+                  <div style={{ marginTop:8, fontSize:12, color:"var(--emerald)", fontWeight:600 }}>
+                    ✓ Logged to account
+                  </div>
+                )}
               </div>
             )}
           </div>
