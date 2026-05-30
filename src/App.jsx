@@ -729,6 +729,7 @@ const Confirm = ({ msg, onConfirm, onCancel }) => {
   );
 };
 
+// m3d.1c — Detail Escape handler defers to CloseoutModal (see TECH_DEBT for broader Modal Escape conflict)
 const CloseoutModal = ({ meeting, onClose, call, toast }) => {
   const [data,      setData]      = useState(null);
   const [loading,   setLoading]   = useState(false);
