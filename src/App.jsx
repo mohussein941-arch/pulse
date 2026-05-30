@@ -2235,7 +2235,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
 };
 
 // ─── Detail panel ─────────────────────────────────────────────────────────────
-const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab="overview", manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
+const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMeeting, setCloseoutMeeting, initialTab="overview", manualTasks=[], onAddManual, onToggleManual, onDeleteManual }) => {
   const [showStk,      setShowStk]      = useState(false);
   const [showEdit,     setShowEdit]     = useState(false);
   const [showDel,      setShowDel]      = useState(false);
@@ -2363,7 +2363,6 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, initialTab=
   const [emailThreads,    setEmailThreads]    = useState([]);
   const [meetingNotes,    setMeetingNotes]    = useState([]);
   const [threadsLoading,  setThreadsLoading]  = useState(false);
-  const [closeoutMeeting, setCloseoutMeeting] = useState(null);
 
   useEffect(() => {
     const h = e => {
@@ -11149,6 +11148,7 @@ export default function App() {
   const [showBulk,     setShowBulk]     = useState(false);
   const [view,         setView]         = useState("briefing");
   const [detailTab,    setDetailTab]    = useState("activity");
+  const [closeoutMeeting, setCloseoutMeeting] = useState(null);
   const [filter,       setFilter]       = useState("All");
   const [planFilter,   setPlanFilter]   = useState("All");
   const [search,       setSearch]       = useState("");
@@ -11227,10 +11227,10 @@ export default function App() {
   }, [session, call]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    const h = e => { if (e.key==="Escape"&&selected&&!showAdd&&!showBulk) setSelected(null); };
+    const h = e => { if (e.key==="Escape"&&selected&&!showAdd&&!showBulk&&!closeoutMeeting) setSelected(null); };
     window.addEventListener("keydown", h);
     return () => window.removeEventListener("keydown", h);
-  }, [selected, showAdd, showBulk]);
+  }, [selected, showAdd, showBulk, closeoutMeeting]);
 
   const addManualTask = async task => {
     if (!API_URL) { setManualTasks(p=>[...p,task]); return; }
@@ -11666,6 +11666,7 @@ export default function App() {
                 initialTab={detailTab}
                 onClose={()=>{setSelected(null);setDetailTab("activity");}}
                 onUpdate={update} onDelete={del} toast={toast}
+                closeoutMeeting={closeoutMeeting} setCloseoutMeeting={setCloseoutMeeting}
                 manualTasks={manualTasks} onAddManual={addManualTask} onToggleManual={toggleManualTask} onDeleteManual={deleteManualTask}/>
             ) : (<>
             {!apiReady&&API_URL&&(
