@@ -826,7 +826,7 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
             </>
           )}
           {data&&!loading&&(
-            <button onClick={()=>fetchCloseout(true)}
+            <button type="button" onClick={()=>fetchCloseout(true)}
               style={{background:"var(--bg3)",color:"var(--text2)",border:"1px solid var(--border)",
                 borderRadius:"var(--r-sm)",padding:"6px 14px",fontSize:13,fontWeight:600,cursor:"pointer"}}>
               Regenerate
@@ -889,7 +889,7 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
                 </div>
                 <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6}}>{data.health_signal.rationale}</div>
                 {!healthLogged ? (
-                  <button onClick={logHealthSignal} disabled={healthLogging}
+                  <button type="button" onClick={logHealthSignal} disabled={healthLogging}
                     style={{ alignSelf:"flex-start", marginTop:8, background:"var(--bg3)", color:"var(--text2)",
                       border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"6px 12px",
                       fontSize:12, fontWeight:600, cursor:healthLogging?"wait":"pointer" }}>
