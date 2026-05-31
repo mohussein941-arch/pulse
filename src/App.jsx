@@ -741,6 +741,10 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
   const [crmContent,    setCrmContent]    = useState("");
   const [crmAccepted,   setCrmAccepted]   = useState(false);
   const [crmAccepting,  setCrmAccepting]  = useState(false);
+  const [emailSubject,  setEmailSubject]  = useState("");
+  const [emailBody,     setEmailBody]     = useState("");
+  const [emailSent,     setEmailSent]     = useState(false);
+  const [emailSending,  setEmailSending]  = useState(false);
   const slowTimer                 = useRef(null);
 
   const fetchCloseout = useCallback(async (force = false) => {
@@ -754,6 +758,7 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
       setFromCache(result.fromCache);
       setHealthLogged(false);
       setCrmAccepted(false);
+      setEmailSent(false);
     } catch (err) {
       setError(err);
     } finally {
@@ -796,8 +801,35 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
     }
   };
 
+  const sendFollowup = async () => {
+    const subj = emailSubject.trim();
+    const body = emailBody.trim();
+    if (!subj || !body || emailSending || emailSent) return;
+    setEmailSending(true);
+    try {
+      await call("POST", `/api/meetings/${meeting.id}/send-followup`, {
+        to: meeting.organizer_email || "",
+        subject: subj,
+        body,
+      });
+      setEmailSent(true);
+      toast("Follow-up email sent", "success");
+    } catch (err) {
+      toast(err.status === 402 ? "AI usage limit reached." : "Couldn't send follow-up email — try again.", "error");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
   useEffect(() => {
     if (data?.crm_update_text) setCrmContent(data.crm_update_text);
+  }, [data]);
+
+  useEffect(() => {
+    if (data?.follow_up_email) {
+      setEmailSubject(data.follow_up_email.subject || "");
+      setEmailBody(data.follow_up_email.body || "");
+    }
   }, [data]);
 
   useEffect(() => {
@@ -971,6 +1003,49 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
             ) : (
               <div style={{ marginTop:8, fontSize:12, color:"var(--emerald)", fontWeight:600 }}>
                 ✓ Logged to CRM
+              </div>
+            )}
+          </div>
+          {/* Follow-up Email */}
+          <div>
+            <div style={sLabel}>Follow-up Email</div>
+            {meeting.organizer_email && (
+              <div style={{ fontSize:12, color:"var(--text3)", marginBottom:8 }}>
+                To: {meeting.organizer_email}
+              </div>
+            )}
+            <input
+              type="text"
+              value={emailSubject}
+              onChange={e => setEmailSubject(e.target.value)}
+              disabled={emailSent || emailSending}
+              placeholder="Subject"
+              style={{ width:"100%", boxSizing:"border-box", background:"var(--bg2)", color:"var(--text2)",
+                border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"8px 12px",
+                fontSize:13, fontFamily:"inherit", marginBottom:8,
+                opacity:(emailSent||emailSending)?0.6:1 }}
+            />
+            <textarea
+              value={emailBody}
+              onChange={e => setEmailBody(e.target.value)}
+              disabled={emailSent || emailSending}
+              rows={8}
+              style={{ width:"100%", boxSizing:"border-box", background:"var(--bg2)", color:"var(--text2)",
+                border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"10px 12px",
+                fontSize:13, fontFamily:"inherit", lineHeight:1.5, resize:"vertical",
+                opacity:(emailSent||emailSending)?0.6:1 }}
+            />
+            {!emailSent ? (
+              <button type="button" onClick={sendFollowup}
+                disabled={emailSending || !emailSubject.trim() || !emailBody.trim()}
+                style={{ alignSelf:"flex-start", marginTop:8, background:"var(--bg3)", color:"var(--text2)",
+                  border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"6px 12px",
+                  fontSize:12, fontWeight:600, cursor:(emailSending || !emailSubject.trim() || !emailBody.trim())?"not-allowed":"pointer" }}>
+                {emailSending ? "Sending…" : "Send"}
+              </button>
+            ) : (
+              <div style={{ marginTop:8, fontSize:12, color:"var(--emerald)", fontWeight:600 }}>
+                ✓ Sent
               </div>
             )}
           </div>
