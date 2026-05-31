@@ -738,6 +738,9 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
   const [slowHint,      setSlowHint]      = useState(false);
   const [healthLogged,  setHealthLogged]  = useState(false);
   const [healthLogging, setHealthLogging] = useState(false);
+  const [crmContent,    setCrmContent]    = useState("");
+  const [crmAccepted,   setCrmAccepted]   = useState(false);
+  const [crmAccepting,  setCrmAccepting]  = useState(false);
   const slowTimer                 = useRef(null);
 
   const fetchCloseout = useCallback(async (force = false) => {
@@ -750,6 +753,7 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
       setData(result.content);
       setFromCache(result.fromCache);
       setHealthLogged(false);
+      setCrmAccepted(false);
     } catch (err) {
       setError(err);
     } finally {
@@ -776,6 +780,25 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
       setHealthLogging(false);
     }
   };
+
+  const acceptCrmUpdate = async () => {
+    const trimmed = crmContent.trim();
+    if (!trimmed || crmAccepting || crmAccepted) return;
+    setCrmAccepting(true);
+    try {
+      await call("POST", `/api/meetings/${meeting.id}/accept-crm-update`, { content: trimmed });
+      setCrmAccepted(true);
+      toast("CRM update logged", "success");
+    } catch (err) {
+      toast(err.status === 402 ? "AI usage limit reached." : "Couldn't log CRM update — try again.", "error");
+    } finally {
+      setCrmAccepting(false);
+    }
+  };
+
+  useEffect(() => {
+    if (data?.crm_update_text) setCrmContent(data.crm_update_text);
+  }, [data]);
 
   useEffect(() => {
     if (meeting.has_closeout) fetchCloseout(false);
@@ -923,6 +946,32 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
               </div>
             ):(
               <div style={{fontSize:13,color:"var(--text3)"}}>No action items captured.</div>
+            )}
+          </div>
+          {/* CRM Update */}
+          <div>
+            <div style={sLabel}>CRM Update</div>
+            <textarea
+              value={crmContent}
+              onChange={e => setCrmContent(e.target.value)}
+              disabled={crmAccepted || crmAccepting}
+              rows={5}
+              style={{width:"100%",boxSizing:"border-box",background:"var(--bg2)",color:"var(--text2)",
+                border:"1px solid var(--border)",borderRadius:"var(--r-sm)",padding:"10px 12px",
+                fontSize:13,fontFamily:"inherit",lineHeight:1.5,resize:"vertical",
+                opacity:(crmAccepted||crmAccepting)?0.6:1}}
+            />
+            {!crmAccepted ? (
+              <button type="button" onClick={acceptCrmUpdate} disabled={crmAccepting || !crmContent.trim()}
+                style={{ alignSelf:"flex-start", marginTop:8, background:"var(--bg3)", color:"var(--text2)",
+                  border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"6px 12px",
+                  fontSize:12, fontWeight:600, cursor:(crmAccepting || !crmContent.trim())?"not-allowed":"pointer" }}>
+                {crmAccepting ? "Accepting…" : "Accept"}
+              </button>
+            ) : (
+              <div style={{ marginTop:8, fontSize:12, color:"var(--emerald)", fontWeight:600 }}>
+                ✓ Logged to CRM
+              </div>
             )}
           </div>
         </div>
