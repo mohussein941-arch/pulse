@@ -804,18 +804,23 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
   const sendFollowup = async () => {
     const subj = emailSubject.trim();
     const body = emailBody.trim();
-    if (!subj || !body || emailSending || emailSent) return;
+    if (!subj || !body || emailSending || emailSent || !meeting.organizer_email) return;
     setEmailSending(true);
     try {
       await call("POST", `/api/meetings/${meeting.id}/send-followup`, {
-        to: meeting.organizer_email || "",
+        to: meeting.organizer_email,
         subject: subj,
         body,
       });
       setEmailSent(true);
       toast("Follow-up email sent", "success");
     } catch (err) {
-      toast(err.status === 402 ? "AI usage limit reached." : "Couldn't send follow-up email — try again.", "error");
+      toast(
+        err.status === 402
+          ? "AI usage limit reached."
+          : err.message || "Couldn't send follow-up email — try again.",
+        "error"
+      );
     } finally {
       setEmailSending(false);
     }
@@ -1009,9 +1014,13 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
           {/* Follow-up Email */}
           <div>
             <div style={sLabel}>Follow-up Email</div>
-            {meeting.organizer_email && (
+            {meeting.organizer_email ? (
               <div style={{ fontSize:12, color:"var(--text3)", marginBottom:8 }}>
                 To: {meeting.organizer_email}
+              </div>
+            ) : (
+              <div style={{ fontSize:12, color:"var(--text3)", marginBottom:8, fontStyle:"italic" }}>
+                No recipient on file — Send disabled.
               </div>
             )}
             <input
@@ -1037,10 +1046,10 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
             />
             {!emailSent ? (
               <button type="button" onClick={sendFollowup}
-                disabled={emailSending || !emailSubject.trim() || !emailBody.trim()}
+                disabled={emailSending || !emailSubject.trim() || !emailBody.trim() || !meeting.organizer_email}
                 style={{ alignSelf:"flex-start", marginTop:8, background:"var(--bg3)", color:"var(--text2)",
                   border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"6px 12px",
-                  fontSize:12, fontWeight:600, cursor:(emailSending || !emailSubject.trim() || !emailBody.trim())?"not-allowed":"pointer" }}>
+                  fontSize:12, fontWeight:600, cursor:(emailSending || !emailSubject.trim() || !emailBody.trim() || !meeting.organizer_email)?"not-allowed":"pointer" }}>
                 {emailSending ? "Sending…" : "Send"}
               </button>
             ) : (
