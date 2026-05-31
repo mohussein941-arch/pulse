@@ -759,10 +759,11 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
       const result = await call("POST", `/api/meetings/${meeting.id}/closeout`, body);
       setData(result.content);
       setFromCache(result.fromCache);
-      setHealthLogged(false);
-      setCrmAccepted(false);
-      setEmailSent(false);
-      setTasksAccepted(false);
+      const at = result.actions_taken || {};
+      setHealthLogged(at.health_logged ?? false);
+      setCrmAccepted(at.crm_accepted ?? false);
+      setEmailSent(at.email_sent ?? false);
+      setTasksAccepted(at.tasks_accepted ?? false);
     } catch (err) {
       setError(err);
     } finally {
