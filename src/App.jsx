@@ -745,6 +745,9 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
   const [emailBody,     setEmailBody]     = useState("");
   const [emailSent,     setEmailSent]     = useState(false);
   const [emailSending,  setEmailSending]  = useState(false);
+  const [tasks,           setTasks]           = useState([]);
+  const [tasksAccepted,   setTasksAccepted]   = useState(false);
+  const [tasksAccepting,  setTasksAccepting]  = useState(false);
   const slowTimer                 = useRef(null);
 
   const fetchCloseout = useCallback(async (force = false) => {
@@ -759,6 +762,7 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
       setHealthLogged(false);
       setCrmAccepted(false);
       setEmailSent(false);
+      setTasksAccepted(false);
     } catch (err) {
       setError(err);
     } finally {
@@ -826,6 +830,29 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
     }
   };
 
+  const updateTask = (idx, field, value) => {
+    setTasks(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+  };
+  const removeTask = (idx) => {
+    setTasks(prev => prev.filter((_, i) => i !== idx));
+  };
+  const acceptTasks = async () => {
+    if (tasks.length === 0 || tasksAccepting || tasksAccepted) return;
+    setTasksAccepting(true);
+    try {
+      await call("POST", `/api/meetings/${meeting.id}/accept-tasks`, { tasks });
+      setTasksAccepted(true);
+      toast(`${tasks.length} task${tasks.length === 1 ? '' : 's'} created`, "success");
+    } catch (err) {
+      toast(
+        err.status === 402 ? "AI usage limit reached." : err.message || "Couldn't create tasks — try again.",
+        "error"
+      );
+    } finally {
+      setTasksAccepting(false);
+    }
+  };
+
   useEffect(() => {
     if (data?.crm_update_text) setCrmContent(data.crm_update_text);
   }, [data]);
@@ -835,6 +862,10 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
       setEmailSubject(data.follow_up_email.subject || "");
       setEmailBody(data.follow_up_email.body || "");
     }
+  }, [data]);
+
+  useEffect(() => {
+    setTasks(data?.suggested_tasks ? data.suggested_tasks.map(t => ({ ...t })) : []);
   }, [data]);
 
   useEffect(() => {
@@ -1056,6 +1087,61 @@ const CloseoutModal = ({ meeting, onClose, call, toast }) => {
               <div style={{ marginTop:8, fontSize:12, color:"var(--emerald)", fontWeight:600 }}>
                 ✓ Sent
               </div>
+            )}
+          </div>
+          {/* Tasks */}
+          <div>
+            <div style={sLabel}>Tasks</div>
+            {tasksAccepted ? (
+              <div style={{ marginTop:8, fontSize:12, color:"var(--emerald)", fontWeight:600 }}>
+                ✓ {tasks.length} task{tasks.length === 1 ? '' : 's'} created
+              </div>
+            ) : tasks.length === 0 ? (
+              <div style={{ fontSize:12, color:"var(--text3)", fontStyle:"italic" }}>No tasks suggested</div>
+            ) : (
+              <>
+                {tasks.map((task, idx) => (
+                  <div key={idx} style={{ background:"var(--bg2)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"10px 12px", marginBottom:8 }}>
+                    <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:6 }}>
+                      <input
+                        type="text"
+                        value={task.title}
+                        onChange={e => updateTask(idx, "title", e.target.value)}
+                        disabled={tasksAccepting || tasksAccepted}
+                        style={{ flex:1, background:"var(--bg1)", color:"var(--text)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"6px 10px", fontSize:13, fontFamily:"inherit", opacity:(tasksAccepting||tasksAccepted)?0.6:1 }}
+                      />
+                      <button type="button" onClick={() => removeTask(idx)} disabled={tasksAccepting || tasksAccepted}
+                        style={{ background:"none", border:"none", color:"var(--text3)", fontSize:13, cursor:(tasksAccepting||tasksAccepted)?"not-allowed":"pointer", padding:"4px 6px", flexShrink:0 }}>
+                        ×
+                      </button>
+                    </div>
+                    <select
+                      value={task.priority}
+                      onChange={e => updateTask(idx, "priority", e.target.value)}
+                      disabled={tasksAccepting || tasksAccepted}
+                      style={{ background:"var(--bg1)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"4px 8px", fontSize:12, marginBottom:6, opacity:(tasksAccepting||tasksAccepted)?0.6:1 }}>
+                      <option value="low">Low</option>
+                      <option value="medium">Medium</option>
+                      <option value="high">High</option>
+                    </select>
+                    <textarea
+                      value={task.description}
+                      onChange={e => updateTask(idx, "description", e.target.value)}
+                      disabled={tasksAccepting || tasksAccepted}
+                      rows={2}
+                      style={{ width:"100%", boxSizing:"border-box", background:"var(--bg1)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"6px 10px", fontSize:12, fontFamily:"inherit", lineHeight:1.4, resize:"vertical", opacity:(tasksAccepting||tasksAccepted)?0.6:1, marginBottom:task.due_in_days != null ? 6 : 0 }}
+                    />
+                    {task.due_in_days != null && (
+                      <div style={{ fontSize:11, color:"var(--text3)" }}>Due in {task.due_in_days} day{task.due_in_days === 1 ? '' : 's'}</div>
+                    )}
+                  </div>
+                ))}
+                <button type="button" onClick={acceptTasks}
+                  disabled={tasksAccepting || tasks.length === 0 || tasks.some(t => !t.title?.trim())}
+                  style={{ alignSelf:"flex-start", marginTop:4, background:"var(--bg3)", color:"var(--text2)", border:"1px solid var(--border)", borderRadius:"var(--r-sm)", padding:"6px 12px", fontSize:12, fontWeight:600, cursor:(tasksAccepting || tasks.length === 0 || tasks.some(t => !t.title?.trim()))?"not-allowed":"pointer" }}>
+                  {tasksAccepting ? "Creating…" : `Accept ${tasks.length} task${tasks.length === 1 ? '' : 's'}`}
+                </button>
+              </>
             )}
           </div>
         </div>
