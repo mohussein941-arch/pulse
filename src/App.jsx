@@ -2705,7 +2705,6 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
       method: "GET",
       headers: {
         "Content-Type":   "application/json",
-        "x-pulse-secret": API_SECRET,
         ...(s?.token ? { Authorization: `Bearer ${s.token}` } : {}),
       },
     }).then(async res => {
@@ -6302,7 +6301,6 @@ const SurveySendModal = ({ survey, accounts, onClose, toast, session, onGoToSett
     if (!API_URL) { setLoadingAccs(false); return; }
     fetch(`${API_URL}/api/email/accounts`, {
       headers: {
-        "x-pulse-secret": API_SECRET,
         ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
       },
     })
@@ -6381,7 +6379,6 @@ const SurveySendModal = ({ survey, accounts, onClose, toast, session, onGoToSett
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-pulse-secret": API_SECRET,
           ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
         body: JSON.stringify({
@@ -7791,7 +7788,6 @@ const SurveyResponsePage = ({ token }) => {
 // ─── App ──────────────────────────────────────────────────────────────────────
 // ─── API client ───────────────────────────────────────────────────────────────
 const API_URL          = import.meta.env.VITE_API_URL          || "";
-const API_SECRET       = import.meta.env.VITE_API_SECRET       || "";
 const WHATSAPP_NUMBER  = import.meta.env.VITE_WHATSAPP_NUMBER  || "";
 
 const api = async (method, path, body, token) => {
@@ -7800,7 +7796,6 @@ const api = async (method, path, body, token) => {
     method,
     headers: {
       "Content-Type":   "application/json",
-      "x-pulse-secret": API_SECRET,
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
     },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -7993,7 +7988,6 @@ const EmailSettingsPage = ({ session }) => {
     try {
       const res = await fetch(`${API_URL}/api/email/accounts`, {
         headers: {
-          "x-pulse-secret": API_SECRET,
           ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
       });
@@ -8033,7 +8027,6 @@ const EmailSettingsPage = ({ session }) => {
   "width=520,height=640,scrollbars=yes,resizable=yes");
 const res = await fetch(`${API_URL}/api/email/gmail/auth`, {
   headers: {
-    "x-pulse-secret": API_SECRET,
     ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
   },
 });
@@ -8058,7 +8051,6 @@ popup.location.href = url;
       await fetch(`${API_URL}/api/email/accounts/${id}/set-primary`, {
         method: "PATCH",
         headers: {
-          "x-pulse-secret": API_SECRET,
           ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
       });
@@ -8078,7 +8070,6 @@ popup.location.href = url;
       await fetch(`${API_URL}/api/email/accounts/${id}`, {
         method: "DELETE",
         headers: {
-          "x-pulse-secret": API_SECRET,
           ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
       });
@@ -8100,7 +8091,6 @@ popup.location.href = url;
       const res = await fetch(`${API_URL}/api/email/sync`, {
         method: "POST",
         headers: {
-          "x-pulse-secret": API_SECRET,
           ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
       });
@@ -8119,7 +8109,6 @@ popup.location.href = url;
     try {
       const res = await fetch(`${API_URL}/api/calendar/accounts`, {
         headers: {
-          "x-pulse-secret": API_SECRET,
           ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
       });
@@ -8157,7 +8146,6 @@ popup.location.href = url;
         "width=520,height=640,scrollbars=yes,resizable=yes");
       const res = await fetch(`${API_URL}/api/calendar/auth`, {
         headers: {
-          "x-pulse-secret": API_SECRET,
           ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
       });
@@ -8183,7 +8171,6 @@ popup.location.href = url;
       await fetch(`${API_URL}/api/calendar/accounts/${id}`, {
         method: "DELETE",
         headers: {
-          "x-pulse-secret": API_SECRET,
           ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}),
         },
       });
