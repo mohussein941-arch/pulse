@@ -10710,6 +10710,11 @@ const BriefingPage = ({ call, toast, onAccountClick, accounts = [], outreachPend
               ))}
             </div>
             <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.5}}>{item.signalDetail}</div>
+              {item.suggestedAction&&(
+                <div style={{fontSize:12,color:"var(--indigo)",fontWeight:600,marginTop:5,display:"flex",gap:5,alignItems:"flex-start"}}>
+                  <span style={{flexShrink:0}}>→</span><span>{item.suggestedAction}</span>
+                </div>
+              )}
           </div>
           <div onClick={e=>e.stopPropagation()}>
             <ItemActions item={item} onUpdate={updateItem}/>
