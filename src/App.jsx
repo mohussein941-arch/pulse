@@ -2604,6 +2604,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
     {key:"ai",         label:"Ask AI"},
     {key:"brief",      label:"Account Brief"},
     {key:"catchup",    label:"Catch me up"},
+    {key:"handoff",    label:"CSM Handoff"},
   ];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
   const tabHasAlert = {
@@ -2674,6 +2675,14 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
   const catchUpSlowTimer  = useRef(null);
   const catchUpFetchedRef = useRef(false);
   const catchUpInflightRef= useRef(false);
+    const [handoffData,     setHandoffData]     = useState(null);
+    const [handoffLoading,  setHandoffLoading]  = useState(false);
+    const [handoffError,    setHandoffError]    = useState(false);
+    const [handoffSlowHint, setHandoffSlowHint] = useState(false);
+    const [handoffNonce,    setHandoffNonce]    = useState(0);
+    const handoffSlowTimer  = useRef(null);
+    const handoffFetchedRef = useRef(false);
+    const handoffInflightRef= useRef(false);
 
   const askAI = async () => {
     const q = aiQuestion.trim();
@@ -2794,6 +2803,47 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
       }
     };
   }, [tab, account.id, catchUpNonce]);
+
+    // Handoff: clear held packet when the account changes
+    useEffect(() => {
+      setHandoffData(null);
+      setHandoffError(false);
+      setHandoffSlowHint(false);
+      setHandoffLoading(false);
+      handoffFetchedRef.current = false;
+      handoffInflightRef.current = false;
+    }, [account.id]);
+
+    // Handoff: on-demand, fetch-once-hold; re-runs on explicit Refresh (handoffNonce)
+    useEffect(() => {
+      if (tab !== "handoff" || handoffFetchedRef.current) return;
+      let cancelled = false;
+      setHandoffLoading(true);
+      handoffFetchedRef.current = true;
+      handoffInflightRef.current = true;
+      handoffSlowTimer.current = setTimeout(() => { if (!cancelled) setHandoffSlowHint(true); }, 2000);
+      call("GET", `/api/accounts/${account.id}/handoff`)
+        .then(d => { if (!cancelled) { setHandoffData(d); setHandoffError(false); } })
+        .catch(() => { if (!cancelled) setHandoffError(true); })
+        .finally(() => {
+          handoffInflightRef.current = false;
+          if (!cancelled) {
+            clearTimeout(handoffSlowTimer.current);
+            setHandoffSlowHint(false);
+            setHandoffLoading(false);
+          }
+        });
+      return () => {
+        cancelled = true;
+        clearTimeout(handoffSlowTimer.current);
+        setHandoffSlowHint(false);
+        if (handoffInflightRef.current) {
+          handoffFetchedRef.current = false;
+          handoffInflightRef.current = false;
+          setHandoffLoading(false);
+        }
+      };
+    }, [tab, account.id, handoffNonce]);
 
   return (
     <>
@@ -3699,6 +3749,97 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               )}
             </div>
           )}
+
+    {tab==="handoff"&&(
+      <div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+          <h3 style={{margin:0,fontSize:16,fontFamily:"var(--font-display)",fontWeight:700,color:"var(--text)"}}>CSM Handoff</h3>
+          {!handoffLoading&&(
+            <button onClick={()=>{handoffFetchedRef.current=false;setHandoffData(null);setHandoffError(false);setHandoffLoading(true);setHandoffNonce(n=>n+1);}}
+              style={{padding:"6px 14px",borderRadius:"var(--r-sm)",fontSize:13,cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600,border:"1.5px solid var(--border)",background:"transparent",color:"var(--text2)"}}>
+              Refresh
+            </button>
+          )}
+        </div>
+        {handoffLoading&&(
+          <div style={{color:"var(--text2)",fontSize:14}}>
+            Assembling the handoff…
+            {handoffSlowHint&&(<div style={{marginTop:6,fontSize:13,color:"var(--text2)",opacity:.7}}>Synthesizing from the account timeline — this can take a few seconds.</div>)}
+          </div>
+        )}
+        {!handoffLoading&&handoffError&&(
+          <div style={{color:"var(--rose)",fontSize:14}}>Couldn't assemble the handoff. Try Refresh.</div>
+        )}
+        {!handoffLoading&&!handoffError&&handoffData&&(()=>{
+          const h = handoffData;
+          const a = h.account || {};
+          const ST = {margin:"24px 0 8px",fontSize:12,letterSpacing:.4,textTransform:"uppercase",fontFamily:"var(--font-display)",fontWeight:700,color:"var(--text2)"};
+          const ROW = {display:"flex",justifyContent:"space-between",gap:16,padding:"6px 0",borderBottom:"1px solid var(--border)",fontSize:14};
+          const L = {color:"var(--text2)"};
+          const V = {color:"var(--text)",fontWeight:600,textAlign:"right"};
+          const EM = {color:"var(--text2)",fontSize:14,fontStyle:"italic"};
+          const NO_CTX = "No relevant context found for this request.";
+          return (
+            <div>
+              <div style={ST}>Snapshot</div>
+              <div style={ROW}><span style={L}>Stage</span><span style={V}>{a.stage||"—"}</span></div>
+              <div style={ROW}><span style={L}>ARR</span><span style={V}>{a.arr!=null?`$${a.arr}`:"—"}</span></div>
+              <div style={ROW}><span style={L}>Plan</span><span style={V}>{a.plan||"—"}</span></div>
+              <div style={ROW}><span style={L}>Renewal</span><span style={V}>{a.renewal_date||"—"}</span></div>
+              <div style={ROW}><span style={L}>Health</span><span style={V}>{a.health_score!=null?a.health_score:"—"}{a.trend?` · ${a.trend}`:""}{a.momentum?.label?` · ${a.momentum.label}`:""}</span></div>
+              <div style={ROW}><span style={L}>Churn risk</span><span style={V}>{a.churn_risk!=null?`${a.churn_risk}%`:"—"}</span></div>
+              <div style={ROW}><span style={L}>NPS</span><span style={V}>{a.nps!=null?a.nps:"—"}</span></div>
+              <div style={ROW}><span style={L}>Last contact</span><span style={V}>{a.last_contact||"—"}</span></div>
+
+              <div style={ST}>Recommended next play</div>
+              {h.recommended_playbook?(
+                <div style={{fontSize:14,color:"var(--text)"}}>
+                  <div style={{fontWeight:700,marginBottom:4}}>{h.recommended_playbook.name||"—"}</div>
+                  {h.recommended_playbook.reason&&<div style={{color:"var(--text2)",lineHeight:1.5}}>{h.recommended_playbook.reason}</div>}
+                </div>
+              ):(<div style={EM}>No recommended play right now.</div>)}
+
+              <div style={ST}>Active playbook</div>
+              {h.active_playbook?(
+                h.active_playbook.name?(
+                  <div style={{fontSize:14,color:"var(--text)"}}>
+                    <div style={{fontWeight:700,marginBottom:4}}>{h.active_playbook.name}</div>
+                    {h.active_playbook.scenario&&<div style={{color:"var(--text2)",lineHeight:1.5}}>{h.active_playbook.scenario}</div>}
+                  </div>
+                ):(<div style={EM}>An active playbook is set, but its details are unavailable.</div>)
+              ):(<div style={EM}>No active playbook.</div>)}
+
+              <div style={ST}>Stakeholders</div>
+              {h.stakeholders&&h.stakeholders.length>0?(
+                h.stakeholders.map((s,i)=>(
+                  <div key={i} style={ROW}>
+                    <span style={L}>{s.name||"—"}{s.title?` · ${s.title}`:""}{s.role?` (${s.role})`:""}</span>
+                    <span style={V}>{s.sentiment||""}</span>
+                  </div>
+                ))
+              ):(<div style={EM}>No stakeholders mapped.</div>)}
+
+              <div style={ST}>Open tasks</div>
+              {h.open_tasks&&h.open_tasks.length>0?(
+                h.open_tasks.map((t,i)=>(
+                  <div key={i} style={ROW}>
+                    <span style={L}>{t.title||"—"}{t.priority?` · ${t.priority}`:""}</span>
+                    <span style={V}>{t.due_date||""}</span>
+                  </div>
+                ))
+              ):(<div style={EM}>No open tasks.</div>)}
+
+              <div style={ST}>Context recap</div>
+              {h.recap&&h.recap.narrative&&h.recap.narrative!==NO_CTX?(
+                <div style={{whiteSpace:"pre-wrap",lineHeight:1.6,fontSize:14,color:"var(--text)"}}>{h.recap.narrative}</div>
+              ):(<div style={EM}>No activity to summarize yet.</div>)}
+
+              {h.generated_at&&(<div style={{marginTop:24,fontSize:12,color:"var(--text2)",opacity:.7}}>Generated {new Date(h.generated_at).toLocaleString()}</div>)}
+            </div>
+          );
+        })()}
+      </div>
+    )}
 
         </div>
       </div>
