@@ -610,6 +610,50 @@ const Bar = ({ value, color="var(--indigo)", thin }) => (
   </div>
 );
 
+const CitedNarrative = ({ text, citations = [], fontSize = 14 }) => {
+  const [active, setActive] = useState(null);
+  const cites = Array.isArray(citations) ? citations : [];
+  const byMarker = new Map(cites.map(c => [c.marker, c]));
+  const str = String(text || '');
+  const nodes = str.split(/(\[\d+\])/g).map((part, i) => {
+    const m = part.match(/^\[(\d+)\]$/);
+    if (m && byMarker.has(Number(m[1]))) {
+      const n = Number(m[1]);
+      return (
+        <sup key={i} onClick={() => setActive(active === n ? null : n)}
+          style={{cursor:"pointer",color:"var(--indigo)",fontWeight:700,fontSize:"0.72em",padding:"0 1px",userSelect:"none"}}>[{n}]</sup>
+      );
+    }
+    return part;
+  });
+  const footnotes = cites.filter(c => str.includes(`[${c.marker}]`)).sort((a, b) => a.marker - b.marker);
+  const fmtSource = s => s ? String(s).replace(/_/g, " ").replace(/^\w/, ch => ch.toUpperCase()) : "Source";
+  const fmtDate = d => { if (!d) return ""; const dt = new Date(d); return isNaN(dt.getTime()) ? "" : dt.toLocaleDateString(undefined, { day:"numeric", month:"short", year:"numeric" }); };
+  return (
+    <div>
+      <div style={{whiteSpace:"pre-wrap",lineHeight:1.6,fontSize,color:"var(--text)"}}>{nodes}</div>
+      {footnotes.length>0&&(
+        <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--border)"}}>
+          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Sources</div>
+          <div style={{display:"flex",flexDirection:"column",gap:6}}>
+            {footnotes.map(c => (
+              <div key={c.marker} onClick={() => setActive(active === c.marker ? null : c.marker)}
+                style={{display:"flex",gap:8,fontSize:12,padding:"6px 8px",borderRadius:"var(--r-sm)",cursor:"pointer",
+                  background:active===c.marker?"var(--indigo-dim)":"transparent",transition:"background .15s"}}>
+                <span style={{color:"var(--indigo)",fontWeight:700,flexShrink:0}}>[{c.marker}]</span>
+                <div style={{minWidth:0}}>
+                  <div style={{color:"var(--text2)",fontWeight:600}}>{fmtSource(c.source)}{fmtDate(c.occurred_at)?` · ${fmtDate(c.occurred_at)}`:""}</div>
+                  {c.snippet&&<div style={{color:"var(--text3)",marginTop:2,lineHeight:1.4}}>{c.snippet}</div>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const Badge = ({ label, color, bg, small }) => (
   <span style={{fontSize:small?10:11,fontFamily:"var(--font-mono)",fontWeight:500,
     padding:small?"2px 7px":"3px 10px",borderRadius:"var(--r-sm)",color,background:bg,
@@ -3464,7 +3508,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 )}
                 {!hnLoading&&hnError&&(<div style={{fontSize:13,color:"var(--rose)"}}>Couldn't load the explanation. Try Refresh.</div>)}
                 {!hnLoading&&!hnError&&hnData&&hnData.trace_id===null&&(<div style={{fontSize:13,color:"var(--text3)"}}>Not enough account history yet to explain the health.</div>)}
-                {!hnLoading&&!hnError&&hnData&&hnData.trace_id!==null&&(<div style={{whiteSpace:"pre-wrap",lineHeight:1.6,fontSize:13,color:"var(--text)"}}>{hnData.narrative}</div>)}
+                {!hnLoading&&!hnError&&hnData&&hnData.trace_id!==null&&(<CitedNarrative text={hnData.narrative} citations={hnData.citations} fontSize={13} />)}
               </div>
               <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,.15)",borderRadius:"var(--r)",padding:"14px 16px"}}>
                 <div style={{fontSize:12,fontWeight:700,color:"var(--indigo)",marginBottom:6}}>Improvement opportunities</div>
@@ -3812,7 +3856,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 <div style={{color:"var(--text2)",fontSize:14}}>Nothing to catch up on yet — no activity recorded for this account.</div>
               )}
               {!catchUpLoading&&!catchUpError&&catchUpData&&catchUpData.trace_id!==null&&(
-                <div style={{whiteSpace:"pre-wrap",lineHeight:1.6,fontSize:14,color:"var(--text)"}}>{catchUpData.narrative}</div>
+                <CitedNarrative text={catchUpData.narrative} citations={catchUpData.citations} />
               )}
             </div>
           )}
@@ -3898,7 +3942,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
 
               <div style={ST}>Context recap</div>
               {h.recap&&h.recap.narrative&&h.recap.narrative!==NO_CTX?(
-                <div style={{whiteSpace:"pre-wrap",lineHeight:1.6,fontSize:14,color:"var(--text)"}}>{h.recap.narrative}</div>
+                <CitedNarrative text={h.recap.narrative} citations={h.recap.citations} />
               ):(<div style={EM}>No activity to summarize yet.</div>)}
 
               {h.generated_at&&(<div style={{marginTop:24,fontSize:12,color:"var(--text2)",opacity:.7}}>Generated {new Date(h.generated_at).toLocaleString()}</div>)}
