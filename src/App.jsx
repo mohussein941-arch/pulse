@@ -2603,6 +2603,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
     {key:"health",     label:"Health & Playbook"},
     {key:"ai",         label:"Ask AI"},
     {key:"brief",      label:"Account Brief"},
+    {key:"catchup",    label:"Catch me up"},
   ];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
   const tabHasAlert = {
@@ -2664,6 +2665,15 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
   const briefSlowTimer   = useRef(null);
   const briefFetchedRef  = useRef(false);
   const briefInflightRef = useRef(false);
+
+  const [catchUpData,     setCatchUpData]     = useState(null);
+  const [catchUpLoading,  setCatchUpLoading]  = useState(false);
+  const [catchUpError,    setCatchUpError]    = useState(false);
+  const [catchUpSlowHint, setCatchUpSlowHint] = useState(false);
+  const [catchUpNonce,    setCatchUpNonce]    = useState(0);
+  const catchUpSlowTimer  = useRef(null);
+  const catchUpFetchedRef = useRef(false);
+  const catchUpInflightRef= useRef(false);
 
   const askAI = async () => {
     const q = aiQuestion.trim();
@@ -2743,6 +2753,47 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
       }
     };
   }, [tab, account.id]);
+
+  // Catch-up: clear held recap when the account changes
+  useEffect(() => {
+    setCatchUpData(null);
+    setCatchUpError(false);
+    setCatchUpSlowHint(false);
+    setCatchUpLoading(false);
+    catchUpFetchedRef.current = false;
+    catchUpInflightRef.current = false;
+  }, [account.id]);
+
+  // Catch-up: on-demand, fetch-once-hold; re-runs on explicit Refresh (catchUpNonce)
+  useEffect(() => {
+    if (tab !== "catchup" || catchUpFetchedRef.current) return;
+    let cancelled = false;
+    setCatchUpLoading(true);
+    catchUpFetchedRef.current = true;
+    catchUpInflightRef.current = true;
+    catchUpSlowTimer.current = setTimeout(() => { if (!cancelled) setCatchUpSlowHint(true); }, 2000);
+    call("GET", `/api/accounts/${account.id}/catch-up`)
+      .then(d => { if (!cancelled) { setCatchUpData(d); setCatchUpError(false); } })
+      .catch(() => { if (!cancelled) setCatchUpError(true); })
+      .finally(() => {
+        catchUpInflightRef.current = false;
+        if (!cancelled) {
+          clearTimeout(catchUpSlowTimer.current);
+          setCatchUpSlowHint(false);
+          setCatchUpLoading(false);
+        }
+      });
+    return () => {
+      cancelled = true;
+      clearTimeout(catchUpSlowTimer.current);
+      setCatchUpSlowHint(false);
+      if (catchUpInflightRef.current) {
+        catchUpFetchedRef.current = false;
+        catchUpInflightRef.current = false;
+        setCatchUpLoading(false);
+      }
+    };
+  }, [tab, account.id, catchUpNonce]);
 
   return (
     <>
@@ -3617,6 +3668,35 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 </>
               )}
 
+            </div>
+          )}
+
+          {tab==="catchup"&&(
+            <div>
+              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+                <h3 style={{margin:0,fontSize:16,fontFamily:"var(--font-display)",fontWeight:700,color:"var(--text)"}}>Catch me up</h3>
+                {!catchUpLoading&&(
+                  <button onClick={()=>{catchUpFetchedRef.current=false;setCatchUpData(null);setCatchUpError(false);setCatchUpNonce(n=>n+1);}}
+                    style={{padding:"6px 14px",borderRadius:"var(--r-sm)",fontSize:13,cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600,border:"1.5px solid var(--border)",background:"transparent",color:"var(--text2)"}}>
+                    Refresh
+                  </button>
+                )}
+              </div>
+              {catchUpLoading&&(
+                <div style={{color:"var(--text2)",fontSize:14}}>
+                  Catching you up…
+                  {catchUpSlowHint&&(<div style={{marginTop:6,fontSize:13,color:"var(--text2)",opacity:.7}}>Synthesizing from the account timeline — this can take a few seconds.</div>)}
+                </div>
+              )}
+              {!catchUpLoading&&catchUpError&&(
+                <div style={{color:"var(--rose)",fontSize:14}}>Couldn't load the recap. Try Refresh.</div>
+              )}
+              {!catchUpLoading&&!catchUpError&&catchUpData&&catchUpData.trace_id===null&&(
+                <div style={{color:"var(--text2)",fontSize:14}}>Nothing to catch up on yet — no activity recorded for this account.</div>
+              )}
+              {!catchUpLoading&&!catchUpError&&catchUpData&&catchUpData.trace_id!==null&&(
+                <div style={{whiteSpace:"pre-wrap",lineHeight:1.6,fontSize:14,color:"var(--text)"}}>{catchUpData.narrative}</div>
+              )}
             </div>
           )}
 
