@@ -2683,6 +2683,14 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
     const handoffSlowTimer  = useRef(null);
     const handoffFetchedRef = useRef(false);
     const handoffInflightRef= useRef(false);
+    const [hnData,     setHnData]     = useState(null);
+    const [hnLoading,  setHnLoading]  = useState(false);
+    const [hnError,    setHnError]    = useState(false);
+    const [hnSlowHint, setHnSlowHint] = useState(false);
+    const [hnNonce,    setHnNonce]    = useState(0);
+    const hnSlowTimer  = useRef(null);
+    const hnFetchedRef = useRef(false);
+    const hnInflightRef= useRef(false);
 
   const askAI = async () => {
     const q = aiQuestion.trim();
@@ -2844,6 +2852,47 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
         }
       };
     }, [tab, account.id, handoffNonce]);
+
+    // Health narrative: clear held explanation when the account changes
+    useEffect(() => {
+      setHnData(null);
+      setHnError(false);
+      setHnSlowHint(false);
+      setHnLoading(false);
+      hnFetchedRef.current = false;
+      hnInflightRef.current = false;
+    }, [account.id]);
+
+    // Health narrative: on-demand when the Health tab opens; fetch-once-hold; Refresh re-runs (hnNonce)
+    useEffect(() => {
+      if (tab !== "health" || hnFetchedRef.current) return;
+      let cancelled = false;
+      setHnLoading(true);
+      hnFetchedRef.current = true;
+      hnInflightRef.current = true;
+      hnSlowTimer.current = setTimeout(() => { if (!cancelled) setHnSlowHint(true); }, 2000);
+      call("GET", `/api/accounts/${account.id}/health-narrative`)
+        .then(d => { if (!cancelled) { setHnData(d); setHnError(false); } })
+        .catch(() => { if (!cancelled) setHnError(true); })
+        .finally(() => {
+          hnInflightRef.current = false;
+          if (!cancelled) {
+            clearTimeout(hnSlowTimer.current);
+            setHnSlowHint(false);
+            setHnLoading(false);
+          }
+        });
+      return () => {
+        cancelled = true;
+        clearTimeout(hnSlowTimer.current);
+        setHnSlowHint(false);
+        if (hnInflightRef.current) {
+          hnFetchedRef.current = false;
+          hnInflightRef.current = false;
+          setHnLoading(false);
+        }
+      };
+    }, [tab, account.id, hnNonce]);
 
   return (
     <>
@@ -3398,6 +3447,24 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                     </div>
                   ))}
                 </div>
+              </div>
+              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                  <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Why this health</div>
+                  {!hnLoading&&(
+                    <button onClick={()=>{hnFetchedRef.current=false;setHnData(null);setHnError(false);setHnLoading(true);setHnNonce(n=>n+1);}}
+                      style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--indigo)",background:"var(--indigo-dim)",border:"none",borderRadius:"var(--r-sm)",padding:"4px 10px",cursor:"pointer",fontWeight:600}}>Refresh</button>
+                  )}
+                </div>
+                {hnLoading&&(
+                  <div style={{fontSize:13,color:"var(--text2)"}}>
+                    Reading the account…
+                    {hnSlowHint&&(<div style={{marginTop:6,fontSize:12,color:"var(--text3)"}}>Synthesizing from the timeline — this can take a few seconds.</div>)}
+                  </div>
+                )}
+                {!hnLoading&&hnError&&(<div style={{fontSize:13,color:"var(--rose)"}}>Couldn't load the explanation. Try Refresh.</div>)}
+                {!hnLoading&&!hnError&&hnData&&hnData.trace_id===null&&(<div style={{fontSize:13,color:"var(--text3)"}}>Not enough account history yet to explain the health.</div>)}
+                {!hnLoading&&!hnError&&hnData&&hnData.trace_id!==null&&(<div style={{whiteSpace:"pre-wrap",lineHeight:1.6,fontSize:13,color:"var(--text)"}}>{hnData.narrative}</div>)}
               </div>
               <div style={{background:"var(--indigo-dim)",border:"1.5px solid rgba(59,94,222,.15)",borderRadius:"var(--r)",padding:"14px 16px"}}>
                 <div style={{fontSize:12,fontWeight:700,color:"var(--indigo)",marginBottom:6}}>Improvement opportunities</div>
