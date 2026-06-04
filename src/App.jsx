@@ -2569,6 +2569,9 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
   const [goalDraft,setGoalDraft] = useState(account.successPlan.goal);
   const [editAct,setEditAct]     = useState(false);
   const [actDraft,setActDraft]   = useState(account.nextAction||"");
+  const [editCap,setEditCap]       = useState(false);
+  const [seatsDraft,setSeatsDraft] = useState(account.licensedSeats ?? "");
+  const [featDraft,setFeatDraft]   = useState(account.licensedFeatures ?? "");
 
   const sc=STAGE_CFG[account.stage]||STAGE_CFG["Stable"];
   const days=ago(account.lastContact);
@@ -2617,6 +2620,11 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
   const delMs=id=>onUpdate(account.id,{successPlan:{...account.successPlan,milestones:account.successPlan.milestones.filter(m=>m.id!==id)}});
   const saveGoal=()=>{ onUpdate(account.id,{successPlan:{...account.successPlan,goal:goalDraft}}); setEditGoal(false); toast("Goal saved","success"); };
   const saveAct=()=>{ onUpdate(account.id,{nextAction:actDraft}); setEditAct(false); toast("Next action saved","success"); };
+  const saveCap=()=>{
+    const toNum=v=>{const n=parseInt(v,10);return Number.isFinite(n)?n:null;};
+    onUpdate(account.id,{licensedSeats:toNum(seatsDraft),licensedFeatures:toNum(featDraft)});
+    setEditCap(false); toast("Capacity saved","success");
+  };
 
   const toggleDigest = async () => {
     if (!call || digestToggling) return;
@@ -3640,6 +3648,34 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                         </div>
                       );
                     })()}
+
+                    <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
+                      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:editCap?8:0}}>
+                        <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Capacity</span>
+                        {!editCap&&(
+                          <button onClick={()=>{setSeatsDraft(account.licensedSeats??"");setFeatDraft(account.licensedFeatures??"");setEditCap(true);}}
+                            style={{background:"none",border:"none",color:"var(--indigo)",fontSize:11,cursor:"pointer",fontWeight:600}}>Edit</button>
+                        )}
+                      </div>
+                      {editCap?(
+                        <div style={{display:"flex",gap:8,alignItems:"center",flexWrap:"wrap"}}>
+                          <Inp type="number" value={seatsDraft} onChange={e=>setSeatsDraft(e.target.value)}
+                            onKeyDown={e=>{if(e.key==="Enter")saveCap();if(e.key==="Escape")setEditCap(false);}}
+                            placeholder="Licensed seats" style={{fontSize:13,padding:"7px 10px",width:130}}/>
+                          <Inp type="number" value={featDraft} onChange={e=>setFeatDraft(e.target.value)}
+                            onKeyDown={e=>{if(e.key==="Enter")saveCap();if(e.key==="Escape")setEditCap(false);}}
+                            placeholder="Entitled features" style={{fontSize:13,padding:"7px 10px",width:140}}/>
+                          <Btn onClick={saveCap} style={{padding:"7px 14px",fontSize:12}}>Save</Btn>
+                          <button onClick={()=>setEditCap(false)} style={{background:"none",border:"none",color:"var(--text3)",fontSize:11,cursor:"pointer"}}>Cancel</button>
+                        </div>
+                      ):(
+                        <div style={{fontSize:12,color:"var(--text3)"}}>
+                          {account.licensedSeats!=null||account.licensedFeatures!=null
+                            ? `${account.licensedSeats??"—"} seats · ${account.licensedFeatures??"—"} features`
+                            : "Not set — add seats & features to unlock seat adoption and breadth"}
+                        </div>
+                      )}
+                    </div>
 
                     {usageHistory.length===0&&(
                       <div style={{fontSize:12,color:"var(--text3)",background:"var(--bg3)",borderRadius:"var(--r)",padding:"10px 14px"}}>
