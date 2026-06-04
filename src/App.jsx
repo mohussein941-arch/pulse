@@ -3597,6 +3597,50 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                       </div>
                     )}
 
+                    {usageLatest&&(usageLatest.wau!=null||usageLatest.last_active_at||usageLatest.events_count!=null||usageLatest.key_events)&&(()=>{
+                      const la  = usageLatest.last_active_at ? new Date(usageLatest.last_active_at) : null;
+                      const dsa = la ? Math.floor((Date.now()-la)/86400000) : null;
+                      const topEvents = usageLatest.key_events
+                        ? Object.entries(usageLatest.key_events).sort((a,b)=>b[1]-a[1]).slice(0,5) : [];
+                      return (
+                        <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
+                          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Engagement</div>
+                          <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:topEvents.length?10:0}}>
+                            {usageLatest.wau!=null&&(
+                              <div>
+                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-mono)"}}>{usageLatest.wau}</div>
+                                <div style={{fontSize:10,color:"var(--text3)"}}>weekly active</div>
+                              </div>
+                            )}
+                            {usageLatest.events_count!=null&&(
+                              <div>
+                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-mono)"}}>{usageLatest.events_count}</div>
+                                <div style={{fontSize:10,color:"var(--text3)"}}>events / 30d</div>
+                              </div>
+                            )}
+                            {dsa!=null&&(
+                              <div>
+                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-mono)",color:dsa<=7?"var(--emerald)":dsa<=30?"var(--amber)":"var(--rose)"}}>{dsa===0?"today":dsa+"d"}</div>
+                                <div style={{fontSize:10,color:"var(--text3)"}}>last active</div>
+                              </div>
+                            )}
+                          </div>
+                          {topEvents.length>0&&(
+                            <div>
+                              <div style={{fontSize:10,color:"var(--text3)",marginBottom:4}}>Top features</div>
+                              <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                                {topEvents.map(([name,count])=>(
+                                  <span key={name} style={{fontSize:11,fontFamily:"var(--font-mono)",background:"var(--bg3)",borderRadius:"var(--r)",padding:"3px 8px"}}>
+                                    {name} <span style={{color:"var(--text3)"}}>{count}</span>
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+
                     {usageHistory.length===0&&(
                       <div style={{fontSize:12,color:"var(--text3)",background:"var(--bg3)",borderRadius:"var(--r)",padding:"10px 14px"}}>
                         No webhook data received yet. Go to <strong>Settings → Product Usage</strong> to get your webhook URL and share it with your engineering team.
