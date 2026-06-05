@@ -11883,6 +11883,36 @@ export default function App() {
     }).catch(() => {});
   }, [session, call]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // ── Reusable refetchers so edits + navigation reflect server truth ────────────
+  const loadAccounts = useCallback(async () => {
+    if (!API_URL || !session?.token) return;
+    try {
+      const data = await call("GET", "/api/accounts");
+      if (data?.accounts) {
+        setAccounts(data.accounts);
+        save(data.accounts);
+        setSelected(prev => prev ? (data.accounts.find(a => a.id === prev.id) || prev) : prev);
+      }
+    } catch {}
+  }, [call, session]);
+
+  const loadTasks = useCallback(async () => {
+    if (!API_URL || !session?.token) return;
+    try {
+      const data = await call("GET", "/api/tasks");
+      if (Array.isArray(data)) setManualTasks(data.map(t => shapeTask(t, accounts)));
+    } catch {}
+  }, [call, session, accounts]);
+
+  // Silently refresh central data on tab change (skip first mount — the login-load
+  // effects already cover it).
+  const didMountRef = useRef(false);
+  useEffect(() => {
+    if (!didMountRef.current) { didMountRef.current = true; return; }
+    loadAccounts();
+    loadTasks();
+  }, [view]); // eslint-disable-line react-hooks/exhaustive-deps
+
   useEffect(() => {
     const h = e => { if (e.key==="Escape"&&selected&&!showAdd&&!showBulk&&!closeoutMeeting) setSelected(null); };
     window.addEventListener("keydown", h);
@@ -11931,10 +11961,10 @@ export default function App() {
     setSelected(p=>p?.id===id?{...p,...patch}:p);
     // Sync to backend if available
     if (API_URL && session?.token) {
-      try { await call("PATCH", `/api/accounts/${id}`, patch); }
+      try { await call("PATCH", `/api/accounts/${id}`, patch); await loadAccounts(); }
       catch { toast("Sync failed — changes saved locally","info"); }
     }
-  }, [call, session, toast]);
+  }, [call, session, toast, loadAccounts]);
 
   const del = useCallback(async id => {
     setAccounts(p=>p.filter(a=>a.id!==id));
