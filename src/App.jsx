@@ -2655,8 +2655,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
     {key:"health",     label:"Health & Playbook"},
     {key:"ai",         label:"Ask AI"},
     {key:"brief",      label:"Account Brief"},
-    {key:"catchup",    label:"Catch me up"},
-    {key:"handoff",    label:"CSM Handoff"},
+    {key:"handoff",    label:"Catch Up & Handoff"},
   ];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
   const tabHasAlert = {
@@ -3912,39 +3911,11 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             </div>
           )}
 
-          {tab==="catchup"&&(
-            <div>
-              <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-                <h3 style={{margin:0,fontSize:16,fontFamily:"var(--font-display)",fontWeight:700,color:"var(--text)"}}>Catch me up</h3>
-                {!catchUpLoading&&(
-                  <button onClick={()=>{catchUpFetchedRef.current=false;setCatchUpData(null);setCatchUpError(false);setCatchUpNonce(n=>n+1);}}
-                    style={{padding:"6px 14px",borderRadius:"var(--r-sm)",fontSize:13,cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600,border:"1.5px solid var(--border)",background:"transparent",color:"var(--text2)"}}>
-                    Refresh
-                  </button>
-                )}
-              </div>
-              {catchUpLoading&&(
-                <div style={{color:"var(--text2)",fontSize:14}}>
-                  Catching you up…
-                  {catchUpSlowHint&&(<div style={{marginTop:6,fontSize:13,color:"var(--text2)",opacity:.7}}>Synthesizing from the account timeline — this can take a few seconds.</div>)}
-                </div>
-              )}
-              {!catchUpLoading&&catchUpError&&(
-                <div style={{color:"var(--rose)",fontSize:14}}>Couldn't load the recap. Try Refresh.</div>
-              )}
-              {!catchUpLoading&&!catchUpError&&catchUpData&&catchUpData.trace_id===null&&(
-                <div style={{color:"var(--text2)",fontSize:14}}>Nothing to catch up on yet — no activity recorded for this account.</div>
-              )}
-              {!catchUpLoading&&!catchUpError&&catchUpData&&catchUpData.trace_id!==null&&(
-                <CitedNarrative text={catchUpData.narrative} citations={catchUpData.citations} />
-              )}
-            </div>
-          )}
 
     {tab==="handoff"&&(
       <div>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
-          <h3 style={{margin:0,fontSize:16,fontFamily:"var(--font-display)",fontWeight:700,color:"var(--text)"}}>CSM Handoff</h3>
+          <h3 style={{margin:0,fontSize:16,fontFamily:"var(--font-display)",fontWeight:700,color:"var(--text)"}}>Catch Up & Handoff</h3>
           {!handoffLoading&&(
             <button onClick={()=>{handoffFetchedRef.current=false;setHandoffData(null);setHandoffError(false);setHandoffLoading(true);setHandoffNonce(n=>n+1);}}
               style={{padding:"6px 14px",borderRadius:"var(--r-sm)",fontSize:13,cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600,border:"1.5px solid var(--border)",background:"transparent",color:"var(--text2)"}}>
@@ -3972,6 +3943,10 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
           const NO_CTX = "No relevant context found for this request.";
           return (
             <div>
+              <div style={ST}>Recap</div>
+              {h.recap&&h.recap.narrative&&h.recap.narrative!==NO_CTX?(
+                <CitedNarrative text={h.recap.narrative} citations={h.recap.citations} />
+              ):(<div style={EM}>No activity to summarize yet.</div>)}
               <div style={ST}>Snapshot</div>
               <div style={ROW}><span style={L}>Stage</span><span style={V}>{a.stage||"—"}</span></div>
               <div style={ROW}><span style={L}>ARR</span><span style={V}>{a.arr!=null?`$${a.arr}`:"—"}</span></div>
@@ -4020,10 +3995,6 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 ))
               ):(<div style={EM}>No open tasks.</div>)}
 
-              <div style={ST}>Context recap</div>
-              {h.recap&&h.recap.narrative&&h.recap.narrative!==NO_CTX?(
-                <CitedNarrative text={h.recap.narrative} citations={h.recap.citations} />
-              ):(<div style={EM}>No activity to summarize yet.</div>)}
 
               {h.generated_at&&(<div style={{marginTop:24,fontSize:12,color:"var(--text2)",opacity:.7}}>Generated {new Date(h.generated_at).toLocaleString()}</div>)}
             </div>
