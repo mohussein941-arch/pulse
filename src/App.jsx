@@ -4886,6 +4886,7 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
   const [newTask, setNewTask]         = useState({ title:"", description:"", accountId:"", priority:"High", dueDate:todayStr() });
   const [filterType, setFilterType]   = useState("All");
   const [filterDone, setFilterDone]   = useState(false);
+  const [activeWidget, setActiveWidget] = useState(null); // null | "critical" | "overdue" | "today"
 
   const autoTasks = generateAutoTasks(accounts);
 
@@ -4899,14 +4900,26 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
     .filter(t => filterType === "All" || t.type === filterType)
     .filter(t => filterDone ? true : !t.done);
 
-  // Group by section
-  const overdue  = filtered.filter(t => t.dueDate < todayStr() && !t.done);
-  const today2   = filtered.filter(t => t.dueDate === todayStr() && !t.done);
-  const upcoming = filtered.filter(t => t.dueDate > todayStr() && !t.done);
-  const done2    = filtered.filter(t => t.done);
+  // Widget counts — reflect the type pill but NOT the active-widget filter, so the
+  // numbers stay stable and you can switch between filters.
+  const overdueCount  = filtered.filter(t => t.dueDate < todayStr() && !t.done).length;
+  const todayCount    = filtered.filter(t => t.dueDate === todayStr() && !t.done).length;
+  const criticalCount = filtered.filter(t => t.priority === "Critical" && !t.done).length;
+  const totalOpen     = filtered.filter(t => !t.done).length;
 
-  const criticalCount = allTasks.filter(t=>t.priority==="Critical"&&!t.done).length;
-  const totalOpen     = allTasks.filter(t=>!t.done).length;
+  // Apply the active-widget filter, then bucket the result for the list sections.
+  const widgetFiltered = filtered.filter(t => {
+    if (activeWidget === "critical") return t.priority === "Critical" && !t.done;
+    if (activeWidget === "overdue")  return t.dueDate < todayStr() && !t.done;
+    if (activeWidget === "today")    return t.dueDate === todayStr() && !t.done;
+    return true;
+  });
+
+  // Group by section
+  const overdue  = widgetFiltered.filter(t => t.dueDate < todayStr() && !t.done);
+  const today2   = widgetFiltered.filter(t => t.dueDate === todayStr() && !t.done);
+  const upcoming = widgetFiltered.filter(t => t.dueDate > todayStr() && !t.done);
+  const done2    = widgetFiltered.filter(t => t.done);
 
   const submitManual = () => {
     if (!newTask.title.trim()) return;
@@ -4997,17 +5010,23 @@ const TasksPage = ({ accounts, manualTasks, onAddManual, onToggleManual, onDelet
       {/* Stats */}
       <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
         {[
-          {label:"Open Tasks",    value:totalOpen,     color:"var(--indigo)" },
-          {label:"Critical",      value:criticalCount, color:criticalCount>0?"var(--rose)":"var(--text3)" },
-          {label:"Due Today",     value:today2.length, color:today2.length>0?"var(--amber)":"var(--text3)" },
-          {label:"Overdue",       value:overdue.length,color:overdue.length>0?"var(--rose)":"var(--text3)" },
-        ].map(s=>(
-          <div key={s.label} style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
-            borderTop:`3px solid ${s.color}`,borderRadius:"var(--r-lg)",padding:"18px 20px",boxShadow:"var(--shadow-sm)"}}>
+          {label:"Open Tasks",    value:totalOpen,     color:"var(--indigo)", wkey:null },
+          {label:"Critical",      value:criticalCount, color:criticalCount>0?"var(--rose)":"var(--text3)", wkey:"critical" },
+          {label:"Due Today",     value:todayCount,    color:todayCount>0?"var(--amber)":"var(--text3)", wkey:"today" },
+          {label:"Overdue",       value:overdueCount,  color:overdueCount>0?"var(--rose)":"var(--text3)", wkey:"overdue" },
+        ].map(s=>{
+          const isActive = s.wkey!==null && activeWidget===s.wkey;
+          return (
+          <div key={s.label}
+            onClick={()=>setActiveWidget(s.wkey===null ? null : (activeWidget===s.wkey ? null : s.wkey))}
+            style={{background:"var(--bg2)",border:"1.5px solid var(--border)",
+              borderTop:`3px solid ${s.color}`,borderRadius:"var(--r-lg)",padding:"18px 20px",
+              boxShadow:isActive?`0 0 0 2.5px ${s.color}`:"var(--shadow-sm)",cursor:"pointer",transition:"all .15s"}}>
             <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:26,color:s.color,marginBottom:4,letterSpacing:"-.02em"}}>{s.value}</div>
             <div style={{fontSize:12,fontWeight:600,color:"var(--text2)"}}>{s.label}</div>
           </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Add task form */}
