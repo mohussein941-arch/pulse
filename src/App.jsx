@@ -6569,6 +6569,10 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
   const [customQuestion,  setCustomQuestion]  = useState("");
   const [deadline,        setDeadline]        = useState("");
   const [loading,         setLoading]         = useState(false);
+  const [scope,           setScope]           = useState("account"); // "all" | "account" | "segment"
+  const [segPlan,         setSegPlan]         = useState("");
+  const [segStage,        setSegStage]        = useState("");
+  const [segArrMin,       setSegArrMin]       = useState("");
 
   useEffect(()=>{
     const h=e=>e.key==="Escape"&&onClose();
@@ -6578,16 +6582,26 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
   const selectedAccount = accounts.find(a=>a.id===accountId);
 
   const submit = async () => {
-    if (!accountId) { toast("Please select an account","error"); return; }
+    if (scope === "account" && !accountId) { toast("Please select an account","error"); return; }
     setLoading(true);
     try {
-      await onCreate({
-        accountId,
-        accountName: selectedAccount?.name || "",
+      const payload = {
         type,
         customQuestion: customQuestion.trim() || null,
         deadline: deadline || null,
-      });
+      };
+      if (scope === "account") {
+        payload.accountId   = accountId;
+        payload.accountName = selectedAccount?.name || "";
+      } else if (scope === "segment") {
+        const seg = {};
+        if (segPlan.trim()) seg.plan    = segPlan.trim();
+        if (segStage)       seg.stage   = segStage;
+        if (segArrMin)      seg.arr_min = Number(segArrMin);
+        payload.segment_config = seg;
+      }
+      // scope === "all" → no account, no segment_config (backend treats empty as all)
+      await onCreate(payload);
       onClose();
     } catch { toast("Failed to create survey","error"); }
     finally { setLoading(false); }
@@ -6614,11 +6628,38 @@ const SurveyCreateModal = ({ accounts, onClose, onCreate, toast }) => {
         </div>
 
         <div style={{padding:24}}>
-          <Fld label="Account">
-            <Slct value={accountId} onChange={e=>setAccountId(e.target.value)}>
-              <option value="">— Select an account —</option>
-              {accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
-            </Slct>
+          <Fld label="Apply to">
+            <div style={{display:"flex",gap:6,marginBottom:10}}>
+              {["all","account","segment"].map(s=>(
+                <button key={s} onClick={()=>setScope(s)}
+                  style={{padding:"6px 14px",borderRadius:"var(--r)",border:"1.5px solid",fontSize:12,fontWeight:600,
+                    cursor:"pointer",fontFamily:"var(--font-display)",
+                    borderColor:scope===s?"var(--indigo)":"var(--border)",
+                    background:scope===s?"var(--indigo-dim)":"var(--bg3)",
+                    color:scope===s?"var(--indigo)":"var(--text2)"}}>
+                  {s==="all"?"All accounts":s==="account"?"Specific account":"Segment"}
+                </button>
+              ))}
+            </div>
+            {scope==="account"&&(
+              <Slct value={accountId} onChange={e=>setAccountId(e.target.value)}>
+                <option value="">— Select an account —</option>
+                {accounts.map(a=><option key={a.id} value={a.id}>{a.name}</option>)}
+              </Slct>
+            )}
+            {scope==="segment"&&(
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                <Inp placeholder="Plan (e.g. Enterprise) — blank for any" value={segPlan} onChange={e=>setSegPlan(e.target.value)}/>
+                <Slct value={segStage} onChange={e=>setSegStage(e.target.value)}>
+                  <option value="">Stage — any</option>
+                  {STAGES.map(s=><option key={s} value={s}>{s}</option>)}
+                </Slct>
+                <Inp type="number" min="0" placeholder="Min ARR (USD) — blank for any" value={segArrMin} onChange={e=>setSegArrMin(e.target.value)}/>
+              </div>
+            )}
+            {scope==="all"&&(
+              <div style={{fontSize:12,color:"var(--text3)"}}>A survey will be created for every active account.</div>
+            )}
           </Fld>
 
           <Fld label="Survey type">
@@ -7684,7 +7725,13 @@ const SurveysPage = ({ accounts, session, toast, onGoToSettings }) => {
 
   const createSurvey = async (payload) => {
     const data = await callSurvey("POST", "/api/surveys", payload);
-    toast("Survey created — ready to send","success");
+    const n = data?.created ?? 1, sk = data?.skipped ?? 0;
+    toast(
+      n === 0
+        ? "No surveys created — matching accounts already have an active survey of this type"
+        : `${n} survey${n !== 1 ? "s" : ""} created — ready to send${sk ? ` (${sk} skipped, already active)` : ""}`,
+      n === 0 ? "info" : "success"
+    );
     await loadSurveys();
     return data;
   };
