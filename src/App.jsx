@@ -9492,6 +9492,7 @@ const OnboardingTab = ({ account, call, toast }) => {
   const [loading,  setLoading]  = useState(true);
   const [showHO,   setShowHO]   = useState(false);
   const [hoDraft,  setHoDraft]  = useState({});
+  const [hoFields,    setHoFields]    = useState([]);
   const [editHO,   setEditHO]   = useState(false);
   const [taskForm, setTaskForm] = useState({show:false, owner:"csm", title:"", due_date:""});
   const [needForm, setNeedForm] = useState({show:false, category:"business", description:"", priority:"medium"});
@@ -9526,14 +9527,22 @@ const OnboardingTab = ({ account, call, toast }) => {
   };
 
   const saveHandover = async () => {
-    try { await call("PATCH", `/api/onboarding/plan/${plan.id}`, { handover_data: hoDraft }); } catch {}
-    setPlan(p => ({ ...p, handover_data: hoDraft }));
+    try { await call("PATCH", `/api/onboarding/plan/${plan.id}`, { handover_data: hoDraft, handover_fields: hoFields }); } catch {}
+    setPlan(p => ({ ...p, handover_data: hoDraft, handover_fields: hoFields }));
     setEditHO(false); toast?.("Handover saved", "success");
   };
 
-  const HO_FIELDS = ["what_sold","why_bought","success_definition","promises","red_flags","contacts"];
+  const HO_DEFAULT_FIELDS = [
+    {key:"what_sold",          label:"What was sold"},
+    {key:"why_bought",         label:"Why they bought / pain points"},
+    {key:"success_definition", label:"Their definition of success"},
+    {key:"promises",           label:"Commitments made during sales"},
+    {key:"red_flags",          label:"Red flags or concerns"},
+    {key:"contacts",           label:"Contacts handed over"},
+  ];
+  const hoFieldDefs = (plan?.handover_fields?.length ? plan.handover_fields : HO_DEFAULT_FIELDS);
   const hoCompleteness = plan
-    ? Math.round(HO_FIELDS.filter(k => plan.handover_data?.[k]?.trim()).length / HO_FIELDS.length * 100)
+    ? Math.round(hoFieldDefs.filter(f => plan.handover_data?.[f.key]?.trim()).length / (hoFieldDefs.length||1) * 100)
     : 0;
 
   const sendHandover = async () => {
@@ -9867,21 +9876,24 @@ const OnboardingTab = ({ account, call, toast }) => {
             )}
             {editHO ? (
               <div style={{display:"flex",flexDirection:"column",gap:8}}>
-                {[
-                  ["what_sold",           "What was sold"],
-                  ["why_bought",          "Why they bought / pain points"],
-                  ["success_definition",  "Their definition of success"],
-                  ["promises",            "Commitments made during sales"],
-                  ["red_flags",           "Red flags or concerns"],
-                  ["contacts",            "Contacts handed over"],
-                ].map(([k, label]) => (
-                  <div key={k}>
-                    <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",marginBottom:3}}>{label}</div>
+                {hoFields.map((f, i) => (
+                  <div key={f.key}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3}}>
+                      <input value={f.label} placeholder="Field label"
+                        onChange={e=>setHoFields(fs=>fs.map((x,j)=>j===i?{...x,label:e.target.value}:x))}
+                        style={{...inputSt,fontSize:11,fontWeight:600,padding:"4px 8px",flex:1}}/>
+                      <button onClick={()=>setHoFields(fs=>fs.filter((_,j)=>j!==i))}
+                        style={{background:"none",border:"none",color:"var(--rose)",fontSize:11,cursor:"pointer",fontWeight:600,fontFamily:"var(--font-display)"}}>Remove</button>
+                    </div>
                     <textarea rows={2} style={{...inputSt,resize:"vertical"}}
-                      value={hoDraft[k]||""} placeholder={label}
-                      onChange={e=>setHoDraft(d=>({...d,[k]:e.target.value}))}/>
+                      value={hoDraft[f.key]||""} placeholder={f.label}
+                      onChange={e=>setHoDraft(d=>({...d,[f.key]:e.target.value}))}/>
                   </div>
                 ))}
+                <button onClick={()=>setHoFields(fs=>[...fs,{key:`custom_${Math.random().toString(36).slice(2,9)}`,label:"New field"}])}
+                  style={{alignSelf:"flex-start",background:"none",border:"1.5px dashed var(--border)",borderRadius:"var(--r-sm)",color:"var(--text2)",fontSize:11,fontWeight:600,padding:"6px 12px",cursor:"pointer",fontFamily:"var(--font-display)"}}>
+                  + Add field
+                </button>
                 <div style={{display:"flex",gap:8,justifyContent:"flex-end",marginTop:4}}>
                   <button onClick={()=>setEditHO(false)}
                     style={{padding:"6px 14px",border:"1.5px solid var(--border)",borderRadius:"var(--r-sm)",
@@ -9897,18 +9909,18 @@ const OnboardingTab = ({ account, call, toast }) => {
               </div>
             ) : (
               <div>
-                {[["what_sold","What was sold"],["why_bought","Why they bought"],["success_definition","Success definition"],["promises","Promises made"],["red_flags","Red flags"],["contacts","Contacts"]].map(([k,label])=>(
-                  (plan.handover_data||{})[k] ? (
-                    <div key={k} style={{marginBottom:8}}>
-                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",letterSpacing:".04em",marginBottom:2}}>{label.toUpperCase()}</div>
-                      <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{(plan.handover_data||{})[k]}</div>
+                {hoFieldDefs.map(({key,label})=>(
+                  (plan.handover_data||{})[key] ? (
+                    <div key={key} style={{marginBottom:8}}>
+                      <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",letterSpacing:".04em",marginBottom:2}}>{(label||key).toUpperCase()}</div>
+                      <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{(plan.handover_data||{})[key]}</div>
                     </div>
                   ) : null
                 ))}
                 {!Object.values(plan.handover_data||{}).some(Boolean) && (
                   <div style={{fontSize:12,color:"var(--text3)",fontStyle:"italic",marginBottom:8}}>No handover notes yet.</div>
                 )}
-                <button onClick={()=>{setHoDraft(plan.handover_data||{});setEditHO(true);}}
+                <button onClick={()=>{setHoDraft(plan.handover_data||{});setHoFields(plan.handover_fields?.length?plan.handover_fields:HO_DEFAULT_FIELDS);setEditHO(true);}}
                   style={{fontSize:11,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600,padding:0}}>
                   {Object.values(plan.handover_data||{}).some(Boolean) ? "Edit" : "Fill in handover"}
                 </button>
