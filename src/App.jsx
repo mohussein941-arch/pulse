@@ -11595,45 +11595,51 @@ const MyPerformancePage = ({ accounts, call }) => {
   );
 };
 
+const CoverageHealthCard = ({ accounts }) => {
+  const active = accounts.filter(a=>!a.archived);
+  if (!active.length) return null;
+  const coveragePct = Math.round(active.filter(a=>ago(a.lastContact)<=14).length/active.length*100);
+  const playbookPct = Math.round(active.filter(a=>a.activePlaybookId).length/active.length*100);
+  const healthPct   = Math.round(active.filter(a=>a.healthScore>=55).length/active.length*100);
+  const metrics = [
+    {label:"Active contact coverage", pct:coveragePct, sub:"accounts contacted ≤14 days",
+      color:coveragePct>=80?"var(--emerald)":coveragePct>=60?"var(--amber)":"var(--rose)"},
+    {label:"Playbook adoption",        pct:playbookPct, sub:"accounts with active playbook",
+      color:playbookPct>=60?"var(--emerald)":playbookPct>=40?"var(--amber)":"var(--rose)"},
+    {label:"Health above threshold",   pct:healthPct,   sub:"accounts with health ≥55",
+      color:"var(--indigo)"},
+  ];
+  return (
+    <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
+      padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
+      <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Coverage Health</div>
+      <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
+        {metrics.map(m=>(
+          <div key={m.label}>
+            <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
+              <span style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>{m.label}</span>
+              <span style={{fontSize:13,fontFamily:"var(--font-mono)",fontWeight:700,color:m.color}}>{m.pct}%</span>
+            </div>
+            <div style={{height:7,borderRadius:99,background:"var(--bg4)"}}>
+              <div style={{height:"100%",width:`${m.pct}%`,borderRadius:99,background:m.color,transition:"width .6s ease"}}/>
+            </div>
+            <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>{m.sub}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── Manager Overview ─────────────────────────────────────────────────────────
 const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
   const [showAllAttention, setShowAllAttention] = useState(false);
   const active = accounts.filter(a => !a.archived);
 
-  // Portfolio-level aggregates
-  const totalArr      = active.reduce((s,a)=>s+a.arr,0);
-  const atRiskArr     = active.filter(a=>a.healthScore<50).reduce((s,a)=>s+a.arr,0);
-  const avgHealth     = active.length ? Math.round(active.reduce((s,a)=>s+a.healthScore,0)/active.length) : 0;
-  const atRiskCount   = active.filter(a=>a.healthScore<50).length;
-  const staleContact  = active.filter(a=>ago(a.lastContact)>21).length;
-  const withPlaybook  = active.filter(a=>a.activePlaybookId).length;
-  const coveragePct   = active.length ? Math.round(active.filter(a=>ago(a.lastContact)<=14).length/active.length*100) : 0;
-  const playbookPct   = active.length ? Math.round(withPlaybook/active.length*100) : 0;
-
-  // Renewal forecast buckets
   const today = new Date();
-  const withRenewal = active.filter(a=>a.renewalDate)
-    .map(a=>({...a, rd: Math.ceil((new Date(a.renewalDate)-today)/86400000)}));
-  const rOD  = withRenewal.filter(a=>a.rd<0);
-  const r30  = withRenewal.filter(a=>a.rd>=0&&a.rd<=30);
-  const r60  = withRenewal.filter(a=>a.rd>30&&a.rd<=60);
-  const r90  = withRenewal.filter(a=>a.rd>60&&a.rd<=90);
-  const arrOD  = rOD.reduce((s,a)=>s+a.arr,0);
-  const arrR30 = r30.reduce((s,a)=>s+a.arr,0);
-  const arrR60 = r60.reduce((s,a)=>s+a.arr,0);
-  const arrR90 = r90.reduce((s,a)=>s+a.arr,0);
-  const safeR30 = r30.filter(a=>a.healthScore>=65).reduce((s,a)=>s+a.arr,0);
-  const riskR30 = arrR30 - safeR30;
-  const forecastBuckets = [
-    {label:"Overdue",      arr:arrOD,  count:rOD.length, riskArr:arrOD,
-      color:"var(--rose)"},
-    {label:"Next 30 days", arr:arrR30, count:r30.length, riskArr:riskR30,
-      color:riskR30>0?"var(--rose)":"var(--emerald)"},
-    {label:"31–60 days",   arr:arrR60, count:r60.length, riskArr:r60.filter(a=>a.healthScore<65).reduce((s,a)=>s+a.arr,0),
-      color:"var(--amber)"},
-    {label:"61–90 days",   arr:arrR90, count:r90.length, riskArr:r90.filter(a=>a.healthScore<55).reduce((s,a)=>s+a.arr,0),
-      color:"var(--indigo)"},
-  ].filter(b=>b.count>0);
+
+  // Escalated accounts — manual crisis flags
+  const escalated = active.filter(a=>a.escalationStatus==="open");
 
   // Urgency score: combined health risk + time pressure
   const urgencyScore = a => {
@@ -11646,91 +11652,52 @@ const ManagerOverviewPage = ({ accounts, onAccountClick }) => {
     .sort((a,b)=>urgencyScore(b)-urgencyScore(a));
   const attentionVisible = showAllAttention ? attention : attention.slice(0,8);
 
-  const StatCard = ({label,value,sub,color,warn}) => (
-    <div style={{background:"var(--bg2)",border:`1.5px solid ${warn?"rgba(225,29,72,0.25)":"var(--border)"}`,
-      borderRadius:"var(--r-lg)",padding:"20px 22px",boxShadow:"var(--shadow-sm)"}}>
-      <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:26,color:color||"var(--indigo)",
-        marginBottom:4,letterSpacing:"-.01em"}}>{value}</div>
-      <div style={{fontSize:12,fontWeight:600,color:"var(--text2)",marginBottom:2}}>{label}</div>
-      {sub&&<div style={{fontSize:11,color:"var(--text3)"}}>{sub}</div>}
-    </div>
-  );
 
   return (
     <div style={{maxWidth:900,animation:"fadeUp .2s ease"}}>
       <div style={{marginBottom:28}}>
-        <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Portfolio Overview</h1>
+        <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Need Attention</h1>
         <div style={{fontSize:13,fontWeight:500,color:"var(--text3)"}}>
           {active.length} accounts · as of today
         </div>
       </div>
 
-      {/* Hero stats */}
-      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:12,marginBottom:28}}>
-        <StatCard label="Total ARR"        value={fmtMoney(totalArr)}    sub={`${active.length} accounts`}          color="var(--indigo)"/>
-        <StatCard label="At-Risk ARR"      value={fmtMoney(atRiskArr)}   sub={`${atRiskCount} accounts below 50`}   color="var(--rose)"    warn={atRiskArr>0}/>
-        <StatCard label="Avg Health Score" value={avgHealth}             sub="portfolio average"                    color={hColor(avgHealth)}/>
-        <StatCard label="No Recent Contact" value={staleContact}         sub="no contact in 21+ days"               color={staleContact>0?"var(--amber)":"var(--emerald)"} warn={staleContact>0}/>
-      </div>
-
-      {/* Coverage metrics */}
-      <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
-        padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
-        <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Coverage Health</div>
-        <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:16}}>
-          {[
-            {label:"Active contact coverage", pct:coveragePct, sub:"accounts contacted ≤14 days",
-              color:coveragePct>=80?"var(--emerald)":coveragePct>=60?"var(--amber)":"var(--rose)"},
-            {label:"Playbook adoption",        pct:playbookPct, sub:"accounts with active playbook",
-              color:playbookPct>=60?"var(--emerald)":playbookPct>=40?"var(--amber)":"var(--rose)"},
-            {label:"Health above threshold",   pct:active.length?Math.round(active.filter(a=>a.healthScore>=55).length/active.length*100):0,
-              sub:"accounts with health ≥55",
-              color:"var(--indigo)"},
-          ].map(m=>(
-            <div key={m.label}>
-              <div style={{display:"flex",justifyContent:"space-between",marginBottom:6}}>
-                <span style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>{m.label}</span>
-                <span style={{fontSize:13,fontFamily:"var(--font-mono)",fontWeight:700,color:m.color}}>{m.pct}%</span>
-              </div>
-              <div style={{height:7,borderRadius:99,background:"var(--bg4)"}}>
-                <div style={{height:"100%",width:`${m.pct}%`,borderRadius:99,background:m.color,transition:"width .6s ease"}}/>
-              </div>
-              <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>{m.sub}</div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Renewal forecast */}
-      <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",
-        padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
-        <div style={{fontSize:14,fontWeight:700,marginBottom:16}}>Renewal Forecast</div>
-        {forecastBuckets.length>0 ? (
-          <div style={{display:"grid",gridTemplateColumns:`repeat(${forecastBuckets.length},1fr)`,gap:12}}>
-            {forecastBuckets.map(b=>(
-              <div key={b.label} style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"14px 16px",
-                border:b.label==="Overdue"?"1.5px solid var(--rose-dim)":"1.5px solid transparent"}}>
-                <div style={{fontSize:11,color:b.label==="Overdue"?"var(--rose)":"var(--text3)",
-                  fontFamily:"var(--font-mono)",fontWeight:b.label==="Overdue"?700:400,marginBottom:6}}>{b.label}</div>
-                <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:18,color:"var(--text)",marginBottom:2}}>
-                  {fmtMoney(b.arr)}
+      {/* Escalated accounts — manual crisis flags, shown first */}
+      {escalated.length>0&&(
+        <div style={{background:"var(--bg2)",border:"1.5px solid rgba(225,29,72,0.3)",borderRadius:"var(--r-lg)",
+          padding:"20px 24px",marginBottom:24,boxShadow:"var(--shadow-sm)"}}>
+          <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:4}}>
+            <Ic n="escalate" size={14} color="var(--rose)"/>
+            <span style={{fontSize:14,fontWeight:700,color:"var(--rose)"}}>Escalated ({escalated.length})</span>
+          </div>
+          <div style={{fontSize:12,color:"var(--text3)",marginBottom:16}}>
+            Accounts you've manually flagged as active escalations
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {escalated.map(a=>(
+              <div key={a.id} onClick={()=>onAccountClick(a)}
+                style={{display:"flex",alignItems:"center",gap:14,
+                  background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 16px",
+                  cursor:"pointer",border:"1.5px solid transparent",transition:"border-color .12s"}}
+                onMouseEnter={e=>e.currentTarget.style.borderColor="var(--rose)"}
+                onMouseLeave={e=>e.currentTarget.style.borderColor="transparent"}>
+                <Avatar name={a.name} size={32}/>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{fontWeight:700,fontSize:13,marginBottom:3}}>{a.name}</div>
+                  {a.escalationReason&&(
+                    <div style={{fontSize:12,color:"var(--text3)",lineHeight:1.4,
+                      overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{a.escalationReason}</div>
+                  )}
                 </div>
-                <div style={{fontSize:11,color:"var(--text3)",marginBottom:8}}>{b.count} account{b.count!==1?"s":""}</div>
-                {b.riskArr>0&&(
-                  <div style={{fontSize:10,fontWeight:600,color:"var(--rose)",background:"var(--rose-dim)",
-                    padding:"2px 8px",borderRadius:99,display:"inline-block"}}>
-                    {fmtMoney(b.riskArr)} at risk
-                  </div>
+                {a.escalationSince&&(
+                  <span style={{fontSize:11,color:"var(--rose)",fontFamily:"var(--font-mono)",flexShrink:0}}>since {a.escalationSince}</span>
                 )}
+                <span style={{color:"var(--text3)",fontSize:16,flexShrink:0}}>→</span>
               </div>
             ))}
           </div>
-        ) : (
-          <div style={{fontSize:13,color:"var(--text3)",textAlign:"center",padding:"12px 0"}}>
-            No renewals due — add renewal dates to accounts to see the forecast.
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Accounts needing attention */}
       {attention.length>0&&(
@@ -12203,7 +12170,7 @@ export default function App() {
     { id:"tasks",       icon:"tasks",        label:"Tasks",             active:true, badge:taskAlerts>0?taskAlerts:null },
     // ── Manage ──────────────────────────────────────────────────────────────────
     { divider:"Manage" },
-    { id:"overview",    icon:"overview",     label:"Overview",          active:true  },
+    { id:"overview",    icon:"overview",     label:"Need Attention",    active:true  },
     { id:"pipeline",    icon:"pipeline",     label:"Renewal Pipeline",  active:true  },
     { id:"playbooks",   icon:"playbooks",    label:"Playbooks",         active:true, badge:playbookAlerts>0?playbookAlerts:null },
     { id:"onboarding",  icon:"onboarding",   label:"Onboarding",        active:true },
@@ -12472,6 +12439,8 @@ export default function App() {
             </div>
 
             <Stats accounts={filtered} isFiltered={isFiltered}/>
+
+            <CoverageHealthCard accounts={accounts}/>
 
             {/* Filters */}
             <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:20}}>
