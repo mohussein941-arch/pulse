@@ -2734,6 +2734,12 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
     const handoffSlowTimer  = useRef(null);
     const handoffFetchedRef = useRef(false);
     const handoffInflightRef= useRef(false);
+    const [caseSummary,  setCaseSummary]  = useState(null);
+    const [caseLoading,  setCaseLoading]  = useState(false);
+    const [caseError,    setCaseError]    = useState(false);
+    const [caseSlowHint, setCaseSlowHint] = useState(false);
+    const caseSlowTimer  = useRef(null);
+    const caseFetchedRef = useRef(false);
     const [hnData,     setHnData]     = useState(null);
     const [hnLoading,  setHnLoading]  = useState(false);
     const [hnError,    setHnError]    = useState(false);
@@ -2903,6 +2909,26 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
         }
       };
     }, [tab, account.id, handoffNonce]);
+
+    // Case summary: reset on account change
+    useEffect(() => {
+      setCaseSummary(null);
+      setCaseError(false);
+      setCaseSlowHint(false);
+      setCaseLoading(false);
+      caseFetchedRef.current = false;
+    }, [account.id]);
+
+    // Case summary: quietly load any stored summary when the account is escalated
+    useEffect(() => {
+      if (account.escalationStatus !== "open" || caseFetchedRef.current) return;
+      caseFetchedRef.current = true;
+      let cancelled = false;
+      call("GET", `/api/accounts/${account.id}/escalation-summary`)
+        .then(d => { if (!cancelled && d) setCaseSummary(d); })
+        .catch(() => {});
+      return () => { cancelled = true; };
+    }, [account.id, account.escalationStatus]);
 
     // Health narrative: clear held explanation when the account changes
     useEffect(() => {
@@ -3143,6 +3169,108 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 {account.escalationReason&&(
                   <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{account.escalationReason}</div>
                 )}
+              </div>
+            )}
+
+            {/* Escalation case summary */}
+            {account.escalationStatus==="open"&&(
+              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
+                padding:"14px 16px",marginTop:14}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
+                  <div style={{display:"flex",alignItems:"center",gap:7}}>
+                    <Ic n="escalate" size={13} color="var(--text2)"/>
+                    <span style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>Case Summary</span>
+                  </div>
+                  {!caseLoading&&(
+                    <button onClick={()=>{
+                      setCaseLoading(true);setCaseError(false);
+                      caseSlowTimer.current=setTimeout(()=>setCaseSlowHint(true),2000);
+                      call("POST",`/api/accounts/${account.id}/escalation-summary`)
+                        .then(d=>{setCaseSummary(d);setCaseError(false);})
+                        .catch(()=>setCaseError(true))
+                        .finally(()=>{clearTimeout(caseSlowTimer.current);setCaseSlowHint(false);setCaseLoading(false);});
+                    }}
+                      style={{padding:"5px 12px",borderRadius:"var(--r-sm)",fontSize:12,cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600,border:"1.5px solid var(--border)",background:"transparent",color:"var(--text2)"}}>
+                      {caseSummary?"Refresh":"Generate case summary"}
+                    </button>
+                  )}
+                </div>
+                {caseLoading&&(
+                  <div style={{fontSize:13,color:"var(--text2)"}}>
+                    Generating case summary…
+                    {caseSlowHint&&(<div style={{marginTop:4,fontSize:12,color:"var(--text3)"}}>Synthesizing from metrics and recent meetings — a few seconds.</div>)}
+                  </div>
+                )}
+                {!caseLoading&&caseError&&(
+                  <div style={{fontSize:13,color:"var(--rose)"}}>Couldn't generate the summary. Try again.</div>
+                )}
+                {!caseLoading&&!caseError&&!caseSummary&&(
+                  <div style={{fontSize:12,color:"var(--text3)",lineHeight:1.5}}>
+                    Generate a shareable case summary — metrics, escalation context, and recommended cross-functional actions — to rally PM, Tech Support, and CS leads.
+                  </div>
+                )}
+                {!caseLoading&&caseSummary&&(()=>{
+                  const s=caseSummary;
+                  return (
+                    <div>
+                      {s.ai?.situation&&(
+                        <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.6,marginBottom:12}}>{s.ai.situation}</div>
+                      )}
+                      <div style={{display:"flex",flexWrap:"wrap",gap:18,marginBottom:12}}>
+                        {[
+                          ["ARR",fmtMoney(s.account.arr)],
+                          ["Health",s.account.health_score??"—"],
+                          ["NPS",s.account.nps??"—"],
+                          ["CES",s.account.ces??"—"],
+                          ["Tickets",s.account.open_tickets??0],
+                          ["Renewal",s.account.renewal_date||"—"],
+                        ].map(([k,v])=>(
+                          <div key={k}>
+                            <div style={{fontSize:10,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>{k}</div>
+                            <div style={{fontSize:13,fontWeight:700,fontFamily:"var(--font-mono)",color:"var(--text)"}}>{v}</div>
+                          </div>
+                        ))}
+                      </div>
+                      {s.ai?.challenges?.length>0&&(
+                        <div style={{marginBottom:12}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em"}}>Key challenges</div>
+                          <ul style={{margin:"4px 0 0",paddingLeft:18}}>
+                            {s.ai.challenges.map((c,i)=>(<li key={i} style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{c}</li>))}
+                          </ul>
+                        </div>
+                      )}
+                      {s.ai?.recommended_actions?.length>0&&(
+                        <div style={{marginBottom:12}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em"}}>Recommended actions</div>
+                          <div style={{display:"flex",flexDirection:"column",gap:6,marginTop:4}}>
+                            {s.ai.recommended_actions.map((a,i)=>(
+                              <div key={i} style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>
+                                <span style={{fontWeight:700,color:"var(--text)"}}>{a.team}:</span> {a.action}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                      {s.recent_meetings?.length>0&&(
+                        <div style={{marginBottom:12}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em"}}>Recent meetings</div>
+                          {s.recent_meetings.map((m,i)=>(
+                            <div key={i} style={{marginTop:6}}>
+                              <div style={{fontSize:12,fontWeight:600,color:"var(--text)"}}>{m.title||"Untitled"}{m.date&&(<span style={{color:"var(--text3)",fontWeight:400}}> · {m.date}</span>)}</div>
+                              {m.summary&&(<div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5,marginTop:2}}>{m.summary}</div>)}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {!s.ai&&(
+                        <div style={{fontSize:11,color:"var(--text3)",fontStyle:"italic",marginBottom:8}}>AI framing unavailable — showing account data only.</div>
+                      )}
+                      {s.generated_at&&(
+                        <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>Generated {new Date(s.generated_at).toLocaleString()}</div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
 
