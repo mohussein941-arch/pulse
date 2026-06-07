@@ -2740,6 +2740,13 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
     const [caseSlowHint, setCaseSlowHint] = useState(false);
     const caseSlowTimer  = useRef(null);
     const caseFetchedRef = useRef(false);
+    const [showCaseEmail,    setShowCaseEmail]    = useState(false);
+    const [caseEmailTo,      setCaseEmailTo]      = useState("");
+    const [caseEmailSubject, setCaseEmailSubject] = useState("");
+    const [caseEmailBody,    setCaseEmailBody]    = useState("");
+    const [caseEmailSending, setCaseEmailSending] = useState(false);
+    const [caseMailboxes,    setCaseMailboxes]    = useState([]);
+    const [caseMailboxId,    setCaseMailboxId]    = useState(null);
     const [hnData,     setHnData]     = useState(null);
     const [hnLoading,  setHnLoading]  = useState(false);
     const [hnError,    setHnError]    = useState(false);
@@ -2929,6 +2936,29 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
         .catch(() => {});
       return () => { cancelled = true; };
     }, [account.id, account.escalationStatus]);
+
+    const sendCaseEmail = async () => {
+      const recipients = caseEmailTo.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
+      const subj = caseEmailSubject.trim();
+      const body = caseEmailBody.trim();
+      if (!recipients.length) { toast("Add at least one recipient", "error"); return; }
+      if (!subj || !body) { toast("Subject and message are required", "error"); return; }
+      if (!caseMailboxId) { toast("Connect a mailbox in Integrations first", "error"); return; }
+      setCaseEmailSending(true);
+      const esc = body.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\n/g,"<br>");
+      const htmlBody = `<div style="font-family:Arial,sans-serif;font-size:14px;line-height:1.6;color:#111;">${esc}</div>`;
+      try {
+        const res = await call("POST", "/api/email/send", { accountId: caseMailboxId, to: recipients, subject: subj, htmlBody });
+        const failed = (res?.results || []).filter(r => r.status === "failed");
+        if (failed.length) { toast(`Sent, but ${failed.length} address(es) failed.`, "info"); }
+        else { toast("Case email sent", "success"); }
+        setShowCaseEmail(false);
+      } catch (err) {
+        toast(err.message || "Couldn't send the case email — try again.", "error");
+      } finally {
+        setCaseEmailSending(false);
+      }
+    };
 
     // Health narrative: clear held explanation when the account changes
     useEffect(() => {
@@ -3267,6 +3297,65 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                       )}
                       {s.generated_at&&(
                         <div style={{fontSize:10,color:"var(--text3)",marginTop:4}}>Generated {new Date(s.generated_at).toLocaleString()}</div>
+                      )}
+                      <div style={{marginTop:14}}>
+                        {!showCaseEmail&&(
+                          <button onClick={()=>{
+                            const lines=[];
+                            lines.push(`Account: ${account.name}${account.stage?` (${account.stage})`:""}`);
+                            if(s.escalation?.since) lines.push(`Escalated: ${s.escalation.since}${s.escalation.reason?` — ${s.escalation.reason}`:""}`);
+                            lines.push("");
+                            if(s.ai?.situation){lines.push(s.ai.situation);lines.push("");}
+                            lines.push(`Metrics: ARR ${s.account.arr!=null?fmtMoney(s.account.arr):"—"} · Health ${s.account.health_score??"—"} · NPS ${s.account.nps??"—"} · CES ${s.account.ces??"—"} · Open tickets ${s.account.open_tickets??0} · Renewal ${s.account.renewal_date||"—"}`);
+                            if(s.ai?.challenges?.length){lines.push("","Key challenges:");s.ai.challenges.forEach(c=>lines.push(`- ${c}`));}
+                            if(s.ai?.recommended_actions?.length){lines.push("","Recommended actions:");s.ai.recommended_actions.forEach(a=>lines.push(`- ${a.team}: ${a.action}`));}
+                            if(s.recent_meetings?.length){lines.push("","Recent meetings:");s.recent_meetings.forEach(m=>lines.push(`- ${m.title||"Untitled"}${m.date?` (${m.date})`:""}${m.summary?`: ${m.summary}`:""}`));}
+                            setCaseEmailSubject(`Escalation — ${account.name}: case briefing`);
+                            setCaseEmailBody(lines.join("\n"));
+                            setCaseEmailTo("");
+                            setShowCaseEmail(true);
+                            call("GET","/api/email/accounts").then(d=>{const accs=(d&&d.accounts)||[];setCaseMailboxes(accs);const p=accs.find(a=>a.is_primary)||accs[0];if(p)setCaseMailboxId(p.id);}).catch(()=>{});
+                          }}
+                            style={{padding:"7px 16px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:700,cursor:"pointer",border:"none",background:"var(--rose-dim)",color:"var(--rose)",fontFamily:"var(--font-display)"}}>
+                            Share via email
+                          </button>
+                        )}
+                      </div>
+                      {showCaseEmail&&(
+                        <div style={{marginTop:12,borderTop:"1px solid var(--border)",paddingTop:12,display:"flex",flexDirection:"column",gap:10}}>
+                          <div>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Recipients</div>
+                            <input value={caseEmailTo} onChange={e=>setCaseEmailTo(e.target.value)}
+                              placeholder="pm.lead@company.com, cs.lead@company.com, support@company.com"
+                              style={{width:"100%",padding:"8px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:13,fontFamily:"var(--font-display)",boxSizing:"border-box"}}/>
+                            <div style={{fontSize:10,color:"var(--text3)",marginTop:3}}>Separate multiple addresses with commas.</div>
+                          </div>
+                          <div>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Subject</div>
+                            <input value={caseEmailSubject} onChange={e=>setCaseEmailSubject(e.target.value)}
+                              style={{width:"100%",padding:"8px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:13,fontFamily:"var(--font-display)",boxSizing:"border-box"}}/>
+                          </div>
+                          <div>
+                            <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:4}}>Message</div>
+                            <textarea value={caseEmailBody} onChange={e=>setCaseEmailBody(e.target.value)} rows={12}
+                              style={{width:"100%",padding:"8px 10px",borderRadius:"var(--r-sm)",border:"1.5px solid var(--border)",background:"var(--bg3)",color:"var(--text)",fontSize:13,lineHeight:1.5,resize:"vertical",fontFamily:"var(--font-display)",boxSizing:"border-box"}}/>
+                          </div>
+                          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
+                            <div style={{fontSize:11,color:"var(--text3)"}}>
+                              {caseMailboxId
+                                ? `Sending from ${caseMailboxes.find(m=>m.id===caseMailboxId)?.email||"your mailbox"}`
+                                : "No mailbox connected — add one in Integrations."}
+                            </div>
+                            <div style={{display:"flex",gap:8}}>
+                              <button onClick={()=>setShowCaseEmail(false)} disabled={caseEmailSending}
+                                style={{padding:"7px 14px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:600,cursor:"pointer",border:"1.5px solid var(--border)",background:"transparent",color:"var(--text2)",fontFamily:"var(--font-display)"}}>Cancel</button>
+                              <button onClick={sendCaseEmail} disabled={caseEmailSending||!caseMailboxId}
+                                style={{padding:"7px 16px",borderRadius:"var(--r-sm)",fontSize:12,fontWeight:700,cursor:caseEmailSending||!caseMailboxId?"not-allowed":"pointer",border:"none",background:"var(--rose)",color:"white",opacity:caseEmailSending||!caseMailboxId?.6:1,fontFamily:"var(--font-display)"}}>
+                                {caseEmailSending?"Sending…":"Send case email"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
                       )}
                     </div>
                   );
