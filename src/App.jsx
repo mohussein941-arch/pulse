@@ -2656,6 +2656,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
     {key:"ai",         label:"Ask AI"},
     {key:"brief",      label:"Account Brief"},
     {key:"handoff",    label:"Catch Up & Handoff"},
+    {key:"tickets",    label:"Tickets"},
   ];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
   const tabHasAlert = {
@@ -2740,6 +2741,14 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
     const [caseSlowHint, setCaseSlowHint] = useState(false);
     const caseSlowTimer  = useRef(null);
     const caseFetchedRef = useRef(false);
+    const [ticketsData,     setTicketsData]     = useState(null);
+    const [ticketsLoading,  setTicketsLoading]  = useState(false);
+    const [ticketsError,    setTicketsError]    = useState(false);
+    const [ticketsSlowHint, setTicketsSlowHint] = useState(false);
+    const [ticketsNonce,    setTicketsNonce]    = useState(0);
+    const ticketsSlowTimer  = useRef(null);
+    const ticketsFetchedRef = useRef(false);
+    const ticketsInflightRef= useRef(false);
     const [showCaseEmail,    setShowCaseEmail]    = useState(false);
     const [caseEmailTo,      setCaseEmailTo]      = useState("");
     const [caseEmailSubject, setCaseEmailSubject] = useState("");
@@ -2936,6 +2945,47 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
         .catch(() => {});
       return () => { cancelled = true; };
     }, [account.id, account.escalationStatus]);
+
+    // Tickets tab: reset on account change
+    useEffect(() => {
+      setTicketsData(null);
+      setTicketsError(false);
+      setTicketsSlowHint(false);
+      setTicketsLoading(false);
+      ticketsFetchedRef.current = false;
+      ticketsInflightRef.current = false;
+    }, [account.id]);
+
+    // Tickets tab: on-demand, fetch-once-hold; re-runs on explicit Refresh (ticketsNonce)
+    useEffect(() => {
+      if (tab !== "tickets" || ticketsFetchedRef.current) return;
+      let cancelled = false;
+      setTicketsLoading(true);
+      ticketsFetchedRef.current = true;
+      ticketsInflightRef.current = true;
+      ticketsSlowTimer.current = setTimeout(() => { if (!cancelled) setTicketsSlowHint(true); }, 2000);
+      call("GET", `/api/accounts/${account.id}/tickets`)
+        .then(d => { if (!cancelled) { setTicketsData(d); setTicketsError(false); } })
+        .catch(() => { if (!cancelled) setTicketsError(true); })
+        .finally(() => {
+          ticketsInflightRef.current = false;
+          if (!cancelled) {
+            clearTimeout(ticketsSlowTimer.current);
+            setTicketsSlowHint(false);
+            setTicketsLoading(false);
+          }
+        });
+      return () => {
+        cancelled = true;
+        clearTimeout(ticketsSlowTimer.current);
+        setTicketsSlowHint(false);
+        if (ticketsInflightRef.current) {
+          ticketsFetchedRef.current = false;
+          ticketsInflightRef.current = false;
+          setTicketsLoading(false);
+        }
+      };
+    }, [tab, account.id, ticketsNonce]);
 
     const sendCaseEmail = async () => {
       const recipients = caseEmailTo.split(/[,;\s]+/).map(x => x.trim()).filter(Boolean);
@@ -3261,6 +3311,20 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                           </div>
                         ))}
                       </div>
+                      {s.tickets?.critical?.length>0&&(
+                        <div style={{marginBottom:12}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em"}}>Critical tickets ({s.tickets.counts?.critical??s.tickets.critical.length})</div>
+                          <div style={{display:"flex",flexDirection:"column",gap:4,marginTop:4}}>
+                            {s.tickets.critical.map((t,i)=>(
+                              <div key={t.externalId||i} style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>
+                                <span style={{fontWeight:700,fontSize:10,letterSpacing:".04em",textTransform:"uppercase",color:t.priority==="urgent"?"var(--rose)":"#d97706"}}>{t.priority}</span>{" "}
+                                {t.url?(<a href={t.url} target="_blank" rel="noreferrer" style={{color:"var(--text2)"}}>{t.subject}</a>):t.subject}
+                                {t.ageDays!=null?(<span style={{color:"var(--text3)"}}> · open {t.ageDays}d</span>):null}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                       {s.ai?.challenges?.length>0&&(
                         <div style={{marginBottom:12}}>
                           <div style={{fontSize:11,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em"}}>Key challenges</div>
@@ -3307,6 +3371,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                             lines.push("");
                             if(s.ai?.situation){lines.push(s.ai.situation);lines.push("");}
                             lines.push(`Metrics: ARR ${s.account.arr!=null?fmtMoney(s.account.arr):"—"} · Health ${s.account.health_score??"—"} · NPS ${s.account.nps??"—"} · CES ${s.account.ces??"—"} · Open tickets ${s.account.open_tickets??0} · Renewal ${s.account.renewal_date||"—"}`);
+                            if(s.tickets?.critical?.length){lines.push("",`Critical tickets (${s.tickets.counts?.critical??s.tickets.critical.length}):`);s.tickets.critical.forEach(t=>lines.push(`- [${t.priority}] ${t.subject}${t.ageDays!=null?` (open ${t.ageDays}d)`:""}`));}
                             if(s.ai?.challenges?.length){lines.push("","Key challenges:");s.ai.challenges.forEach(c=>lines.push(`- ${c}`));}
                             if(s.ai?.recommended_actions?.length){lines.push("","Recommended actions:");s.ai.recommended_actions.forEach(a=>lines.push(`- ${a.team}: ${a.action}`));}
                             if(s.recent_meetings?.length){lines.push("","Recent meetings:");s.recent_meetings.forEach(m=>lines.push(`- ${m.title||"Untitled"}${m.date?` (${m.date})`:""}${m.summary?`: ${m.summary}`:""}`));}
@@ -4217,6 +4282,70 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             </div>
           );
         })()}
+      </div>
+    )}
+
+    {tab==="tickets"&&(
+      <div>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:16}}>
+          <h3 style={{margin:0,fontSize:16,fontFamily:"var(--font-display)",fontWeight:700,color:"var(--text)"}}>Support Tickets</h3>
+          {!ticketsLoading&&(
+            <button onClick={()=>{ticketsFetchedRef.current=false;setTicketsData(null);setTicketsError(false);setTicketsLoading(true);setTicketsNonce(n=>n+1);}}
+              style={{padding:"6px 14px",borderRadius:"var(--r-sm)",fontSize:13,cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600,border:"1.5px solid var(--border)",background:"transparent",color:"var(--text2)"}}>
+              Refresh
+            </button>
+          )}
+        </div>
+        {ticketsLoading&&(
+          <div style={{fontSize:13,color:"var(--text2)"}}>Loading tickets…{ticketsSlowHint&&(<div style={{marginTop:4,fontSize:12,color:"var(--text3)"}}>Reading synced support tickets — a moment.</div>)}</div>
+        )}
+        {!ticketsLoading&&ticketsError&&(
+          <div style={{fontSize:13,color:"var(--rose)"}}>Couldn't load tickets. Try Refresh.</div>
+        )}
+        {!ticketsLoading&&!ticketsError&&ticketsData&&(()=>{
+          const td=ticketsData;
+          const c=td.counts||{open:0,critical:0,ageing:0};
+          const pColor=p=>p==="urgent"?"var(--rose)":p==="high"?"#d97706":p==="normal"?"var(--text2)":"var(--text3)";
+          const ageLabel=n=>n==null?"—":n===0?"today":`${n}d`;
+          if(!td.open||!td.open.length){
+            return (
+              <div style={{fontSize:13,color:"var(--text3)",lineHeight:1.6,background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"14px 16px"}}>
+                No open tickets synced for this account.{(td.account_open_tickets||0)>0?` The connector reports ${td.account_open_tickets} open ticket(s) but does not sync individual ticket detail.`:""}
+              </div>
+            );
+          }
+          return (
+            <div>
+              <div style={{display:"flex",flexWrap:"wrap",gap:18,marginBottom:14}}>
+                {[["Open",c.open],["Critical",c.critical],["Ageing >7d",c.ageing]].map(([k,v])=>(
+                  <div key={k}>
+                    <div style={{fontSize:10,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>{k}</div>
+                    <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-mono)",color:k==="Critical"&&v>0?"var(--rose)":"var(--text)"}}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {td.open.map((t,i)=>(
+                  <div key={t.externalId||i} style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:12,background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"10px 14px"}}>
+                    <div style={{minWidth:0}}>
+                      <div style={{fontSize:13,fontWeight:600,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
+                        {t.url?(<a href={t.url} target="_blank" rel="noreferrer" style={{color:"var(--text)",textDecoration:"none"}}>{t.subject}</a>):t.subject}
+                      </div>
+                      <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>
+                        <span style={{color:pColor(t.priority),fontWeight:700,textTransform:"uppercase",letterSpacing:".04em"}}>{t.priority}</span>
+                        {t.status?` · ${t.status}`:""}{` · open ${ageLabel(t.ageDays)}`}{t.isAgeing?" · ageing":""}
+                      </div>
+                    </div>
+                    {t.url&&(<a href={t.url} target="_blank" rel="noreferrer" style={{fontSize:11,color:"var(--indigo)",whiteSpace:"nowrap",textDecoration:"none"}}>Open ↗</a>)}
+                  </div>
+                ))}
+              </div>
+            </div>
+          );
+        })()}
+        {!ticketsLoading&&!ticketsError&&!ticketsData&&(
+          <div style={{fontSize:12,color:"var(--text3)"}}>No ticket data loaded.</div>
+        )}
       </div>
     )}
 
