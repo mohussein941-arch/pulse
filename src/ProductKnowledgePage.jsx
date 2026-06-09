@@ -4,6 +4,7 @@ const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"var(--
 const inputStyle = { width:"100%", boxSizing:"border-box", padding:"10px 12px", fontSize:14, border:"1px solid var(--border2)", borderRadius:8, background:"transparent", color:"inherit", outline:"none" };
 const primaryBtn = { marginTop:20, padding:"10px 18px", fontSize:14, fontWeight:600, color:"#fff", background:"var(--indigo)", border:"none", borderRadius:8, cursor:"pointer" };
 const ghostBtn = { padding:"7px 14px", fontSize:13, fontWeight:600, color:"var(--indigo)", background:"transparent", border:"1px solid var(--border2)", borderRadius:8, cursor:"pointer" };
+const page = { padding:"32px 36px", width:"100%", boxSizing:"border-box", textAlign:"left" };
 
 function Spinner({ label }) {
   return (
@@ -86,16 +87,16 @@ export default function ProductKnowledgePage({ call, toast }) {
   );
 
   if (loading) {
-    return <div style={{padding:"32px 36px"}}>{header}<Spinner label="Loading product knowledge…"/></div>;
+    return <div style={page}>{header}<Spinner label="Loading product knowledge…"/></div>;
   }
 
   if (researching) {
-    return <div style={{padding:"32px 36px"}}>{header}<Spinner label="Searching the web and building your profile — this can take up to a minute."/></div>;
+    return <div style={page}>{header}<Spinner label="Searching the web and building your profile — this can take up to a minute."/></div>;
   }
 
   if (!profile) {
     return (
-      <div style={{padding:"32px 36px"}}>
+      <div style={page}>
         {header}
         <div style={{maxWidth:560}}>
           <p style={{fontSize:14,color:"var(--text3)",marginBottom:8,lineHeight:1.55}}>
@@ -116,7 +117,7 @@ export default function ProductKnowledgePage({ call, toast }) {
   }
 
   return (
-    <div style={{padding:"32px 36px",maxWidth:820}}>
+    <div style={{...page, maxWidth:820}}>
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:24}}>
         <div>
           <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>{profile.product_name || "Product Knowledge"}</h1>
