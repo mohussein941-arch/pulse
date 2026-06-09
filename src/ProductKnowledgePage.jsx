@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 
 const labelStyle = { display:"block", fontSize:12, fontWeight:600, color:"var(--text3)", marginBottom:6, marginTop:16 };
 const inputStyle = { width:"100%", boxSizing:"border-box", padding:"10px 12px", fontSize:14, border:"1px solid var(--border2)", borderRadius:8, background:"transparent", color:"inherit", outline:"none", fontFamily:"inherit" };
@@ -49,19 +49,29 @@ function Field({ label, value, onChange, textarea, placeholder, hint }) {
   );
 }
 
-export default function ProductKnowledgePage({ call, toast }) {
+export default function ProductKnowledgePage({ call, upload, toast }) {
   const [loading, setLoading] = useState(true);
   const [researching, setResearching] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
   const [knowledge, setKnowledge] = useState({ profile: null, features: [] });
+  const [documents, setDocuments] = useState([]);
   const [productName, setProductName] = useState("");
   const [websiteUrl, setWebsiteUrl] = useState("");
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState(null);
+  const fileInputRef = useRef(null);
 
   const refresh = useCallback(async () => {
     const data = await call("GET", "/api/company-knowledge");
     return data || { profile: null, features: [] };
+  }, [call]);
+
+  const loadDocs = useCallback(async () => {
+    try {
+      const d = await call("GET", "/api/company-knowledge/documents");
+      setDocuments((d && d.documents) || []);
+    } catch (e) { /* non-fatal */ }
   }, [call]);
 
   const load = useCallback(async () => {
@@ -72,14 +82,46 @@ export default function ProductKnowledgePage({ call, toast }) {
         setProductName(k.profile.product_name || "");
         setWebsiteUrl(k.profile.website_url || "");
       }
+      await loadDocs();
     } catch (err) {
       toast && toast(err.message || "Failed to load product knowledge");
     } finally {
       setLoading(false);
     }
-  }, [refresh, toast]);
+  }, [refresh, loadDocs, toast]);
 
   useEffect(() => { load(); }, [load]);
+
+  const onUpload = async (e) => {
+    const files = Array.from((e.target && e.target.files) || []);
+    if (!files.length) return;
+    if (!upload) { toast && toast("Upload unavailable"); return; }
+    const fd = new FormData();
+    files.forEach(f => fd.append("files", f));
+    setUploading(true);
+    try {
+      const res = await upload("/api/company-knowledge/documents", fd);
+      setDocuments((res && res.documents) || documents);
+      const ins = (res && res.inserted) || [];
+      const fail = (res && res.failed) || [];
+      if (ins.length && !fail.length) toast && toast(`Added ${ins.length} document${ins.length>1?"s":""}`);
+      else if (ins.length && fail.length) toast && toast(`Added ${ins.length}; ${fail.length} couldn't be read`);
+      else if (fail.length) toast && toast(`Couldn't read ${fail.length} file${fail.length>1?"s":""}`);
+    } catch (err) {
+      toast && toast(err.message || "Upload failed");
+    } finally {
+      setUploading(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
+
+  const deleteDoc = async (id) => {
+    try {
+      await call("DELETE", `/api/company-knowledge/documents/${id}`);
+      setDocuments(prev => prev.filter(d => d.id !== id));
+      toast && toast("Removed");
+    } catch (err) { toast && toast(err.message || "Remove failed"); }
+  };
 
   const runResearch = async () => {
     if (!productName.trim() || !websiteUrl.trim()) { toast && toast("Enter both a product name and a website URL"); return; }
@@ -88,6 +130,7 @@ export default function ProductKnowledgePage({ call, toast }) {
       const data = await call("POST", "/api/company-knowledge/research", { productName: productName.trim(), websiteUrl: websiteUrl.trim() });
       const k = data || { profile: null, features: [] };
       setKnowledge(k);
+      loadDocs();
       toast && toast(k.profile && k.profile.has_draft ? "Refresh ready to review" : "Research complete");
     } catch (err) {
       toast && toast(err.message || "Research failed");
@@ -107,7 +150,7 @@ export default function ProductKnowledgePage({ call, toast }) {
       pricing_summary: p.pricing_summary || "",
       positioning: p.positioning || "",
       competitors: arrToLines(p.competitors),
-      verticals: (p.target_verticals || []).map(v => ({
+      target_verticals: (p.target_verticals || []).map(v => ({
         vertical: v.vertical || "",
         common_needs: arrToLines(v.common_needs),
         stakeholders: arrToLines(v.stakeholders),
@@ -130,9 +173,9 @@ export default function ProductKnowledgePage({ call, toast }) {
 
   const cancelEdit = () => { setEditing(false); setForm(null); };
   const setF = (key, val) => setForm(prev => ({ ...prev, [key]: val }));
-  const setVertical = (i, key, val) => setForm(prev => { const verticals = [...prev.verticals]; verticals[i] = { ...verticals[i], [key]: val }; return { ...prev, verticals }; });
-  const addVertical = () => setForm(prev => ({ ...prev, verticals: [...prev.verticals, { vertical:"", common_needs:"", stakeholders:"", language:"", objections:"" }] }));
-  const removeVertical = (i) => setForm(prev => ({ ...prev, verticals: prev.verticals.filter((_, idx) => idx !== i) }));
+  const setVertical = (i, key, val) => setForm(prev => { const target_verticals = [...prev.target_verticals]; target_verticals[i] = { ...target_verticals[i], [key]: val }; return { ...prev, target_verticals }; });
+  const addVertical = () => setForm(prev => ({ ...prev, target_verticals: [...prev.target_verticals, { vertical:"", common_needs:"", stakeholders:"", language:"", objections:"" }] }));
+  const removeVertical = (i) => setForm(prev => ({ ...prev, target_verticals: prev.target_verticals.filter((_, idx) => idx !== i) }));
   const setFeature = (i, key, val) => setForm(prev => { const features = [...prev.features]; features[i] = { ...features[i], [key]: val }; return { ...prev, features }; });
   const addFeature = () => setForm(prev => ({ ...prev, features: [...prev.features, { name:"", problem_solved:"", use_cases:"", personas:"", tier:"", trigger_keywords:"", source:"manual", locked:true }] }));
   const removeFeature = (i) => setForm(prev => ({ ...prev, features: prev.features.filter((_, idx) => idx !== i) }));
@@ -149,7 +192,7 @@ export default function ProductKnowledgePage({ call, toast }) {
         pricing_summary: form.pricing_summary.trim(),
         positioning: form.positioning.trim(),
         competitors: linesToArr(form.competitors),
-        target_verticals: form.verticals.map(v => ({
+        target_verticals: form.target_verticals.map(v => ({
           vertical: v.vertical.trim(),
           common_needs: linesToArr(v.common_needs),
           stakeholders: linesToArr(v.stakeholders),
@@ -209,6 +252,31 @@ export default function ProductKnowledgePage({ call, toast }) {
   const features = knowledge.features || [];
   const fmtDate = (s) => { try { return new Date(s).toLocaleDateString("en-US", { month:"short", day:"numeric", year:"numeric" }); } catch { return ""; } };
 
+  const uploadControl = (
+    <div>
+      <input ref={fileInputRef} type="file" multiple accept=".pdf,.docx,.pptx,.xlsx" onChange={onUpload} style={{display:"none"}}/>
+      <div onClick={()=>{ if(!uploading && fileInputRef.current) fileInputRef.current.click(); }}
+        style={{border:"1.5px dashed var(--border2)",borderRadius:10,padding:"20px",textAlign:"center",cursor:uploading?"default":"pointer"}}>
+        <div style={{fontSize:13,fontWeight:600}}>{uploading?"Reading documents…":"Upload product docs & slides"}</div>
+        <div style={{fontSize:12,color:"var(--text3)",marginTop:4}}>PDF, Word, or PowerPoint — they feed the research.</div>
+      </div>
+    </div>
+  );
+
+  const docsList = documents.length > 0 ? (
+    <div style={{display:"flex",flexDirection:"column",gap:6}}>
+      {documents.map(d => (
+        <div key={d.id} style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:12,border:"1px solid var(--border2)",borderRadius:8,padding:"8px 12px"}}>
+          <div style={{minWidth:0}}>
+            <div style={{fontSize:13,fontWeight:600,whiteSpace:"nowrap",overflow:"hidden",textOverflow:"ellipsis"}}>{d.title}</div>
+            <div style={{fontSize:11,color:"var(--text3)"}}>{d.kind==="document"?"Document":"Web research"}{d.created_at?` · ${fmtDate(d.created_at)}`:""}</div>
+          </div>
+          <button onClick={()=>deleteDoc(d.id)} style={dangerLink}>Remove</button>
+        </div>
+      ))}
+    </div>
+  ) : null;
+
   const header = (
     <div style={{marginBottom:28}}>
       <h1 style={{fontWeight:800,fontSize:26,letterSpacing:"-.04em",marginBottom:4}}>Product Knowledge</h1>
@@ -231,10 +299,8 @@ export default function ProductKnowledgePage({ call, toast }) {
           <input value={productName} onChange={e=>setProductName(e.target.value)} placeholder="e.g. Acme Support Cloud" style={inputStyle}/>
           <label style={labelStyle}>Website URL</label>
           <input value={websiteUrl} onChange={e=>setWebsiteUrl(e.target.value)} placeholder="https://…" style={inputStyle}/>
-          <div style={{marginTop:18,border:"1.5px dashed var(--border2)",borderRadius:10,padding:"20px",textAlign:"center",opacity:.55}}>
-            <div style={{fontSize:13,fontWeight:600}}>Upload product docs & slides</div>
-            <div style={{fontSize:12,color:"var(--text3)",marginTop:4}}>Arrives next — feed decks and PDFs into the research.</div>
-          </div>
+          <div style={{marginTop:18}}>{uploadControl}</div>
+          {docsList && <div style={{marginTop:12}}>{docsList}</div>}
           <button onClick={runResearch} style={primaryBtn}>Research my product</button>
         </div>
       </div>
@@ -265,7 +331,7 @@ export default function ProductKnowledgePage({ call, toast }) {
           <div style={sectionLabel}>Target verticals</div>
           <button onClick={addVertical} style={ghostBtn}>+ Add vertical</button>
         </div>
-        {form.verticals.map((v,i)=>(
+        {form.target_verticals.map((v,i)=>(
           <div key={i} style={{border:"1px solid var(--border2)",borderRadius:10,padding:"14px 16px",marginBottom:12}}>
             <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:12,marginBottom:4}}>
               <input value={v.vertical} onChange={e=>setVertical(i,"vertical",e.target.value)} placeholder="Vertical name" style={{...inputStyle,fontWeight:700}}/>
@@ -391,6 +457,11 @@ export default function ProductKnowledgePage({ call, toast }) {
           </div>
         </Section>
       )}
+
+      <Section title="Knowledge inputs">
+        {uploadControl}
+        {docsList && <div style={{marginTop:12}}>{docsList}</div>}
+      </Section>
 
       {Array.isArray(profile.sources) && profile.sources.length>0 && (
         <Section title="Sources">

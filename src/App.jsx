@@ -12209,6 +12209,19 @@ export default function App() {
     }
   }, [session]);
 
+  const uploadDoc = useCallback(async (path, formData) => {
+    const res = await fetch(`${API_URL}${path}`, {
+      method: "POST",
+      headers: { ...(session?.token ? { Authorization: `Bearer ${session.token}` } : {}) },
+      body: formData,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      const e = new Error(err.error || "Upload error"); e.status = res.status; throw e;
+    }
+    return res.json();
+  }, [session]);
+
   // ── Load accounts on mount / session change ──────────────────────────────────
   useEffect(() => {
     if (!API_URL) {
@@ -12700,7 +12713,7 @@ export default function App() {
 
           {/* ── PRODUCT KNOWLEDGE VIEW ── */}
           {view==="product"&&(
-            <ProductKnowledgePage call={call} toast={toast}/>
+            <ProductKnowledgePage call={call} upload={uploadDoc} toast={toast}/>
           )}
 
           {/* ── PERFORMANCE VIEW ── */}
