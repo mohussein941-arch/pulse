@@ -1,4 +1,5 @@
 ﻿import { useState, useEffect, useCallback, useRef, Component } from "react";
+import ProductKnowledgePage from "./ProductKnowledgePage";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -12526,6 +12527,7 @@ export default function App() {
     { id:"surveys",     icon:"survey",       label:"Surveys",           active:true  },
     { id:"automation",  icon:"automation",   label:"Automation",        active:true },
     { id:"integrations",icon:"integrations", label:"Integrations",      active:true  },
+    { id:"product",     icon:"playbooks",    label:"Product Knowledge", active:true },
     { id:"settings",    icon:"settings",     label:"Settings",          active:true },
   ];
 
@@ -12694,6 +12696,11 @@ export default function App() {
           {view==="onboarding"&&(
             <OnboardingPage call={call} toast={toast} accounts={active}
               onAccountClick={a=>{setSelected(a);setDetailTab("onboarding");}}/>
+          )}
+
+          {/* ── PRODUCT KNOWLEDGE VIEW ── */}
+          {view==="product"&&(
+            <ProductKnowledgePage call={call} toast={toast}/>
           )}
 
           {/* ── PERFORMANCE VIEW ── */}
