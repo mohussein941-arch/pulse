@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback, useRef, Component } from "react";
 import ProductKnowledgePage from "./ProductKnowledgePage";
+import OpportunityCards from "./OpportunityCards";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const STYLES = `
@@ -3428,6 +3429,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 })()}
               </div>
             )}
+
+            <OpportunityCards account={account} call={call} toast={toast}/>
 
             {/* Expansion opportunity */}
             {(account.expansionPotential||showExpand)&&(
