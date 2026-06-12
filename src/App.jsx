@@ -4,41 +4,47 @@ import OpportunityCards from "./OpportunityCards";
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=DM+Mono:wght@300;400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     /* Surfaces — warm, Notion-inspired */
-    --bg:#FAFAF8; --bg2:#FFFFFF; --bg3:#F4F3F0; --bg4:#EEEDEA;
-    --border:#E5E4E0; --border2:#D4D2CD;
+    --bg:#FAFAF9; --bg1:#FCFCFB; --bg2:#FFFFFF; --bg3:#F5F5F3; --bg4:#EFEFEC;
+    --border:#E9E8E4; --border2:#DBD9D3;
 
-    /* Primary — warm blue */
-    --indigo:#3B5EDE; --indigo-dim:rgba(59,94,222,0.07); --indigo-glow:rgba(59,94,222,0.20);
+    /* Primary — indigo */
+    --indigo:#5469D4; --indigo-dim:rgba(84,105,212,0.08); --indigo-glow:rgba(84,105,212,0.16);
 
     /* Semantic */
-    --emerald:#059669; --emerald-dim:rgba(5,150,105,0.07);
-    --amber:#D97706;   --amber-dim:rgba(217,119,6,0.08);
-    --rose:#E11D48;    --rose-dim:rgba(225,29,72,0.07);
-    --sky:#0284C7;     --sky-dim:rgba(2,132,199,0.07);
-    --violet:#7C3AED;  --violet-dim:rgba(124,58,237,0.07);
-    --teal:#0D9488;    --teal-dim:rgba(13,148,136,0.07);
+    --emerald:#059669; --emerald-dim:rgba(5,150,105,0.08);  --emerald-border:rgba(5,150,105,0.25);
+    --amber:#D97706;   --amber-dim:rgba(217,119,6,0.08);    --amber-border:rgba(217,119,6,0.25);
+    --rose:#E11D48;    --rose-dim:rgba(225,29,72,0.08);     --rose-border:rgba(225,29,72,0.3);
+    --sky:#0284C7;     --sky-dim:rgba(2,132,199,0.08);      --sky-border:rgba(2,132,199,0.25);
+    --violet:#7C3AED;  --violet-dim:rgba(124,58,237,0.08);  --violet-border:rgba(124,58,237,0.25);
+    --teal:#0D9488;    --teal-dim:rgba(13,148,136,0.08);    --teal-border:rgba(13,148,136,0.25);
+    --red:var(--rose);
 
     /* Text — warm stone */
-    --text:#1C1B18; --text2:#57534E; --text3:#A8A29E;
+    --text:#1C1B18; --text2:#57534E; --text3:#9C968F;
 
     /* Sidebar — warm light (Notion-style) */
     --sidebar-bg:#F7F6F3;
-    --sidebar-border:#E5E4E0;
-    --sidebar-active:rgba(59,94,222,0.08);
+    --sidebar-border:#E9E8E4;
+    --sidebar-active:rgba(84,105,212,0.08);
     --sidebar-hover:rgba(0,0,0,0.04);
     --sidebar-text:#78716C;
     --sidebar-text-active:#1C1B18;
     --sidebar-icon:#B2ACA8;
-    --sidebar-icon-active:#3B5EDE;
+    --sidebar-icon-active:#5469D4;
     --sidebar-section:#B2ACA8;
 
     /* Typography */
-    --font-display:'Plus Jakarta Sans',sans-serif;
+    --font-display:'Inter',sans-serif;
     --font-mono:'DM Mono',monospace;
+
+    /* Structural */
+    --scrim:rgba(22,20,14,0.45);
+    --sidebar-w:232px;
+    --detail-col-w:300px;
 
     /* Radius */
     --r-xs:4px; --r-sm:6px; --r:10px; --r-lg:14px; --r-xl:18px; --r-2xl:22px;
@@ -46,11 +52,11 @@ const STYLES = `
     /* Shadows — soft, warm */
     --shadow-xs:0 1px 2px rgba(0,0,0,0.04);
     --shadow-sm:0 1px 3px rgba(0,0,0,0.06),0 1px 2px rgba(0,0,0,0.03);
-    --shadow:0 4px 16px rgba(0,0,0,0.07),0 2px 6px rgba(0,0,0,0.03);
-    --shadow-lg:0 20px 48px rgba(0,0,0,0.12),0 8px 16px rgba(0,0,0,0.05);
+    --shadow:0 4px 12px rgba(0,0,0,0.05),0 2px 4px rgba(0,0,0,0.03);
+    --shadow-lg:0 16px 40px rgba(0,0,0,0.10),0 6px 12px rgba(0,0,0,0.04);
   }
-  body { background:var(--bg); color:var(--text); font-family:var(--font-display); font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
-  ::selection { background:rgba(59,94,222,0.10); }
+  body { background:var(--bg); color:var(--text); font-family:var(--font-display); font-size:14px; line-height:1.5; font-variant-numeric:tabular-nums; -webkit-font-smoothing:antialiased; -moz-osx-font-smoothing:grayscale; }
+  ::selection { background:var(--indigo-dim); }
   ::-webkit-scrollbar { width:5px; height:5px; }
   ::-webkit-scrollbar-track { background:transparent; }
   ::-webkit-scrollbar-thumb { background:var(--border2); border-radius:99px; }
@@ -71,7 +77,7 @@ const STYLES = `
   .pill-btn:hover { filter:brightness(0.96); }
   .icon-btn { transition:background 0.12s; cursor:pointer; }
   .icon-btn:hover { background:var(--bg3)!important; }
-  .sidebar-icon-btn:hover { background:rgba(0,0,0,0.06)!important; }
+  .sidebar-icon-btn:hover { background:var(--sidebar-hover)!important; }
   input:focus, select:focus, textarea:focus { border-color:var(--indigo)!important; box-shadow:0 0 0 3px var(--indigo-dim)!important; outline:none; }
   button:disabled { opacity:0.42; cursor:not-allowed; }
 `;
@@ -400,10 +406,10 @@ const SEED = [
 
 // ─── Config ───────────────────────────────────────────────────────────────────
 const STAGE_CFG = {
-  "Healthy":         { color:"var(--emerald)", bg:"var(--emerald-dim)", border:"rgba(5,150,105,0.25)"  },
-  "Stable":          { color:"var(--sky)",     bg:"var(--sky-dim)",     border:"rgba(2,132,199,0.25)"  },
-  "Needs Attention": { color:"var(--amber)",   bg:"var(--amber-dim)",   border:"rgba(217,119,6,0.25)"  },
-  "At Risk":         { color:"var(--rose)",    bg:"var(--rose-dim)",    border:"rgba(225,29,72,0.35)"  },
+  "Healthy":         { color:"var(--emerald)", bg:"var(--emerald-dim)", border:"var(--emerald-border)" },
+  "Stable":          { color:"var(--sky)",     bg:"var(--sky-dim)",     border:"var(--sky-border)"     },
+  "Needs Attention": { color:"var(--amber)",   bg:"var(--amber-dim)",   border:"var(--amber-border)"   },
+  "At Risk":         { color:"var(--rose)",    bg:"var(--rose-dim)",    border:"var(--rose-border)"    },
 };
 const ROLE_CFG = {
   Champion:  { color:"var(--emerald)", bg:"var(--emerald-dim)" },
@@ -736,7 +742,7 @@ const Modal = ({ title, onClose, children, wide }) => {
   },[onClose]);
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()}
-      style={{position:"fixed",inset:0,background:"rgba(10,18,36,0.55)",backdropFilter:"blur(8px)",
+      style={{position:"fixed",inset:0,background:"var(--scrim)",backdropFilter:"blur(8px)",
         display:"flex",alignItems:"center",justifyContent:"center",zIndex:1000,padding:24}}>
       <div style={{background:"var(--bg2)",borderRadius:"var(--r-2xl)",width:"100%",maxWidth:wide?800:560,
         maxHeight:"90vh",overflow:"auto",boxShadow:"var(--shadow-lg)",animation:"scaleIn .18s ease",border:"1px solid var(--border)"}}>
@@ -760,7 +766,7 @@ const Confirm = ({ msg, onConfirm, onCancel }) => {
     window.addEventListener("keydown",h); return()=>window.removeEventListener("keydown",h);
   },[onCancel]);
   return (
-    <div style={{position:"fixed",inset:0,background:"rgba(15,23,42,0.5)",backdropFilter:"blur(4px)",
+    <div style={{position:"fixed",inset:0,background:"var(--scrim)",backdropFilter:"blur(4px)",
       display:"flex",alignItems:"center",justifyContent:"center",zIndex:2000}}>
       <div style={{background:"var(--bg2)",borderRadius:"var(--r-lg)",padding:28,maxWidth:360,
         width:"100%",boxShadow:"var(--shadow-lg)",animation:"scaleIn .15s ease"}}>
@@ -3058,7 +3064,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
       <div style={{display:"flex",gap:28,alignItems:"flex-start"}}>
 
         {/* ── LEFT COLUMN ─────────────────────────────────────────────────────── */}
-        <div style={{width:284,flexShrink:0,position:"sticky",top:0,alignSelf:"flex-start",display:"flex",flexDirection:"column",gap:12}}>
+        <div style={{width:"var(--detail-col-w)",flexShrink:0,position:"sticky",top:0,alignSelf:"flex-start",display:"flex",flexDirection:"column",gap:12}}>
 
           {/* Back + action buttons */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -4901,7 +4907,7 @@ const Card = ({ account, onClick, index }) => {
   return (
     <div onClick={onClick} className="card-hover"
       style={{background:"var(--bg2)",
-        border:`1.5px solid ${atRisk?"rgba(225,29,72,0.3)":urgent?"rgba(217,119,6,0.25)":"var(--border)"}`,
+        border:`1.5px solid ${atRisk?"var(--rose-border)":urgent?"var(--amber-border)":"var(--border)"}`,
         borderRadius:"var(--r-lg)",padding:"20px 22px",cursor:"pointer",
         boxShadow:atRisk?"0 0 0 1px rgba(225,29,72,0.08),var(--shadow-sm)":"var(--shadow-sm)",
         animation:`fadeUp .3s ease ${index*0.05}s both`,position:"relative",overflow:"hidden"}}>
@@ -12554,7 +12560,7 @@ export default function App() {
       <div style={{minHeight:"100vh",display:"flex",background:"var(--bg)"}}>
 
         {/* Sidebar */}
-        <div style={{width:224,background:"var(--sidebar-bg)",borderRight:"1px solid var(--sidebar-border)",
+        <div style={{width:"var(--sidebar-w)",background:"var(--sidebar-bg)",borderRight:"1px solid var(--sidebar-border)",
           display:"flex",flexDirection:"column",flexShrink:0,position:"sticky",top:0,height:"100vh"}}>
           <div style={{padding:"22px 16px 18px",borderBottom:"1px solid var(--sidebar-border)"}}>
             <div style={{display:"flex",alignItems:"center",gap:10}}>
