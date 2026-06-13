@@ -5,6 +5,7 @@ import {
   hColor, fmtMoney, ago, until, todayStr, shapeTask, sentIcon, initials, hue, load, save,
   Ic, ScenarioBadge, Sparkline, Ring, Bar, Badge, Avatar, Inp, Slct, Fld, Btn, Modal, Confirm,
   PlaybookStepView, TASK_TYPE_CFG, generateAutoTasks,
+  Card, SectionLabel, StatStrip, SignalCard, Tabs,
 } from "./ui";
 import { API_URL, loadSession } from "./api";
 import CloseoutModal from "./CloseoutModal";
@@ -39,7 +40,7 @@ const CitedNarrative = ({ text, citations = [], fontSize = 14 }) => {
       <div style={{whiteSpace:"pre-wrap",lineHeight:1.6,fontSize,color:"var(--text)"}}>{nodes}</div>
       {footnotes.length>0&&(
         <div style={{marginTop:14,paddingTop:12,borderTop:"1px solid var(--border)"}}>
-          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Sources</div>
+          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:8}}>Sources</div>
           <div style={{display:"flex",flexDirection:"column",gap:6}}>
             {footnotes.map(c => (
               <div key={c.marker} onClick={() => setActive(active === c.marker ? null : c.marker)}
@@ -494,7 +495,7 @@ const AccountForm = ({ onClose, onSave, existing, toast }) => {
         padding:"12px 16px",marginBottom:20,display:"flex",justifyContent:"space-between",alignItems:"center"}}>
         <div style={{fontSize:12,color:"var(--text2)",fontWeight:500}}>Live health preview</div>
         <div style={{display:"flex",gap:10,alignItems:"center"}}>
-          <span style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:20,color:hColor(preview.total)}}>{preview.total}</span>
+          <span style={{fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:700,fontSize:20,color:hColor(preview.total)}}>{preview.total}</span>
           <Badge label={preview.stage} color={sc.color} bg={sc.bg}/>
         </div>
       </div>
@@ -707,7 +708,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
             ].map(m=>(
               <div key={m.label} style={{background:"var(--bg3)",border:"1.5px solid var(--border)",
                 borderRadius:"var(--r)",padding:"12px 8px",textAlign:"center"}}>
-                <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:17,color:m.color,lineHeight:1}}>
+                <div style={{fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:700,fontSize:17,color:m.color,lineHeight:1}}>
                   {m.value}<span style={{fontSize:10,color:"var(--text3)",fontWeight:400}}>{m.unit}</span>
                 </div>
                 <div style={{fontSize:10,color:"var(--text3)",fontWeight:600,textTransform:"uppercase",
@@ -850,7 +851,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
                 <div style={{display:"flex",alignItems:"center",gap:12}}>
                   <Sparkline data={account.cesHistory}
                     color={(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"}/>
-                  <span style={{fontSize:14,fontFamily:"var(--font-mono)",fontWeight:700,
+                  <span style={{fontSize:14,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:700,
                     color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"}}>
                     {(account.ces??3.5).toFixed(1)}
                   </span>
@@ -862,7 +863,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
               <div style={{textAlign:"center"}}>
                 <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
                   textTransform:"uppercase",letterSpacing:".07em",marginBottom:6}}>NPS</div>
-                <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:22,
+                <div style={{fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:700,fontSize:22,
                   color:account.nps>=50?"var(--emerald)":account.nps>=30?"var(--amber)":"var(--rose)"}}>
                   {account.nps}
                 </div>
@@ -870,7 +871,7 @@ const CallPrepModal = ({ account, onClose, onSaveNotes, toast, call }) => {
               <div style={{textAlign:"right"}}>
                 <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",
                   textTransform:"uppercase",letterSpacing:".07em",marginBottom:6}}>ARR</div>
-                <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:22,color:"var(--indigo)"}}>
+                <div style={{fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:700,fontSize:22,color:"var(--indigo)"}}>
                   {fmtMoney(account.arr)}
                 </div>
               </div>
@@ -1391,10 +1392,10 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
   const TABS = [
     {key:"activity",   label:"Activity"},
     {key:"onboarding", label:"Onboarding"},
-    {key:"health",     label:"Health & Playbook"},
+    {key:"health",     label:"Health"},
     {key:"ai",         label:"Ask AI"},
-    {key:"brief",      label:"Account Brief"},
-    {key:"handoff",    label:"Catch Up & Handoff"},
+    {key:"brief",      label:"Brief"},
+    {key:"handoff",    label:"Catch-up"},
     {key:"tickets",    label:"Tickets"},
   ];
   const taskAlertCount = [...generateAutoTasks([account]),...(manualTasks||[]).filter(t=>t.accountId===account.id)].filter(t=>!t.done).length;
@@ -1827,69 +1828,39 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             </div>
           </div>
 
-          {/* Account card */}
-          <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:20}}>
+          {/* Header card */}
+          <Card pad={20}>
 
-            {/* Avatar + name */}
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+            {/* Top row: avatar + name block + ring */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:0}}>
               <Avatar name={account.name} size={44}/>
-              <div>
-                <div style={{fontWeight:800,fontSize:17,lineHeight:1.2}}>{account.name}</div>
-                <div style={{display:"flex",gap:5,alignItems:"center",marginTop:4,flexWrap:"wrap"}}>
-                  <span style={{fontSize:11,color:"var(--text3)"}}>{account.industry}</span>
-                  <span style={{fontSize:11,color:"var(--text3)"}}>·</span>
-                  <span style={{fontSize:11,color:"var(--text3)"}}>{account.plan}</span>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontWeight:650,fontSize:18,lineHeight:1.2,color:"var(--text)"}}>{account.name}</div>
+                <div style={{display:"flex",gap:6,alignItems:"center",marginTop:5,flexWrap:"wrap"}}>
+                  <span style={{fontSize:12,color:"var(--text3)"}}>{account.industry} · {account.plan}</span>
                   <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
                 </div>
               </div>
+              <Ring score={account.healthScore} size={44}/>
             </div>
 
-            {/* Health + Churn */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-              <div style={{textAlign:"center",background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 8px"}}>
-                <Ring score={account.healthScore} size={44}/>
-                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginTop:6,letterSpacing:".07em"}}>Health</div>
-              </div>
-              <div style={{textAlign:"center",background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 8px"}}>
-                <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:22,
-                  color:(account.churnRisk??50)>=60?"var(--rose)":(account.churnRisk??50)>=35?"var(--amber)":"var(--emerald)"}}>
-                  {account.churnRisk??'—'}%
-                </div>
-                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginTop:6,letterSpacing:".07em"}}>Churn Risk</div>
-              </div>
-            </div>
+            {/* StatStrip: Churn · ARR · NPS · CES · Usage · Tickets */}
+            <StatStrip stats={[
+              {label:"Churn %", value:`${account.churnRisk??'—'}%`,      color:(account.churnRisk??50)>=60?"var(--rose)":(account.churnRisk??50)>=35?"var(--amber)":"var(--emerald)"},
+              {label:"ARR",     value:fmtMoney(account.arr),               color:"var(--indigo)"},
+              {label:"NPS",     value:account.nps??'—',                    color:account.nps>=50?"var(--emerald)":account.nps>=30?"var(--amber)":"var(--rose)"},
+              {label:"CES",     value:(account.ces??3.5).toFixed(1),       color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"},
+              {label:"Usage %", value:`${account.productUsage}%`,          color:account.productUsage>=70?"var(--emerald)":account.productUsage>=45?"var(--amber)":"var(--rose)"},
+              {label:"Tickets", value:account.openTickets??0,              color:account.openTickets>4?"var(--rose)":undefined},
+            ]}/>
 
-            {/* Stats grid */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-              <div style={{gridColumn:"1/-1",background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"10px 12px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                <span style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".07em"}}>ARR</span>
-                <span style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:16,color:"var(--indigo)"}}>{fmtMoney(account.arr)}</span>
-              </div>
-              {[
-                {label:"NPS",    value:account.nps,                color:account.nps>=50?"var(--emerald)":"var(--amber)"},
-                {label:"CES",    value:(account.ces??3.5).toFixed(1),     color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"},
-                {label:"Usage",  value:`${account.productUsage}%`, color:account.productUsage>=70?"var(--emerald)":account.productUsage>=45?"var(--amber)":"var(--rose)"},
-                {label:"Tickets",value:account.openTickets,        color:account.openTickets>4?"var(--rose)":"var(--text2)"},
-              ].map(m=>(
-                <div key={m.label} style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"10px 8px",textAlign:"center"}}>
-                  <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:16,color:m.color}}>{m.value}</div>
-                  <div style={{fontSize:10,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginTop:3,fontFamily:"var(--font-mono)"}}>{m.label}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Renewal + Last Contact */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:14}}>
-              <div style={{background:"var(--bg3)",border:`1.5px solid ${rdays<=60&&rdays>0?"rgba(225,29,72,.3)":"var(--border)"}`,borderRadius:"var(--r)",padding:"10px 8px"}}>
-                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginBottom:3}}>Renewal</div>
-                <div style={{fontFamily:"var(--font-mono)",fontSize:12,fontWeight:500}}>{account.renewalDate||"—"}</div>
-                <div style={{fontSize:11,marginTop:2,fontFamily:"var(--font-mono)",color:rdays<=60&&rdays>0?"var(--rose)":"var(--text3)"}}>{rdays>0?`${rdays}d away`:"Overdue"}</div>
-              </div>
-              <div style={{background:"var(--bg3)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",padding:"10px 8px"}}>
-                <div style={{fontSize:10,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",marginBottom:3}}>Last Contact</div>
-                <div style={{fontFamily:"var(--font-mono)",fontSize:12,fontWeight:500,color:days>30?"var(--rose)":days>14?"var(--amber)":"var(--text)"}}>{days}d ago</div>
-                <div style={{fontSize:11,color:"var(--text3)",marginTop:2}}>{days>30?"Overdue":days>14?"Follow up":"Recent"}</div>
-              </div>
+            {/* Renewal + last contact — quiet meta line */}
+            <div style={{fontSize:11,color:"var(--text3)",marginTop:10,display:"flex",gap:6,flexWrap:"wrap"}}>
+              <span style={{color:rdays<=0?"var(--rose)":rdays<=60?"var(--rose)":undefined}}>
+                {rdays>0?`Renews in ${rdays}d`:"Renewal overdue"}
+              </span>
+              <span>·</span>
+              <span style={{color:days>30?"var(--rose)":undefined}}>Last contact {days}d ago</span>
             </div>
 
             {/* Next Action */}
@@ -1923,9 +1894,10 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             {/* Pre-Call Brief */}
             <button onClick={()=>setShowPrep(true)}
               style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:7,
-                background:"var(--bg3)",color:"var(--text2)",border:"1.5px solid var(--border)",
+                background:"var(--bg3)",color:"var(--text2)",border:"1px solid var(--border)",
                 borderRadius:"var(--r)",padding:"8px 16px",fontWeight:600,fontSize:12,cursor:"pointer",
-                fontFamily:"var(--font-display)",transition:"background .12s,border-color .12s",marginBottom:16}}
+                fontFamily:"var(--font-display)",transition:"background .12s,border-color .12s",
+                marginTop:12,marginBottom:16}}
               onMouseEnter={e=>{e.currentTarget.style.background="var(--bg4)";e.currentTarget.style.borderColor="var(--border2)";}}
               onMouseLeave={e=>{e.currentTarget.style.background="var(--bg3)";e.currentTarget.style.borderColor="var(--border)";}}>
               <Ic n="prep" size={13} color="var(--text2)"/>
@@ -1935,7 +1907,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             {/* Stakeholders */}
             <div>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Stakeholders</div>
+                <SectionLabel>Stakeholders</SectionLabel>
                 <button onClick={()=>setShowStk(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage →</button>
               </div>
               {account.stakeholders.length===0
@@ -1962,7 +1934,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             {/* Notes */}
             {account.notes&&(
               <div style={{background:"var(--amber-dim)",border:"1.5px solid rgba(217,119,6,0.2)",borderRadius:"var(--r)",padding:"12px 14px",marginTop:14}}>
-                <div style={{fontSize:10,color:"var(--amber)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:6}}>Notes</div>
+                <div style={{fontSize:10,color:"var(--amber)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:6}}>Notes</div>
                 <div style={{fontSize:12,color:"var(--text)",lineHeight:1.6}}>{account.notes}</div>
               </div>
             )}
@@ -1991,29 +1963,26 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               </div>
             )}
 
-            {/* Escalation case summary */}
-            {account.escalationStatus==="open"&&(
-              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r)",
-                padding:"14px 16px",marginTop:14}}>
-                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:10}}>
-                  <div style={{display:"flex",alignItems:"center",gap:7}}>
-                    <Ic n="escalate" size={13} color="var(--text2)"/>
-                    <span style={{fontSize:13,fontWeight:700,color:"var(--text)"}}>Case Summary</span>
-                  </div>
-                  {!caseLoading&&(
-                    <button onClick={()=>{
-                      setCaseLoading(true);setCaseError(false);
-                      caseSlowTimer.current=setTimeout(()=>setCaseSlowHint(true),2000);
-                      call("POST",`/api/accounts/${account.id}/escalation-summary`)
-                        .then(d=>{setCaseSummary(d);setCaseError(false);})
-                        .catch(()=>setCaseError(true))
-                        .finally(()=>{clearTimeout(caseSlowTimer.current);setCaseSlowHint(false);setCaseLoading(false);});
-                    }}
-                      style={{padding:"5px 12px",borderRadius:"var(--r-sm)",fontSize:12,cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600,border:"1.5px solid var(--border)",background:"transparent",color:"var(--text2)"}}>
-                      {caseSummary?"Refresh":"Generate case summary"}
-                    </button>
-                  )}
-                </div>
+          </Card>
+
+          {/* Escalation case summary */}
+          {account.escalationStatus==="open"&&(
+            <SignalCard tone="danger" title="Case Summary"
+              icon={<Ic n="escalate" size={13} color="var(--rose)"/>}
+              actions={!caseLoading&&(
+                <button onClick={()=>{
+                  setCaseLoading(true);setCaseError(false);
+                  caseSlowTimer.current=setTimeout(()=>setCaseSlowHint(true),2000);
+                  call("POST",`/api/accounts/${account.id}/escalation-summary`)
+                    .then(d=>{setCaseSummary(d);setCaseError(false);})
+                    .catch(()=>setCaseError(true))
+                    .finally(()=>{clearTimeout(caseSlowTimer.current);setCaseSlowHint(false);setCaseLoading(false);});
+                }}
+                  style={{padding:"4px 10px",borderRadius:"var(--r-sm)",fontSize:11,cursor:"pointer",fontFamily:"var(--font-display)",fontWeight:600,border:"1px solid rgba(225,29,72,0.3)",background:"transparent",color:"var(--rose)"}}>
+                  {caseSummary?"Refresh":"Generate"}
+                </button>
+              )}>
+              <div>
                 {caseLoading&&(
                   <div style={{fontSize:13,color:"var(--text2)"}}>
                     Generating case summary…
@@ -2165,24 +2134,24 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                   );
                 })()}
               </div>
-            )}
+            </SignalCard>
+          )}
 
+          {/* Opportunity Signals */}
+          <SignalCard tone="accent" title="Opportunity Signals"
+            icon={<Ic n="trend_up" size={13} color="var(--indigo)"/>}>
             <OpportunityCards account={account} call={call} toast={toast}/>
+          </SignalCard>
 
-            {/* Expansion opportunity */}
-            {(account.expansionPotential||showExpand)&&(
-              <div style={{background:"rgba(5,150,105,.06)",border:"1.5px solid rgba(5,150,105,.25)",
-                borderRadius:"var(--r)",padding:"12px 14px",marginTop:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:7}}>
-                    <Ic n="expand" size={13} color="var(--emerald)"/>
-                    <span style={{fontSize:11,fontWeight:700,color:"var(--emerald)",textTransform:"uppercase",letterSpacing:".06em"}}>Expansion Opportunity</span>
-                  </div>
-                  {!showExpand&&(
-                    <button onClick={()=>{setExpDraft({arr:account.expansionArr||0,stage:account.expansionStage||"",notes:account.expansionNotes||""});setShowExpand(true);}}
-                      style={{fontSize:11,color:"var(--emerald)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Edit</button>
-                  )}
-                </div>
+          {/* Expansion opportunity */}
+          {(account.expansionPotential||showExpand)&&(
+            <SignalCard tone="success" title="Expansion Opportunity"
+              icon={<Ic n="expand" size={13} color="var(--emerald)"/>}
+              actions={!showExpand&&(
+                <button onClick={()=>{setExpDraft({arr:account.expansionArr||0,stage:account.expansionStage||"",notes:account.expansionNotes||""});setShowExpand(true);}}
+                  style={{fontSize:11,color:"var(--emerald)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Edit</button>
+              )}>
+              <div>
                 {showExpand?(
                   <div style={{display:"flex",flexDirection:"column",gap:8}}>
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
@@ -2226,7 +2195,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                     {account.expansionArr>0&&(
                       <div>
                         <div style={{fontSize:10,color:"var(--text3)"}}>Potential ARR</div>
-                        <div style={{fontSize:14,fontWeight:700,color:"var(--emerald)",fontFamily:"var(--font-mono)"}}>{fmtMoney(account.expansionArr)}</div>
+                        <div style={{fontSize:14,fontWeight:700,color:"var(--emerald)",fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums"}}>{fmtMoney(account.expansionArr)}</div>
                       </div>
                     )}
                     {account.expansionStage&&(
@@ -2241,40 +2210,25 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                   </div>
                 )}
               </div>
-            )}
-            {!account.expansionPotential&&!showExpand&&(
-              <button onClick={()=>{setExpDraft({arr:0,stage:"",notes:""});setShowExpand(true);}}
-                style={{width:"100%",marginTop:10,padding:"6px 0",border:"1.5px dashed rgba(5,150,105,.3)",
-                  borderRadius:"var(--r-sm)",background:"none",color:"var(--emerald)",fontSize:11,fontWeight:600,
-                  cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
-                <Ic n="expand" size={12} color="var(--emerald)"/>
-                Mark as expansion opportunity
-              </button>
-            )}
+            </SignalCard>
+          )}
+          {!account.expansionPotential&&!showExpand&&(
+            <button onClick={()=>{setExpDraft({arr:0,stage:"",notes:""});setShowExpand(true);}}
+              style={{width:"100%",padding:"6px 0",border:"1px dashed rgba(5,150,105,.3)",
+                borderRadius:"var(--r-sm)",background:"none",color:"var(--emerald)",fontSize:11,fontWeight:600,
+                cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+              <Ic n="expand" size={12} color="var(--emerald)"/>
+              Mark as expansion opportunity
+            </button>
+          )}
 
-          </div>
         </div>
 
         {/* ── RIGHT COLUMN ────────────────────────────────────────────────────── */}
         <div style={{flex:1,minWidth:0}}>
 
           {/* Tab bar */}
-          <div style={{display:"flex",gap:4,borderBottom:"1.5px solid var(--border)",paddingBottom:12,marginBottom:20}}>
-            {TABS.map(({key,label})=>(
-              <button key={key} onClick={()=>setTab(key)}
-                style={{position:"relative",padding:"8px 18px",borderRadius:"var(--r-sm)",fontSize:13,cursor:"pointer",
-                  fontFamily:"var(--font-display)",border:"none",fontWeight:600,
-                  background:tab===key?"var(--indigo)":"transparent",
-                  color:tab===key?"white":"var(--text2)",
-                  transition:"all .15s"}}>
-                {label}
-                {tabHasAlert[key]&&tab!==key&&(
-                  <span style={{position:"absolute",top:4,right:4,width:6,height:6,
-                    borderRadius:"50%",background:"var(--rose)",display:"block"}}/>
-                )}
-              </button>
-            ))}
-          </div>
+          <Tabs tabs={TABS} active={tab} onSelect={setTab} alerts={tabHasAlert}/>
 
           {/* ACTIVITY TAB */}
           {tab==="activity"&&(
@@ -2289,8 +2243,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                   </div>
                 </div>
               )}
-              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Log Activity</div>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
+                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:14}}>Log Activity</div>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:"0 12px"}}>
                   <Fld label="Type"><Slct value={logF.type} onChange={e=>setLogF(f=>({...f,type:e.target.value}))}>{ACT_TYPES.map(t=><option key={t}>{t}</option>)}</Slct></Fld>
                   <Fld label="Date"><Inp type="date" value={logF.date} onChange={e=>setLogF(f=>({...f,date:e.target.value}))}/></Fld>
@@ -2486,11 +2440,11 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
           {/* HEALTH & PLAYBOOK TAB */}
           {tab==="health"&&(
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
-              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
                   <div style={{flex:1}}>
-                    <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Overall Health</div>
-                    <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:32,color:hColor(account.healthScore)}}>
+                    <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:4}}>Overall Health</div>
+                    <div style={{fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:700,fontSize:32,color:hColor(account.healthScore)}}>
                       {account.healthScore}<span style={{fontSize:16,color:"var(--text3)",fontWeight:400}}>/100</span>
                     </div>
                     {(account.healthHistory||[]).length>=2&&(
@@ -2511,7 +2465,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                         <span style={{fontSize:12,fontWeight:600}}>{p.label}</span>
                         <div style={{display:"flex",gap:8,alignItems:"center"}}>
                           <span style={{fontSize:11,color:"var(--text3)"}}>{p.note}</span>
-                          <span style={{fontSize:12,fontFamily:"var(--font-mono)",fontWeight:600,
+                          <span style={{fontSize:12,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:600,
                             color:p.pts===p.max?"var(--emerald)":p.pts<p.max*0.5?"var(--rose)":"var(--amber)"}}>
                             {p.pts}/{p.max}
                           </span>
@@ -2522,9 +2476,9 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                   ))}
                 </div>
               </div>
-              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                  <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Why this health</div>
+                  <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em"}}>Why this health</div>
                   {!hnLoading&&(
                     <button onClick={()=>{hnFetchedRef.current=false;setHnData(null);setHnError(false);setHnLoading(true);setHnNonce(n=>n+1);}}
                       style={{fontSize:11,fontFamily:"var(--font-mono)",color:"var(--indigo)",background:"var(--indigo-dim)",border:"none",borderRadius:"var(--r-sm)",padding:"4px 10px",cursor:"pointer",fontWeight:600}}>Refresh</button>
@@ -2563,11 +2517,11 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 const featurePct  = usageLatest?.features_used_count && usageLatest?.total_features
                   ? Math.round((usageLatest.features_used_count/usageLatest.total_features)*100) : null;
                 return (
-                  <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                  <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                     <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:16}}>
                       <div>
-                        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Product Usage</div>
-                        <div style={{fontFamily:"var(--font-mono)",fontWeight:700,fontSize:28,color:usageColor}}>
+                        <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:4}}>Product Usage</div>
+                        <div style={{fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:700,fontSize:28,color:usageColor}}>
                           {account.productUsage}<span style={{fontSize:14,color:"var(--text3)",fontWeight:400}}>/100</span>
                         </div>
                         <div style={{fontSize:11,marginTop:4,
@@ -2592,7 +2546,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                           <div>
                             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
                               <span style={{fontSize:12,fontWeight:600}}>Seat adoption</span>
-                              <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:600,
+                              <span style={{fontSize:11,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:600,
                                 color:seatPct>=75?"var(--emerald)":seatPct>=50?"var(--amber)":"var(--rose)"}}>
                                 {usageLatest.active_users} / {usageLatest.licensed_seats} seats ({seatPct}%)
                               </span>
@@ -2604,7 +2558,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                           <div>
                             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
                               <span style={{fontSize:12,fontWeight:600}}>Daily / Monthly ratio</span>
-                              <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:600,
+                              <span style={{fontSize:11,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:600,
                                 color:dauMauPct>=30?"var(--emerald)":dauMauPct>=15?"var(--amber)":"var(--rose)"}}>
                                 {usageLatest.dau} DAU / {usageLatest.mau} MAU ({dauMauPct}%)
                               </span>
@@ -2616,7 +2570,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                           <div>
                             <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
                               <span style={{fontSize:12,fontWeight:600}}>Feature breadth</span>
-                              <span style={{fontSize:11,fontFamily:"var(--font-mono)",fontWeight:600,
+                              <span style={{fontSize:11,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:600,
                                 color:featurePct>=60?"var(--emerald)":featurePct>=35?"var(--amber)":"var(--rose)"}}>
                                 {usageLatest.features_used_count} / {usageLatest.total_features} features ({featurePct}%)
                               </span>
@@ -2634,23 +2588,23 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                         ? Object.entries(usageLatest.key_events).sort((a,b)=>b[1]-a[1]).slice(0,5) : [];
                       return (
                         <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
-                          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>Engagement</div>
+                          <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:8}}>Engagement</div>
                           <div style={{display:"flex",gap:16,flexWrap:"wrap",marginBottom:topEvents.length?10:0}}>
                             {usageLatest.wau!=null&&(
                               <div>
-                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-mono)"}}>{usageLatest.wau}</div>
+                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums"}}>{usageLatest.wau}</div>
                                 <div style={{fontSize:10,color:"var(--text3)"}}>weekly active</div>
                               </div>
                             )}
                             {usageLatest.events_count!=null&&(
                               <div>
-                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-mono)"}}>{usageLatest.events_count}</div>
+                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums"}}>{usageLatest.events_count}</div>
                                 <div style={{fontSize:10,color:"var(--text3)"}}>events / 30d</div>
                               </div>
                             )}
                             {dsa!=null&&(
                               <div>
-                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-mono)",color:dsa<=7?"var(--emerald)":dsa<=30?"var(--amber)":"var(--rose)"}}>{dsa===0?"today":dsa+"d"}</div>
+                                <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",color:dsa<=7?"var(--emerald)":dsa<=30?"var(--amber)":"var(--rose)"}}>{dsa===0?"today":dsa+"d"}</div>
                                 <div style={{fontSize:10,color:"var(--text3)"}}>last active</div>
                               </div>
                             )}
@@ -2673,7 +2627,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
 
                     <div style={{marginTop:12,paddingTop:12,borderTop:"1px solid var(--border)"}}>
                       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:editCap?8:0}}>
-                        <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Capacity</span>
+                        <span style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em"}}>Capacity</span>
                         {!editCap&&(
                           <button onClick={()=>{setSeatsDraft(account.licensedSeats??"");setFeatDraft(account.licensedFeatures??"");setEditCap(true);}}
                             style={{background:"none",border:"none",color:"var(--indigo)",fontSize:11,cursor:"pointer",fontWeight:600}}>Edit</button>
@@ -2707,11 +2661,11 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                   </div>
                 );
               })()}
-              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
                   <div>
-                    <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:4}}>Customer Effort Score</div>
-                    <div style={{fontFamily:"var(--font-mono)",fontWeight:600,fontSize:28,
+                    <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:4}}>Customer Effort Score</div>
+                    <div style={{fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",fontWeight:600,fontSize:28,
                       color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"}}>
                       {(account.ces??3.5).toFixed(1)}<span style={{fontSize:14,color:"var(--text3)",fontWeight:400}}> / 5</span>
                     </div>
@@ -2730,8 +2684,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 </div>
               </div>
               <ActivePlaybookTab account={account} onUpdate={onUpdate}/>
-              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:10}}>Customer Goal</div>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
+                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:10}}>Customer Goal</div>
                 {editGoal?(
                   <div>
                     <textarea value={goalDraft} onChange={e=>setGoalDraft(e.target.value)}
@@ -2754,7 +2708,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 )}
               </div>
               {totalMs>0&&(
-                <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                   <div style={{display:"flex",justifyContent:"space-between",marginBottom:8}}>
                     <span style={{fontSize:12,color:"var(--text2)",fontWeight:600}}>Success Plan Progress</span>
                     <span style={{fontSize:12,fontFamily:"var(--font-mono)",color:"var(--indigo)",fontWeight:600}}>{doneMs}/{totalMs} · {planPct}%</span>
@@ -2762,8 +2716,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                   <Bar value={planPct} color={planPct>=70?"var(--emerald)":planPct>=40?"var(--indigo)":"var(--amber)"}/>
                 </div>
               )}
-              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
-                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em",marginBottom:14}}>Milestones</div>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
+                <div style={{fontSize:11,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:14}}>Milestones</div>
                 {account.successPlan.milestones.length===0&&<div style={{fontSize:13,color:"var(--text3)",marginBottom:14}}>No milestones yet.</div>}
                 <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:14}}>
                   {account.successPlan.milestones.map(m=>(
@@ -2785,7 +2739,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               </div>
 
               {/* Health Digest toggle */}
-              <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+              <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
                   <div>
                     <div style={{fontWeight:600,fontSize:13,marginBottom:3}}>Stakeholder Health Digest</div>
@@ -2826,7 +2780,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             <div style={{display:"flex",flexDirection:"column",gap:14}}>
 
               <div style={{display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",fontFamily:"var(--font-mono)",textTransform:"uppercase",letterSpacing:".08em"}}>Account Brief</div>
+                <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em"}}>Account Brief</div>
                 {briefCache&&(
                   <span style={{fontSize:12,color:"var(--text3)",fontFamily:"var(--font-mono)"}}>
                     {briefCache==="hit"?"cached":"generated just now"}
@@ -2856,13 +2810,13 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               {briefData&&!briefLoading&&(
                 <>
                   {/* Summary */}
-                  <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                  <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                     <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:8}}>Summary</div>
                     <div style={{fontSize:14,color:"var(--text)",lineHeight:1.6}}>{briefData.summary}</div>
                   </div>
 
                   {/* Themes */}
-                  <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                  <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                     <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Themes</div>
                     {briefData.themes.map((theme,i)=>(
                       <div key={i} style={{paddingBottom:i<briefData.themes.length-1?12:0,marginBottom:i<briefData.themes.length-1?12:0,borderBottom:i<briefData.themes.length-1?"1px solid var(--border)":"none"}}>
@@ -2877,7 +2831,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                   </div>
 
                   {/* Talking Points */}
-                  <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                  <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                     <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Talking Points</div>
                     {briefData.talking_points.map((tp,i)=>(
                       <div key={i} style={{display:"flex",gap:10,marginTop:i>0?12:0}}>
@@ -2892,7 +2846,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
 
                   {/* Risks — omit section if no risks have a description */}
                   {briefData.risks.filter(r=>r.description!=null).length>0&&(
-                    <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                    <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                       <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Risks</div>
                       {briefData.risks.filter(r=>r.description!=null).map((risk,i)=>{
                         const sevColor=risk.severity==="high"?"var(--rose)":risk.severity==="medium"?"var(--amber)":"var(--text3)";
@@ -2912,7 +2866,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
 
                   {/* Recommended Playbooks — omit section if empty */}
                   {briefData.playbooks.length>0&&(
-                    <div style={{background:"var(--bg2)",border:"1.5px solid var(--border)",borderRadius:"var(--r-lg)",padding:16}}>
+                    <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",boxShadow:"var(--shadow-xs)",padding:16}}>
                       <div style={{fontSize:11,fontWeight:600,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:10}}>Recommended Playbooks</div>
                       {briefData.playbooks.map((pb,i)=>(
                         <div key={i} style={{marginTop:i>0?10:0}}>
@@ -3061,7 +3015,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 {[["Open",c.open],["Critical",c.critical],["Ageing >7d",c.ageing]].map(([k,v])=>(
                   <div key={k}>
                     <div style={{fontSize:10,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".05em",marginBottom:2}}>{k}</div>
-                    <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-mono)",color:k==="Critical"&&v>0?"var(--rose)":"var(--text)"}}>{v}</div>
+                    <div style={{fontSize:18,fontWeight:700,fontFamily:"var(--font-display)",fontVariantNumeric:"tabular-nums",color:k==="Critical"&&v>0?"var(--rose)":"var(--text)"}}>{v}</div>
                   </div>
                 ))}
               </div>
