@@ -1829,47 +1829,51 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
           </div>
 
           {/* Header card */}
-          <Card pad={20}>
+          <Card pad={24}>
 
-            {/* Top row: avatar + name block + ring */}
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
+            {/* Name zone: avatar · name · industry/plan · badge + ring */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
               <Avatar name={account.name} size={44}/>
               <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:650,fontSize:18,lineHeight:1.2,color:"var(--text)"}}>{account.name}</div>
-                <div style={{display:"flex",gap:6,alignItems:"center",marginTop:5,flexWrap:"wrap"}}>
-                  <span style={{fontSize:12,color:"var(--text3)"}}>{account.industry} · {account.plan}</span>
-                  <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
-                </div>
+                <div style={{fontWeight:500,fontSize:24,lineHeight:1.15,color:"var(--text)"}}>{account.name}</div>
+                <div style={{fontSize:12,color:"var(--text3)",marginTop:4}}>{account.industry} · {account.plan}</div>
               </div>
-              <Ring score={account.healthScore} size={44}/>
+              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,flexShrink:0}}>
+                <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
+                <Ring score={account.healthScore} size={38}/>
+              </div>
             </div>
 
-            {/* StatStrip: Churn · ARR · NPS · CES · Usage · Tickets */}
-            <div style={{margin:"12px 0",borderTop:"1px solid var(--border)",borderBottom:"1px solid var(--border)"}}>
-            <StatStrip stats={[
-              {label:"Churn %", value:`${account.churnRisk??'—'}%`,      color:(account.churnRisk??50)>=60?"var(--rose)":(account.churnRisk??50)>=35?"var(--amber)":"var(--emerald)"},
-              {label:"ARR",     value:fmtMoney(account.arr),               color:"var(--indigo)"},
-              {label:"NPS",     value:account.nps??'—',                    color:account.nps>=50?"var(--emerald)":account.nps>=30?"var(--amber)":"var(--rose)"},
-              {label:"CES",     value:(account.ces??3.5).toFixed(1),       color:(account.ces??3.5)>=3.5?"var(--emerald)":(account.ces??3.5)>=2.5?"var(--amber)":"var(--rose)"},
-              {label:"Usage %", value:`${account.productUsage}%`,          color:account.productUsage>=70?"var(--emerald)":account.productUsage>=45?"var(--amber)":"var(--rose)"},
-              {label:"Tickets", value:account.openTickets??0,              color:account.openTickets>4?"var(--rose)":undefined},
-            ]}/>
+            {/* Metric grid: 3-up, neutral ink, no borders */}
+            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"20px 16px"}}>
+              {[
+                {label:"ARR",      value:fmtMoney(account.arr)},
+                {label:"Health",   value:account.healthScore??'—'},
+                {label:"Churn %",  value:`${account.churnRisk??'—'}%`},
+                {label:"NPS",      value:account.nps??'—'},
+                {label:"CES",      value:account.ces!=null?Number(account.ces).toFixed(1):'—'},
+                {label:"Usage %",  value:`${account.productUsage??'—'}%`},
+              ].map(({label,value})=>(
+                <div key={label}>
+                  <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:4}}>{label}</div>
+                  <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>{value}</div>
+                </div>
+              ))}
             </div>
 
-            {/* Renewal + last contact — quiet meta line */}
-            <div style={{fontSize:11.5,color:"var(--text3)",margin:"14px 0",display:"flex",gap:6,flexWrap:"wrap"}}>
-              <span style={{color:rdays<=0?"var(--rose)":rdays<=60?"var(--rose)":undefined}}>
-                {rdays>0?`Renews in ${rdays}d`:"Renewal overdue"}
+            {/* Meta line: renewal · contact · tickets */}
+            <div style={{marginTop:20,fontSize:12,color:"var(--text3)",display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+              <span style={{color:rdays<=0?"var(--rose)":undefined}}>
+                {rdays<=0?"Renewal overdue":`Renews in ${rdays}d`}
               </span>
               <span>·</span>
               <span style={{color:days>30?"var(--rose)":undefined}}>Last contact {days}d ago</span>
+              <span>·</span>
+              <span style={{color:(account.openTickets??0)>4?"var(--rose)":undefined}}>{account.openTickets??0} open ticket{(account.openTickets??0)!==1?"s":""}</span>
             </div>
 
             {/* Next Action + Pre-Call Brief */}
-            <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:14}}>
-            <div style={{background:account.nextAction?"var(--violet-dim)":"var(--bg3)",
-              border:`1.5px solid ${account.nextAction?"rgba(124,58,237,0.2)":"var(--border)"}`,
-              borderRadius:"var(--r)",padding:"10px 14px"}}>
+            <div style={{display:"flex",flexDirection:"column",gap:12,marginTop:20}}>
               {editAct?(
                 <div style={{display:"flex",gap:8}}>
                   <Inp value={actDraft} onChange={e=>setActDraft(e.target.value)}
@@ -1881,8 +1885,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",gap:8}}>
                   <div style={{display:"flex",alignItems:"center",gap:8,flex:1,minWidth:0}}>
                     <Ic n="target" size={14} color="var(--violet)" style={{flexShrink:0}}/>
-                    <span style={{fontSize:13,color:account.nextAction?"var(--violet)":"var(--text3)",
-                      fontWeight:account.nextAction?600:400,
+                    <span style={{fontSize:13,color:account.nextAction?"var(--text)":"var(--text3)",
+                      fontWeight:account.nextAction?500:400,
                       overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>
                       {account.nextAction||"No next action — click to add"}
                     </span>
@@ -1892,23 +1896,20 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                       cursor:"pointer",fontWeight:600,flexShrink:0}}>Edit</button>
                 </div>
               )}
+              <button onClick={()=>setShowPrep(true)}
+                style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:7,
+                  background:"var(--bg3)",color:"var(--text2)",border:"1px solid var(--border)",
+                  borderRadius:"var(--r)",padding:"8px 16px",fontWeight:600,fontSize:12,cursor:"pointer",
+                  fontFamily:"var(--font-display)",transition:"background .12s,border-color .12s"}}
+                onMouseEnter={e=>{e.currentTarget.style.background="var(--bg4)";e.currentTarget.style.borderColor="var(--border2)";}}
+                onMouseLeave={e=>{e.currentTarget.style.background="var(--bg3)";e.currentTarget.style.borderColor="var(--border)";}}>
+                <Ic n="prep" size={13} color="var(--text2)"/>
+                Pre-Call Brief
+              </button>
             </div>
 
-            {/* Pre-Call Brief */}
-            <button onClick={()=>setShowPrep(true)}
-              style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:7,
-                background:"var(--bg3)",color:"var(--text2)",border:"1px solid var(--border)",
-                borderRadius:"var(--r)",padding:"8px 16px",fontWeight:600,fontSize:12,cursor:"pointer",
-                fontFamily:"var(--font-display)",transition:"background .12s,border-color .12s"}}
-              onMouseEnter={e=>{e.currentTarget.style.background="var(--bg4)";e.currentTarget.style.borderColor="var(--border2)";}}
-              onMouseLeave={e=>{e.currentTarget.style.background="var(--bg3)";e.currentTarget.style.borderColor="var(--border)";}}>
-              <Ic n="prep" size={13} color="var(--text2)"/>
-              Pre-Call Brief
-            </button>
-            </div>{/* end Next Action + Pre-Call Brief wrapper */}
-
             {/* Stakeholders */}
-            <div style={{marginTop:20,borderTop:"1px solid var(--border)",paddingTop:16}}>
+            <div style={{marginTop:24,borderTop:"1px solid var(--border)",paddingTop:20}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <SectionLabel>Stakeholders</SectionLabel>
                 <button onClick={()=>setShowStk(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage →</button>
@@ -1936,33 +1937,32 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
 
             {/* Notes */}
             {account.notes&&(
-              <div style={{background:"var(--amber-dim)",border:"1.5px solid rgba(217,119,6,0.2)",borderRadius:"var(--r)",padding:"12px 14px",marginTop:14}}>
-                <div style={{fontSize:10,color:"var(--amber)",fontFamily:"var(--font-display)",textTransform:"uppercase",letterSpacing:".06em",marginBottom:6}}>Notes</div>
-                <div style={{fontSize:12,color:"var(--text)",lineHeight:1.6}}>{account.notes}</div>
+              <div style={{marginTop:20,borderTop:"1px solid var(--border)",paddingTop:16}}>
+                <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:6}}>Notes</div>
+                <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>{account.notes}</div>
               </div>
             )}
 
             {/* Escalation banner */}
             {account.escalationStatus==="open"&&(
-              <div style={{background:"var(--rose-dim)",border:"1.5px solid rgba(225,29,72,0.3)",
-                borderRadius:"var(--r)",padding:"12px 14px",marginTop:14}}>
-                <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
-                  <div style={{display:"flex",alignItems:"center",gap:7}}>
+              <div style={{marginTop:20,borderTop:"1px solid var(--border)",paddingTop:16,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                <div>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
                     <Ic n="escalate" size={13} color="var(--rose)"/>
-                    <span style={{fontSize:11,fontWeight:700,color:"var(--rose)",textTransform:"uppercase",letterSpacing:".06em"}}>Escalated</span>
+                    <span style={{fontSize:12,fontWeight:600,color:"var(--rose)"}}>Escalated</span>
                     {account.escalationSince&&(
-                      <span style={{fontSize:10,color:"var(--rose)",opacity:.7}}>since {account.escalationSince}</span>
+                      <span style={{fontSize:11,color:"var(--text3)"}}>since {account.escalationSince}</span>
                     )}
                   </div>
-                  <button onClick={()=>onUpdate(account.id,{escalationStatus:"resolved"})}
-                    style={{fontSize:11,fontWeight:600,color:"var(--rose)",background:"none",border:"1px solid rgba(225,29,72,0.4)",
-                      borderRadius:"var(--r-sm)",padding:"3px 10px",cursor:"pointer"}}>
-                    Resolve
-                  </button>
+                  {account.escalationReason&&(
+                    <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{account.escalationReason}</div>
+                  )}
                 </div>
-                {account.escalationReason&&(
-                  <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{account.escalationReason}</div>
-                )}
+                <button onClick={()=>onUpdate(account.id,{escalationStatus:"resolved"})}
+                  style={{fontSize:11,fontWeight:600,color:"var(--rose)",background:"none",border:"none",
+                    cursor:"pointer",flexShrink:0}}>
+                  Resolve
+                </button>
               </div>
             )}
 
