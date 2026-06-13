@@ -1833,11 +1833,13 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
         <Card pad={24}>
 
             {/* Name zone: avatar · name · industry/plan · badge + ring */}
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
-              <Avatar name={account.name} size={44}/>
-              <div style={{flex:1,minWidth:0}}>
-                <div style={{fontWeight:500,fontSize:24,lineHeight:1.15,color:"var(--text)"}}>{account.name}</div>
-                <div style={{fontSize:12,color:"var(--text3)",marginTop:4}}>{account.industry} · {account.plan}</div>
+            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <Avatar name={account.name} size={40}/>
+                <div>
+                  <div style={{fontWeight:600,fontSize:19,lineHeight:1.3,color:"var(--text)"}}>{account.name}</div>
+                  <div style={{fontSize:13,color:"var(--text3)",marginTop:2,lineHeight:1.4}}>{account.industry} · {account.plan}</div>
+                </div>
               </div>
               <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,flexShrink:0}}>
                 <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
@@ -1845,20 +1847,20 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               </div>
             </div>
 
-            {/* Primary metrics: ARR + Health — display size */}
-            <div style={{display:"flex",gap:32,marginBottom:16}}>
+            {/* Tier-1 metrics: ARR + Health — 22px/600, gap-contrast rule */}
+            <div style={{display:"flex",gap:40,marginBottom:16}}>
               <div>
                 <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>ARR</div>
-                <div style={{fontSize:24,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{fmtMoney(account.arr)}</div>
+                <div style={{fontSize:22,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{fmtMoney(account.arr)}</div>
               </div>
               <div>
                 <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>Health</div>
-                <div style={{fontSize:24,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{account.healthScore??'—'}</div>
+                <div style={{fontSize:22,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{account.healthScore??'—'}</div>
               </div>
             </div>
 
-            {/* Secondary cluster: Churn / NPS / CES / Usage — subordinate */}
-            <div style={{display:"flex",gap:24,marginBottom:16}}>
+            {/* Tier-2 metrics: Churn / NPS / CES / Usage — 13px/medium, same label treatment */}
+            <div style={{display:"flex",gap:20,marginBottom:16}}>
               {[
                 {label:"Churn %", value:`${account.churnRisk??'—'}%`},
                 {label:"NPS",     value:account.nps??'—'},
@@ -1866,8 +1868,8 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 {label:"Usage %", value:`${account.productUsage??'—'}%`},
               ].map(({label,value})=>(
                 <div key={label}>
-                  <div style={{fontSize:12,color:"var(--text3)",marginBottom:2}}>{label}</div>
-                  <div style={{fontSize:13,color:"var(--text)"}}>{value}</div>
+                  <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>{label}</div>
+                  <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{value}</div>
                 </div>
               ))}
             </div>
@@ -1922,11 +1924,11 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
           </Card>
 
         {/* ── SIGNAL CARDS ROW ─────────────────────────────────────────────────── */}
-        <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit, minmax(220px, 1fr))",gap:16,alignItems:"flex-start"}}>
 
           {/* Escalation case summary */}
           {account.escalationStatus==="open"&&(
-            <div style={{flex:1,minWidth:0}}>
+            <div style={{minWidth:0,maxWidth:480}}>
             <SignalCard tone="danger" title="Case Summary"
               icon={<Ic n="escalate" size={13} color="var(--rose)"/>}
               actions={!caseLoading&&(
@@ -2099,7 +2101,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
           )}
 
           {/* Opportunity Signals */}
-          <div style={{flex:1,minWidth:0}}>
+          <div style={{minWidth:0,maxWidth:480}}>
           <SignalCard tone="accent" title="Opportunity Signals"
             icon={<Ic n="trend_up" size={13} color="var(--indigo)"/>}>
             <OpportunityCards account={account} call={call} toast={toast}/>
@@ -2107,7 +2109,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
           </div>
 
           {/* Expansion */}
-          <div style={{flex:1,minWidth:0}}>
+          <div style={{minWidth:0,maxWidth:480}}>
           {(account.expansionPotential||showExpand)&&(
             <SignalCard tone="success" title="Expansion Opportunity"
               icon={<Ic n="expand" size={13} color="var(--emerald)"/>}
@@ -3015,7 +3017,28 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
           </div>
 
           {/* ── RAIL ─────────────────────────────────────────────────────────── */}
-          <div style={{flex:38,position:"sticky",top:0,alignSelf:"flex-start",display:"flex",flexDirection:"column",gap:12}}>
+          <div style={{flex:38,position:"sticky",top:0,alignSelf:"flex-start",display:"flex",flexDirection:"column",gap:24}}>
+
+            {/* Properties */}
+            <Card pad={20}>
+              <div style={{marginBottom:10}}>
+                <SectionLabel>Properties</SectionLabel>
+              </div>
+              <div style={{display:"flex",flexDirection:"column",gap:8}}>
+                {[
+                  {label:"ARR",      value:fmtMoney(account.arr)},
+                  {label:"Plan",     value:account.plan},
+                  {label:"Industry", value:account.industry},
+                  ...(account.owner?[{label:"Owner",value:account.owner}]:[]),
+                  {label:"Renewal",  value:account.renewalDate||"—"},
+                ].map(({label,value})=>(
+                  <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"baseline",gap:8}}>
+                    <span style={{fontSize:11,color:"var(--text3)",flexShrink:0}}>{label}</span>
+                    <span style={{fontSize:13,color:"var(--text)",fontWeight:500,textAlign:"right"}}>{value}</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
 
             {/* Stakeholders */}
             <Card pad={20}>
@@ -3047,7 +3070,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             {/* Notes */}
             {account.notes&&(
               <Card pad={16}>
-                <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:6}}>Notes</div>
+                <div style={{marginBottom:6}}><SectionLabel>Notes</SectionLabel></div>
                 <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>{account.notes}</div>
               </Card>
             )}
