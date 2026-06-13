@@ -1832,52 +1832,57 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
         {/* ── HEADER BAND ─────────────────────────────────────────────────────── */}
         <Card pad={24}>
 
-            {/* Name zone: avatar · name · industry/plan · badge + ring */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:24}}>
-              <div style={{display:"flex",alignItems:"center",gap:12}}>
+            {/* Header band — identity | metric block | ring */}
+            <div style={{display:"flex",alignItems:"flex-start",justifyContent:"space-between",gap:32,marginBottom:24}}>
+
+              {/* Identity unit */}
+              <div style={{display:"flex",alignItems:"flex-start",gap:12,flexShrink:0}}>
                 <Avatar name={account.name} size={40}/>
                 <div>
                   <div style={{fontWeight:600,fontSize:19,lineHeight:1.3,color:"var(--text)"}}>{account.name}</div>
                   <div style={{fontSize:13,color:"var(--text3)",marginTop:2,lineHeight:1.4}}>{account.industry} · {account.plan}</div>
+                  <div style={{marginTop:6}}><Badge label={account.stage} color={sc.color} bg={sc.bg} small/></div>
                 </div>
               </div>
-              <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:8,flexShrink:0}}>
-                <Badge label={account.stage} color={sc.color} bg={sc.bg} small/>
-                <Ring score={account.healthScore} size={38}/>
-              </div>
-            </div>
 
-            {/* Tier-1 metrics: ARR + Health — 22px/600, gap-contrast rule */}
-            <div style={{display:"flex",gap:40,marginBottom:16}}>
-              <div>
-                <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>ARR</div>
-                <div style={{fontSize:22,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{fmtMoney(account.arr)}</div>
-              </div>
-              <div>
-                <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>Health</div>
-                <div style={{fontSize:22,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{account.healthScore??'—'}</div>
-              </div>
-            </div>
-
-            {/* Tier-2 metrics: Churn / NPS / CES / Usage — 13px/medium, same label treatment */}
-            <div style={{display:"flex",gap:20,marginBottom:16}}>
-              {[
-                {label:"Churn %", value:`${account.churnRisk??'—'}%`},
-                {label:"NPS",     value:account.nps??'—'},
-                {label:"CES",     value:account.ces!=null?Number(account.ces).toFixed(1):'—'},
-                {label:"Usage %", value:`${account.productUsage??'—'}%`},
-              ].map(({label,value})=>(
-                <div key={label}>
-                  <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>{label}</div>
-                  <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{value}</div>
+              {/* Two-tier metric block */}
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",gap:40,marginBottom:12}}>
+                  <div>
+                    <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>ARR</div>
+                    <div style={{fontSize:22,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{fmtMoney(account.arr)}</div>
+                  </div>
+                  <div>
+                    <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>Health</div>
+                    <div style={{fontSize:22,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{account.healthScore??'—'}</div>
+                  </div>
                 </div>
-              ))}
+                <div style={{display:"flex",gap:20}}>
+                  {[
+                    {label:"Churn %", value:`${account.churnRisk??'—'}%`},
+                    {label:"NPS",     value:account.nps??'—'},
+                    {label:"CES",     value:account.ces!=null?Number(account.ces).toFixed(1):'—'},
+                    {label:"Usage %", value:`${account.productUsage??'—'}%`},
+                  ].map(({label,value})=>(
+                    <div key={label}>
+                      <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>{label}</div>
+                      <div style={{fontSize:13,fontWeight:500,color:"var(--text)"}}>{value}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Health Ring */}
+              <div style={{flexShrink:0}}>
+                <Ring score={account.healthScore} size={44}/>
+              </div>
+
             </div>
 
             {/* Meta line */}
             <div style={{fontSize:12,color:"var(--text3)",display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-              <span style={{color:rdays<=0?"var(--rose)":undefined}}>
-                {rdays<=0?"Renewal overdue":`Renews in ${rdays}d`}
+              <span style={{color:account.renewalDate&&rdays<=0?"var(--rose)":undefined}}>
+                {!account.renewalDate||isNaN(rdays)?"Renewal not set":rdays<=0?"Renewal overdue":`Renews in ${rdays}d`}
               </span>
               <span>·</span>
               <span style={{color:days>30?"var(--rose)":undefined}}>Last contact {days}d ago</span>
@@ -2102,10 +2107,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
 
           {/* Opportunity Signals */}
           <div style={{minWidth:0,maxWidth:480}}>
-          <SignalCard tone="accent" title="Opportunity Signals"
-            icon={<Ic n="trend_up" size={13} color="var(--indigo)"/>}>
             <OpportunityCards account={account} call={call} toast={toast}/>
-          </SignalCard>
           </div>
 
           {/* Expansion */}
@@ -3028,7 +3030,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 {[
                   {label:"ARR",      value:fmtMoney(account.arr)},
                   {label:"Plan",     value:account.plan},
-                  {label:"Industry", value:account.industry},
+                  ...(account.industry?[{label:"Industry",value:account.industry}]:[]),
                   ...(account.owner?[{label:"Owner",value:account.owner}]:[]),
                   {label:"Renewal",  value:account.renewalDate||"—"},
                 ].map(({label,value})=>(
