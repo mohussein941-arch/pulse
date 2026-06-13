@@ -202,10 +202,16 @@ Two big numbers (ARR + Health) sit on their own line at display size. The four s
 At typical viewport widths with the 232px sidebar consumed, the 38% rail lands at ~420–480px — wide enough for signal cards and stakeholder rows without cramping. Below 860px content width, the rail collapses to a horizontal accordion above the primary column (future responsive pass).
 
 **Header band** (full-width `Card` with `pad={24}`, `marginBottom:24`):
-- Name at display (24px), weight 500 · Industry + plan at caption (12px) below · `Ring` score top-right
-- Primaries (ARR + Health) at display size, secondaries (Churn %, NPS, CES, Usage %) as small quiet cluster — per the Section 2 hierarchy rule
+- **Identity block** (left-aligned unit): Avatar 40px · 12px gap · Name 19px/weight 600 + Subtitle 13px/`var(--text3)` stacked beneath. Stage badge + Ring sit far-right via `justify-content:space-between` on the header row. Rationale: left-to-right identity→status scan; a centered name breaks the F-scan by separating avatar and name into unrelated-looking elements.
+- **Two-tier metrics — gap-contrast rule**: Tier hierarchy comes from GAP CONTRAST, emphasis from font-size contrast. Cross-tier gap (16px) must exceed within-tier rhythm; tier-1 horizontal gap 40px; tier-2 metrics 13px/medium with the SAME label treatment as tier-1. All tier-1 labels share a baseline, all tier-1 values share a baseline, tier-1 and tier-2 share one left edge — no stair-stepping. Anti-pattern: equal within/cross-tier gaps collapse the tiers into one block.
 - Meta line (renewal · last contact · tickets) at 12px `var(--text3)` with conditional `var(--rose)` on overdue/stale values only
 - The six account metrics (Health + ARR primary, Churn/NPS/CES/Usage secondary) render ONCE, in the full-width header band. The secondary rail contains signals, stakeholders, and metadata only — never a duplicate metric block.
+
+**Signal cards row** (rendered in the rail or positioned below header band per layout pass):
+- Layout: `display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr))`. Empty/null signal cards are not rendered (per SignalCard empty rule); the survivors fill the row evenly with no half-width gaps. A lone card is capped (`max-width:480px`) so it does not balloon and misrepresent severity.
+
+**Secondary rail content rule**:
+- The rail must earn its width — stack logical sections (Properties: ARR/tier/industry/owner/renewal · Stakeholders · activity summary) rather than holding a single sparse list. A rail containing only one short list reads as unfinished. Section gap 24px, no divider lines unless content types differ sharply.
 
 ### Portfolio / List View
 
