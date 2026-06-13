@@ -15,7 +15,7 @@ Single source of truth for every UI pass. All token names match `src/ui.jsx` `:r
 | body | 13 | 400–600 | 1.5 | All component copy — buttons, inputs, list rows, tab labels |
 | base-emphasis | 15 | 700 | 1.4 | Dialog headings, alert titles, confirm questions |
 | heading | 19 | 700 | 1.3 | Section titles, card headings, modal `<h1>` |
-| display | 24 | 500 | 1.15 | Account/record name, primary metric value (Health + ARR only) |
+| display | 22 | 600 | 1.15 | Primary metric values (Health + ARR only) — record name uses heading/600 |
 
 Global body base is `14px` (declared on `body`). Component text defaults to **body (13px)**; never write ad-hoc font sizes outside this scale.
 
@@ -69,7 +69,7 @@ Do not use mono for section labels, metric labels, navigation items, or any deco
 Every view that shows account metrics applies this rule without exception.
 
 **Primary metrics: Health score + ARR**
-- Rendered at display size (24px), weight 500–700
+- Rendered at 22px, weight 600
 - Health gets a `Ring` indicator (visual, not a colored number)
 - ARR rendered with `fmtMoney()` helper, ink is `var(--text)`
 - Prominent placement: top-left of the header card, above the secondary cluster
@@ -85,10 +85,10 @@ Every view that shows account metrics applies this rule without exception.
 ```
 ┌─────────────────────────────────────────────────────┐
 │  [Avatar]  Acme Corp                    [Stage]     │
-│            E-Commerce · Enterprise      [Ring/38]   │  ← name: 24px, weight 500
+│            E-Commerce · Enterprise      [Ring/38]   │  ← name: 19px, weight 600
 │                                                     │
 │   $84k           78                                 │
-│   ARR            Health        ← display (24px)     │
+│   ARR            Health        ← 22px, weight 600   │
 │                                                     │
 │   Churn %   NPS    CES    Usage %   ← 12px labels   │
 │   22%       72     4.2    85%       ← 13px, --text  │
@@ -97,7 +97,7 @@ Every view that shows account metrics applies this rule without exception.
 └─────────────────────────────────────────────────────┘
 ```
 
-Two big numbers (ARR + Health) sit on their own line at display size. The four secondaries follow as a compact single-row cluster at caption label + body value — visibly smaller, neutral ink, no color coding. In the current implementation all 6 metrics share `fontSize:16, color:var(--text)` — correct on color, undifferentiated on size. Future passes must apply this hierarchy.
+Two big numbers (ARR + Health) sit on their own line at 22px/weight 600. The four secondaries follow as a compact single-row cluster at caption label + body value — visibly smaller, neutral ink, no color coding. In the current implementation all 6 metrics share `fontSize:16, color:var(--text)` — correct on color, undifferentiated on size. Future passes must apply this hierarchy.
 
 ---
 
@@ -203,7 +203,7 @@ At typical viewport widths with the 232px sidebar consumed, the 38% rail lands a
 
 **Header band** (full-width `Card` with `pad={24}`, `marginBottom:24`):
 - **Identity block** (left-aligned unit): Avatar 40px · 12px gap · Name 19px/weight 600 + Subtitle 13px/`var(--text3)` stacked beneath. Stage badge + Ring sit far-right via `justify-content:space-between` on the header row. Rationale: left-to-right identity→status scan; a centered name breaks the F-scan by separating avatar and name into unrelated-looking elements.
-- **Two-tier metrics — gap-contrast rule**: Tier hierarchy comes from GAP CONTRAST, emphasis from font-size contrast. Cross-tier gap (16px) must exceed within-tier rhythm; tier-1 horizontal gap 40px; tier-2 metrics 13px/medium with the SAME label treatment as tier-1. All tier-1 labels share a baseline, all tier-1 values share a baseline, tier-1 and tier-2 share one left edge — no stair-stepping. Anti-pattern: equal within/cross-tier gaps collapse the tiers into one block.
+- **Two-tier metrics — gap-contrast rule**: Tier hierarchy comes from GAP CONTRAST, emphasis from font-size contrast. Tier-1 values 22px/weight 600; cross-tier gap (16px) must exceed within-tier rhythm; tier-1 horizontal gap 40px; tier-2 metrics 13px/medium with the SAME label treatment as tier-1. All tier-1 labels share a baseline, all tier-1 values share a baseline, tier-1 and tier-2 share one left edge — no stair-stepping. Anti-pattern: equal within/cross-tier gaps collapse the tiers into one block.
 - Meta line (renewal · last contact · tickets) at 12px `var(--text3)` with conditional `var(--rose)` on overdue/stale values only
 - The six account metrics (Health + ARR primary, Churn/NPS/CES/Usage secondary) render ONCE, in the full-width header band. The secondary rail contains signals, stakeholders, and metadata only — never a duplicate metric block.
 
