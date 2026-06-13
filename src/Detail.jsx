@@ -1,18 +1,14 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import {
-  STYLES, SCENARIO_CFG, PLAYBOOK_LIBRARY, getTriggeredPlaybooks, getPriorityConfig,
-  STAKEHOLDER_GUIDE, SEED, STAGE_CFG, ROLE_CFG, calcHealth, getHealthWarnings, renewalRisk,
+  SCENARIO_CFG, PLAYBOOK_LIBRARY, getTriggeredPlaybooks, getPriorityConfig,
+  STAKEHOLDER_GUIDE, STAGE_CFG, ROLE_CFG, calcHealth, getHealthWarnings,
   hColor, fmtMoney, ago, until, todayStr, shapeTask, sentIcon, initials, hue, load, save,
-  Ic, ScenarioBadge, Sparkline, Ring, Bar, Badge, Avatar, Inp, Slct, Fld, Btn, ToastBar, Modal, Confirm,
+  Ic, ScenarioBadge, Sparkline, Ring, Bar, Badge, Avatar, Inp, Slct, Fld, Btn, Modal, Confirm,
 } from "./ui";
+import { API_URL, loadSession } from "./api";
 import CloseoutModal from "./CloseoutModal";
 import OnboardingTab from "./OnboardingTab";
 import OpportunityCards from "./OpportunityCards";
-
-// Ruling 2: inline brief fetch at lines 2811-2812 reads these directly
-const API_URL = import.meta.env.VITE_API_URL || "";
-const SESSION_KEY = "pulse_session_v1";
-const loadSession = () => { try { const s = localStorage.getItem(SESSION_KEY); return s ? JSON.parse(s) : null; } catch { return null; } };
 
 const ACT_TYPES  = ["Call","Email","Meeting","Note"];
 const ACT_ICONS  = { Call:"Ph", Email:"Em", Meeting:"Mx", Note:"Nt" };
@@ -3340,4 +3336,5 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
   );
 };
 
+export { AccountForm };
 export default Detail;
