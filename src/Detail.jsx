@@ -1793,10 +1793,10 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
 
   return (
     <>
-      <div style={{display:"flex",gap:28,alignItems:"flex-start"}}>
+      <div style={{display:"flex",flexDirection:"column",gap:24}}>
 
-        {/* ── LEFT COLUMN ─────────────────────────────────────────────────────── */}
-        <div style={{width:"var(--detail-col-w)",flexShrink:0,position:"sticky",top:0,alignSelf:"flex-start",display:"flex",flexDirection:"column",gap:12}}>
+        {/* ── TOOLBAR ─────────────────────────────────────────────────────────── */}
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
 
           {/* Back + action buttons */}
           <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
@@ -1827,9 +1827,10 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 <Ic n="archive" size={14} color="var(--rose)"/></button>
             </div>
           </div>
+        </div>
 
-          {/* Header card */}
-          <Card pad={24}>
+        {/* ── HEADER BAND ─────────────────────────────────────────────────────── */}
+        <Card pad={24}>
 
             {/* Name zone: avatar · name · industry/plan · badge + ring */}
             <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:24}}>
@@ -1844,25 +1845,35 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               </div>
             </div>
 
-            {/* Metric grid: 3-up, neutral ink, no borders */}
-            <div style={{display:"grid",gridTemplateColumns:"repeat(3,1fr)",gap:"20px 16px"}}>
+            {/* Primary metrics: ARR + Health — display size */}
+            <div style={{display:"flex",gap:32,marginBottom:16}}>
+              <div>
+                <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>ARR</div>
+                <div style={{fontSize:24,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{fmtMoney(account.arr)}</div>
+              </div>
+              <div>
+                <div style={{fontSize:12,color:"var(--text3)",marginBottom:4}}>Health</div>
+                <div style={{fontSize:24,fontWeight:600,color:"var(--text)",fontVariantNumeric:"tabular-nums",lineHeight:1.1}}>{account.healthScore??'—'}</div>
+              </div>
+            </div>
+
+            {/* Secondary cluster: Churn / NPS / CES / Usage — subordinate */}
+            <div style={{display:"flex",gap:24,marginBottom:16}}>
               {[
-                {label:"ARR",      value:fmtMoney(account.arr)},
-                {label:"Health",   value:account.healthScore??'—'},
-                {label:"Churn %",  value:`${account.churnRisk??'—'}%`},
-                {label:"NPS",      value:account.nps??'—'},
-                {label:"CES",      value:account.ces!=null?Number(account.ces).toFixed(1):'—'},
-                {label:"Usage %",  value:`${account.productUsage??'—'}%`},
+                {label:"Churn %", value:`${account.churnRisk??'—'}%`},
+                {label:"NPS",     value:account.nps??'—'},
+                {label:"CES",     value:account.ces!=null?Number(account.ces).toFixed(1):'—'},
+                {label:"Usage %", value:`${account.productUsage??'—'}%`},
               ].map(({label,value})=>(
                 <div key={label}>
-                  <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:4}}>{label}</div>
-                  <div style={{fontSize:16,fontWeight:600,color:"var(--text)"}}>{value}</div>
+                  <div style={{fontSize:12,color:"var(--text3)",marginBottom:2}}>{label}</div>
+                  <div style={{fontSize:13,color:"var(--text)"}}>{value}</div>
                 </div>
               ))}
             </div>
 
-            {/* Meta line: renewal · contact · tickets */}
-            <div style={{marginTop:20,fontSize:12,color:"var(--text3)",display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+            {/* Meta line */}
+            <div style={{fontSize:12,color:"var(--text3)",display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
               <span style={{color:rdays<=0?"var(--rose)":undefined}}>
                 {rdays<=0?"Renewal overdue":`Renews in ${rdays}d`}
               </span>
@@ -1908,68 +1919,14 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               </button>
             </div>
 
-            {/* Stakeholders */}
-            <div style={{marginTop:24,borderTop:"1px solid var(--border)",paddingTop:20}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
-                <SectionLabel>Stakeholders</SectionLabel>
-                <button onClick={()=>setShowStk(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage →</button>
-              </div>
-              {account.stakeholders.length===0
-                ?<div style={{fontSize:12,color:"var(--text3)"}}>None mapped yet</div>
-                :account.stakeholders.map(s=>{
-                  const rc=ROLE_CFG[s.role]||ROLE_CFG.Neutral;
-                  return (
-                    <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
-                      <div style={{display:"flex",alignItems:"center",gap:7}}>
-                        <div style={{width:26,height:26,borderRadius:"var(--r-sm)",background:`hsl(${hue(s.name)},60%,92%)`,
-                          display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,
-                          fontWeight:700,color:`hsl(${hue(s.name)},50%,35%)`}}>{initials(s.name)}</div>
-                        <div>
-                          <div style={{fontSize:12,fontWeight:600}}>{s.name}</div>
-                          <div style={{fontSize:10,color:"var(--text3)"}}>{s.title}</div>
-                        </div>
-                      </div>
-                      <Badge label={`${sentIcon(s.sentiment)} ${s.role}`} color={rc.color} bg={rc.bg}/>
-                    </div>
-                  );
-                })}
-            </div>
-
-            {/* Notes */}
-            {account.notes&&(
-              <div style={{marginTop:20,borderTop:"1px solid var(--border)",paddingTop:16}}>
-                <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:6}}>Notes</div>
-                <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>{account.notes}</div>
-              </div>
-            )}
-
-            {/* Escalation banner */}
-            {account.escalationStatus==="open"&&(
-              <div style={{marginTop:20,borderTop:"1px solid var(--border)",paddingTop:16,display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
-                <div>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
-                    <Ic n="escalate" size={13} color="var(--rose)"/>
-                    <span style={{fontSize:12,fontWeight:600,color:"var(--rose)"}}>Escalated</span>
-                    {account.escalationSince&&(
-                      <span style={{fontSize:11,color:"var(--text3)"}}>since {account.escalationSince}</span>
-                    )}
-                  </div>
-                  {account.escalationReason&&(
-                    <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{account.escalationReason}</div>
-                  )}
-                </div>
-                <button onClick={()=>onUpdate(account.id,{escalationStatus:"resolved"})}
-                  style={{fontSize:11,fontWeight:600,color:"var(--rose)",background:"none",border:"none",
-                    cursor:"pointer",flexShrink:0}}>
-                  Resolve
-                </button>
-              </div>
-            )}
-
           </Card>
+
+        {/* ── SIGNAL CARDS ROW ─────────────────────────────────────────────────── */}
+        <div style={{display:"flex",gap:16,alignItems:"flex-start"}}>
 
           {/* Escalation case summary */}
           {account.escalationStatus==="open"&&(
+            <div style={{flex:1,minWidth:0}}>
             <SignalCard tone="danger" title="Case Summary"
               icon={<Ic n="escalate" size={13} color="var(--rose)"/>}
               actions={!caseLoading&&(
@@ -2138,15 +2095,19 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
                 })()}
               </div>
             </SignalCard>
+            </div>
           )}
 
           {/* Opportunity Signals */}
+          <div style={{flex:1,minWidth:0}}>
           <SignalCard tone="accent" title="Opportunity Signals"
             icon={<Ic n="trend_up" size={13} color="var(--indigo)"/>}>
             <OpportunityCards account={account} call={call} toast={toast}/>
           </SignalCard>
+          </div>
 
-          {/* Expansion opportunity */}
+          {/* Expansion */}
+          <div style={{flex:1,minWidth:0}}>
           {(account.expansionPotential||showExpand)&&(
             <SignalCard tone="success" title="Expansion Opportunity"
               icon={<Ic n="expand" size={13} color="var(--emerald)"/>}
@@ -2224,11 +2185,15 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               Mark as expansion opportunity
             </button>
           )}
+          </div>
 
         </div>
 
-        {/* ── RIGHT COLUMN ────────────────────────────────────────────────────── */}
-        <div style={{flex:1,minWidth:0}}>
+        {/* ── 62/38 WORK SPLIT ─────────────────────────────────────────────────── */}
+        <div style={{display:"flex",gap:24,alignItems:"flex-start"}}>
+
+          {/* PRIMARY COLUMN */}
+          <div style={{flex:62,minWidth:0}}>
 
           {/* Tab bar */}
           <Tabs tabs={TABS} active={tab} onSelect={setTab} alerts={tabHasAlert}/>
@@ -3046,6 +3011,73 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
         )}
       </div>
     )}
+
+          </div>
+
+          {/* ── RAIL ─────────────────────────────────────────────────────────── */}
+          <div style={{flex:38,position:"sticky",top:0,alignSelf:"flex-start",display:"flex",flexDirection:"column",gap:12}}>
+
+            {/* Stakeholders */}
+            <Card pad={20}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+                <SectionLabel>Stakeholders</SectionLabel>
+                <button onClick={()=>setShowStk(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage →</button>
+              </div>
+              {account.stakeholders.length===0
+                ?<div style={{fontSize:12,color:"var(--text3)"}}>None mapped yet</div>
+                :account.stakeholders.map(s=>{
+                  const rc=ROLE_CFG[s.role]||ROLE_CFG.Neutral;
+                  return (
+                    <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:7}}>
+                        <div style={{width:26,height:26,borderRadius:"var(--r-sm)",background:`hsl(${hue(s.name)},60%,92%)`,
+                          display:"flex",alignItems:"center",justifyContent:"center",fontSize:10,
+                          fontWeight:700,color:`hsl(${hue(s.name)},50%,35%)`}}>{initials(s.name)}</div>
+                        <div>
+                          <div style={{fontSize:12,fontWeight:600}}>{s.name}</div>
+                          <div style={{fontSize:10,color:"var(--text3)"}}>{s.title}</div>
+                        </div>
+                      </div>
+                      <Badge label={`${sentIcon(s.sentiment)} ${s.role}`} color={rc.color} bg={rc.bg}/>
+                    </div>
+                  );
+                })}
+            </Card>
+
+            {/* Notes */}
+            {account.notes&&(
+              <Card pad={16}>
+                <div style={{fontSize:10,fontWeight:700,color:"var(--text3)",textTransform:"uppercase",letterSpacing:".07em",marginBottom:6}}>Notes</div>
+                <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>{account.notes}</div>
+              </Card>
+            )}
+
+            {/* Escalation status */}
+            {account.escalationStatus==="open"&&(
+              <Card pad={16}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",gap:8}}>
+                  <div>
+                    <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:4}}>
+                      <Ic n="escalate" size={13} color="var(--rose)"/>
+                      <span style={{fontSize:12,fontWeight:600,color:"var(--rose)"}}>Escalated</span>
+                      {account.escalationSince&&(
+                        <span style={{fontSize:11,color:"var(--text3)"}}>since {account.escalationSince}</span>
+                      )}
+                    </div>
+                    {account.escalationReason&&(
+                      <div style={{fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{account.escalationReason}</div>
+                    )}
+                  </div>
+                  <button onClick={()=>onUpdate(account.id,{escalationStatus:"resolved"})}
+                    style={{fontSize:11,fontWeight:600,color:"var(--rose)",background:"none",border:"none",
+                      cursor:"pointer",flexShrink:0}}>
+                    Resolve
+                  </button>
+                </div>
+              </Card>
+            )}
+
+          </div>
 
         </div>
       </div>
