@@ -1832,7 +1832,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
           <Card pad={20}>
 
             {/* Top row: avatar + name block + ring */}
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:0}}>
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16}}>
               <Avatar name={account.name} size={44}/>
               <div style={{flex:1,minWidth:0}}>
                 <div style={{fontWeight:650,fontSize:18,lineHeight:1.2,color:"var(--text)"}}>{account.name}</div>
@@ -1845,6 +1845,7 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
             </div>
 
             {/* StatStrip: Churn · ARR · NPS · CES · Usage · Tickets */}
+            <div style={{margin:"12px 0",borderTop:"1px solid var(--border)",borderBottom:"1px solid var(--border)"}}>
             <StatStrip stats={[
               {label:"Churn %", value:`${account.churnRisk??'—'}%`,      color:(account.churnRisk??50)>=60?"var(--rose)":(account.churnRisk??50)>=35?"var(--amber)":"var(--emerald)"},
               {label:"ARR",     value:fmtMoney(account.arr),               color:"var(--indigo)"},
@@ -1853,9 +1854,10 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               {label:"Usage %", value:`${account.productUsage}%`,          color:account.productUsage>=70?"var(--emerald)":account.productUsage>=45?"var(--amber)":"var(--rose)"},
               {label:"Tickets", value:account.openTickets??0,              color:account.openTickets>4?"var(--rose)":undefined},
             ]}/>
+            </div>
 
             {/* Renewal + last contact — quiet meta line */}
-            <div style={{fontSize:11,color:"var(--text3)",marginTop:10,display:"flex",gap:6,flexWrap:"wrap"}}>
+            <div style={{fontSize:11.5,color:"var(--text3)",margin:"14px 0",display:"flex",gap:6,flexWrap:"wrap"}}>
               <span style={{color:rdays<=0?"var(--rose)":rdays<=60?"var(--rose)":undefined}}>
                 {rdays>0?`Renews in ${rdays}d`:"Renewal overdue"}
               </span>
@@ -1863,10 +1865,11 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               <span style={{color:days>30?"var(--rose)":undefined}}>Last contact {days}d ago</span>
             </div>
 
-            {/* Next Action */}
+            {/* Next Action + Pre-Call Brief */}
+            <div style={{display:"flex",flexDirection:"column",gap:10,marginTop:14}}>
             <div style={{background:account.nextAction?"var(--violet-dim)":"var(--bg3)",
               border:`1.5px solid ${account.nextAction?"rgba(124,58,237,0.2)":"var(--border)"}`,
-              borderRadius:"var(--r)",padding:"10px 14px",marginBottom:14}}>
+              borderRadius:"var(--r)",padding:"10px 14px"}}>
               {editAct?(
                 <div style={{display:"flex",gap:8}}>
                   <Inp value={actDraft} onChange={e=>setActDraft(e.target.value)}
@@ -1896,16 +1899,16 @@ const Detail = ({ account, onClose, onUpdate, onDelete, toast, call, closeoutMee
               style={{width:"100%",display:"flex",alignItems:"center",justifyContent:"center",gap:7,
                 background:"var(--bg3)",color:"var(--text2)",border:"1px solid var(--border)",
                 borderRadius:"var(--r)",padding:"8px 16px",fontWeight:600,fontSize:12,cursor:"pointer",
-                fontFamily:"var(--font-display)",transition:"background .12s,border-color .12s",
-                marginTop:12,marginBottom:16}}
+                fontFamily:"var(--font-display)",transition:"background .12s,border-color .12s"}}
               onMouseEnter={e=>{e.currentTarget.style.background="var(--bg4)";e.currentTarget.style.borderColor="var(--border2)";}}
               onMouseLeave={e=>{e.currentTarget.style.background="var(--bg3)";e.currentTarget.style.borderColor="var(--border)";}}>
               <Ic n="prep" size={13} color="var(--text2)"/>
               Pre-Call Brief
             </button>
+            </div>{/* end Next Action + Pre-Call Brief wrapper */}
 
             {/* Stakeholders */}
-            <div>
+            <div style={{marginTop:20,borderTop:"1px solid var(--border)",paddingTop:16}}>
               <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
                 <SectionLabel>Stakeholders</SectionLabel>
                 <button onClick={()=>setShowStk(true)} style={{fontSize:12,color:"var(--indigo)",background:"none",border:"none",cursor:"pointer",fontWeight:600}}>Manage →</button>
