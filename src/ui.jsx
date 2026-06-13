@@ -777,3 +777,161 @@ export const Confirm = ({ msg, onConfirm, onCancel }) => {
     </div>
   );
 };
+
+export const PlaybookStepView = ({ step, done, onToggle, expanded, onExpand }) => {
+  return (
+    <div style={{background:"white",borderRadius:"var(--r)",border:`1.5px solid ${done?"var(--emerald-dim)":"var(--border)"}`,
+      marginBottom:8,overflow:"hidden",transition:"all .15s"}}>
+      <div style={{display:"flex",alignItems:"center",gap:12,padding:"12px 16px",cursor:"pointer"}}
+        onClick={onExpand}>
+        <input type="checkbox" checked={done} onChange={e=>{e.stopPropagation();onToggle();}}
+          style={{width:16,height:16,cursor:"pointer",accentColor:"var(--emerald)",flexShrink:0}}
+          onClick={e=>e.stopPropagation()}/>
+        <div style={{flex:1,minWidth:0}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
+            <span style={{fontSize:13,fontWeight:600,color:done?"var(--text3)":"var(--text)",
+              textDecoration:done?"line-through":"none"}}>{step.title}</span>
+            <span style={{fontSize:10,fontFamily:"var(--font-mono)",color:"var(--text3)",
+              background:"var(--bg3)",padding:"1px 7px",borderRadius:99}}>{step.timeline}</span>
+            {step.owner && (
+              <span style={{fontSize:10,fontFamily:"var(--font-mono)",color:"var(--sky)",
+                background:"var(--sky-dim)",padding:"1px 7px",borderRadius:99}}>{step.owner}</span>
+            )}
+          </div>
+        </div>
+        <span style={{fontSize:11,color:"var(--text3)",flexShrink:0}}>{expanded?"▲":"▼"}</span>
+      </div>
+      {expanded && (
+        <div style={{padding:"0 16px 14px 44px",borderTop:"1px solid var(--border)"}}>
+          <div style={{fontSize:13,color:"var(--text2)",lineHeight:1.7,marginTop:12,marginBottom:12}}>
+            {step.action}
+          </div>
+          {step.commsTemplate && (
+            <div>
+              <div style={{fontSize:10,fontFamily:"var(--font-mono)",color:"var(--text3)",
+                textTransform:"uppercase",letterSpacing:".08em",marginBottom:8}}>
+                Communication template
+              </div>
+              <div style={{background:"var(--bg3)",borderRadius:"var(--r)",padding:"12px 14px",
+                fontSize:12,color:"var(--text2)",lineHeight:1.8,
+                fontFamily:"var(--font-mono)",whiteSpace:"pre-wrap"}}>
+                {step.commsTemplate}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// ─── Task engine ─────────────────────────────────────────────────────────────
+export const TASK_TYPE_CFG = {
+  renewal:  { color:"var(--indigo)", bg:"var(--indigo-dim)", abbr:"RE", label:"Renewal"  },
+  health:   { color:"var(--rose)",   bg:"var(--rose-dim)",   abbr:"HL", label:"Health"   },
+  silent:   { color:"var(--amber)",  bg:"var(--amber-dim)",  abbr:"SI", label:"Silent"   },
+  ces:      { color:"var(--amber)",  bg:"var(--amber-dim)",  abbr:"CE", label:"CES"      },
+  playbook: { color:"var(--teal)",   bg:"var(--teal-dim)",   abbr:"PB", label:"Playbook" },
+  manual:   { color:"var(--sky)",    bg:"var(--sky-dim)",    abbr:"MN", label:"Manual"   },
+};
+
+export const generateAutoTasks = (accounts) => {
+  const tasks = [];
+  const today = new Date();
+
+  accounts.forEach(account => {
+    const rdays  = Math.ceil((new Date(account.renewalDate) - today) / 86400000);
+    const silent = Math.floor((today - new Date(account.lastContact)) / 86400000);
+    const cesVals = account.cesHistory.map(d=>d.value);
+    const cesDeclining = cesVals.length >= 3
+      && cesVals.at(-1) < cesVals.at(-2)
+      && cesVals.at(-2) < cesVals.at(-3);
+
+    // ── Renewal tasks ──
+    if (account.renewalDate) {
+      if (rdays < 0) {
+        tasks.push({ id:`renewal-overdue-${account.id}`, type:"renewal", priority:"Critical",
+          accountId:account.id, accountName:account.name, auto:true, done:false,
+          title:`Renewal overdue — ${account.name}`,
+          description:`Renewal was due ${Math.abs(rdays)} days ago. Immediate action required.`,
+          dueDate: account.renewalDate });
+      } else if (rdays <= 30 && account.healthScore < 60) {
+        tasks.push({ id:`renewal-critical-${account.id}`, type:"renewal", priority:"Critical",
+          accountId:account.id, accountName:account.name, auto:true, done:false,
+          title:`At-risk renewal in ${rdays}d — ${account.name}`,
+          description:`Renewal approaching with health score ${account.healthScore}. Activate at-risk renewal playbook now.`,
+          dueDate: todayStr() });
+      } else if (rdays <= 30) {
+        tasks.push({ id:`renewal-30-${account.id}`, type:"renewal", priority:"High",
+          accountId:account.id, accountName:account.name, auto:true, done:false,
+          title:`Renewal in ${rdays}d — finalise contract`,
+          description:`Get verbal commit and send renewal paperwork for ${account.name}.`,
+          dueDate: todayStr() });
+      } else if (rdays <= 60 && account.healthScore < 55) {
+        tasks.push({ id:`renewal-60risk-${account.id}`, type:"renewal", priority:"Critical",
+          accountId:account.id, accountName:account.name, auto:true, done:false,
+          title:`At-risk renewal in ${rdays}d — ${account.name}`,
+          description:`Health score ${account.healthScore} with renewal in ${rdays} days. Start recovery conversation immediately.`,
+          dueDate: todayStr() });
+      } else if (rdays <= 90) {
+        tasks.push({ id:`renewal-90-${account.id}`, type:"renewal", priority:"High",
+          accountId:account.id, accountName:account.name, auto:true, done:false,
+          title:`Start renewal prep — ${account.name}`,
+          description:`Renewal in ${rdays} days. Prepare ROI summary and schedule planning call.`,
+          dueDate: new Date(today.getTime() + 7*86400000).toISOString().split("T")[0] });
+      }
+    }
+
+    // ── Health tasks ──
+    if (account.healthScore < 40) {
+      tasks.push({ id:`health-critical-${account.id}`, type:"health", priority:"Critical",
+        accountId:account.id, accountName:account.name, auto:true, done:false,
+        title:`Critical health — activate recovery for ${account.name}`,
+        description:`Health score ${account.healthScore}/100 — churn risk ${account.churnRisk}%. Escalate today.`,
+        dueDate: todayStr() });
+    } else if (account.healthScore < 55) {
+      tasks.push({ id:`health-warn-${account.id}`, type:"health", priority:"High",
+        accountId:account.id, accountName:account.name, auto:true, done:false,
+        title:`Health declining — intervene on ${account.name}`,
+        description:`Health score ${account.healthScore}/100. Diagnose root cause before it drops further.`,
+        dueDate: todayStr() });
+    }
+
+    // ── Silent account tasks ──
+    if (silent >= 30) {
+      tasks.push({ id:`silent-${account.id}`, type:"silent", priority:"High",
+        accountId:account.id, accountName:account.name, auto:true, done:false,
+        title:`No contact in ${silent}d — re-engage ${account.name}`,
+        description:`Last contact was ${silent} days ago. Risk of disengagement is high.`,
+        dueDate: todayStr() });
+    }
+
+    // ── CES tasks ──
+    if (cesDeclining) {
+      tasks.push({ id:`ces-${account.id}`, type:"ces", priority:"High",
+        accountId:account.id, accountName:account.name, auto:true, done:false,
+        title:`CES declining 3 months — investigate ${account.name}`,
+        description:`CES dropped from ${cesVals.at(-3).toFixed(1)} → ${cesVals.at(-2).toFixed(1)} → ${cesVals.at(-1).toFixed(1)}. Find the friction source.`,
+        dueDate: todayStr() });
+    }
+
+    // ── Active playbook next step ──
+    if (account.activePlaybookId) {
+      const pb = PLAYBOOK_LIBRARY.find(p=>p.id===account.activePlaybookId);
+      if (pb) {
+        const nextStep = pb.steps.find(s=>!(account.activePlaybookSteps||{})[s.id]);
+        if (nextStep) {
+          tasks.push({ id:`playbook-${account.id}-${nextStep.id}`, type:"playbook", priority:"Medium",
+            accountId:account.id, accountName:account.name, auto:true, done:false,
+            title:`${pb.name} — next step for ${account.name}`,
+            description:`Step: "${nextStep.title}" (${nextStep.timeline})`,
+            dueDate: todayStr() });
+        }
+      }
+    }
+  });
+
+  // Sort: Critical first, then High, then Medium; within same priority by due date
+  const pOrder = { Critical:0, High:1, Medium:2 };
+  return tasks.sort((a,b) => pOrder[a.priority]-pOrder[b.priority] || a.dueDate.localeCompare(b.dueDate));
+};
