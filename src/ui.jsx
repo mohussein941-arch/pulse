@@ -731,10 +731,10 @@ export const SectionLabel = ({ children }) => (
 export const StatStrip = ({ stats }) => (
   <div style={{display:"flex"}}>
     {stats.map((s,i) => (
-      <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+      <div key={i} style={{flex:1,minWidth:0,overflow:"hidden",display:"flex",flexDirection:"column",alignItems:"center",
         borderLeft:i>0?"1px solid var(--border)":"none",padding:"10px 6px"}}>
-        <div style={{fontSize:17,fontWeight:650,fontFamily:"var(--font-display)",
-          fontVariantNumeric:"tabular-nums",color:s.color||"var(--text)",lineHeight:1.1}}>
+        <div style={{fontSize:18,fontWeight:650,fontFamily:"var(--font-display)",
+          fontVariantNumeric:"tabular-nums",color:s.color||"var(--text)",lineHeight:1.1,whiteSpace:"nowrap"}}>
           {s.value}
         </div>
         <div style={{fontSize:10,color:"var(--text3)",marginTop:3,textAlign:"center"}}>{s.label}</div>
@@ -757,7 +757,7 @@ export const SignalCard = ({ tone="info", icon, title, children, actions }) => {
       padding:"14px 16px"}}>
       <div style={{display:"flex",alignItems:"center",gap:7}}>
         {icon&&<span style={{flexShrink:0}}>{icon}</span>}
-        <span style={{fontSize:12.5,fontWeight:650,color:t.color,flex:1}}>{title}</span>
+        <span style={{fontSize:12.5,fontWeight:600,color:"var(--text)",flex:1}}>{title}</span>
         {actions&&<div style={{display:"flex",gap:6}}>{actions}</div>}
       </div>
       {children&&<div style={{marginTop:6,fontSize:12,color:"var(--text2)",lineHeight:1.5}}>{children}</div>}
