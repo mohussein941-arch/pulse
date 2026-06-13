@@ -205,6 +205,7 @@ At typical viewport widths with the 232px sidebar consumed, the 38% rail lands a
 - Name at display (24px), weight 500 · Industry + plan at caption (12px) below · `Ring` score top-right
 - Primaries (ARR + Health) at display size, secondaries (Churn %, NPS, CES, Usage %) as small quiet cluster — per the Section 2 hierarchy rule
 - Meta line (renewal · last contact · tickets) at 12px `var(--text3)` with conditional `var(--rose)` on overdue/stale values only
+- The six account metrics (Health + ARR primary, Churn/NPS/CES/Usage secondary) render ONCE, in the full-width header band. The secondary rail contains signals, stakeholders, and metadata only — never a duplicate metric block.
 
 ### Portfolio / List View
 
