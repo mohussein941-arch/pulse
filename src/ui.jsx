@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 
 export const STYLES = `
-  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=DM+Mono:wght@300;400;500&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&family=DM+Mono:wght@300;400;500&display=swap');
   *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
   :root {
     /* Surfaces — warm, Notion-inspired */
@@ -660,9 +660,9 @@ export const CitedNarrative = ({ text, citations = [], fontSize = 14 }) => {
 };
 
 export const Badge = ({ label, color, bg, small }) => (
-  <span style={{fontSize:small?10:11,fontFamily:"var(--font-mono)",fontWeight:500,
+  <span style={{fontSize:small?10:11,fontFamily:"var(--font-display)",fontWeight:600,
     padding:small?"2px 7px":"3px 10px",borderRadius:"var(--r-sm)",color,background:bg,
-    display:"inline-block",whiteSpace:"nowrap",letterSpacing:".02em"}}>
+    display:"inline-block",whiteSpace:"nowrap",letterSpacing:".01em"}}>
     {label}
   </span>
 );
@@ -691,20 +691,19 @@ export const Slct = (p) => (
 );
 export const Fld = ({ label, children }) => (
   <div style={{marginBottom:14}}>
-    <div style={{fontSize:11,fontWeight:600,color:"var(--text2)",
-      textTransform:"uppercase",letterSpacing:".05em",marginBottom:6}}>{label}</div>
+    <div style={{fontSize:12,fontWeight:500,color:"var(--text2)",marginBottom:6}}>{label}</div>
     {children}
   </div>
 );
 export const Btn = ({ children, variant="primary", onClick, style={}, ...rest }) => {
   const styles = {
-    primary: { background:"var(--indigo)", color:"white", boxShadow:"0 2px 12px var(--indigo-glow)", border:"none" },
+    primary: { background:"var(--indigo)", color:"white", boxShadow:"var(--shadow-xs)", border:"none" },
     ghost:   { background:"var(--bg3)",    color:"var(--text2)", boxShadow:"none", border:"1.5px solid var(--border)" },
     danger:  { background:"var(--rose-dim)", color:"var(--rose)", boxShadow:"none", border:"none" },
   };
   return (
     <button onClick={onClick} {...rest}
-      style={{borderRadius:"var(--r)",padding:"10px 20px",
+      style={{borderRadius:"var(--r)",padding:"8px 16px",
         fontFamily:"var(--font-display)",fontWeight:600,fontSize:13,
         cursor:"pointer",transition:"filter .15s,transform .1s",letterSpacing:"-.01em",
         ...styles[variant],...style}}
@@ -714,6 +713,76 @@ export const Btn = ({ children, variant="primary", onClick, style={}, ...rest })
     </button>
   );
 };
+
+export const Card = ({ children, pad=20, style={} }) => (
+  <div style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:"var(--r-lg)",
+    boxShadow:"var(--shadow-xs)",padding:pad,...style}}>
+    {children}
+  </div>
+);
+
+export const SectionLabel = ({ children }) => (
+  <div style={{fontSize:10.5,fontWeight:600,letterSpacing:".06em",color:"var(--text3)",
+    textTransform:"uppercase"}}>
+    {children}
+  </div>
+);
+
+export const StatStrip = ({ stats }) => (
+  <div style={{display:"flex",borderTop:"1px solid var(--border)",marginTop:12,paddingTop:10}}>
+    {stats.map((s,i) => (
+      <div key={i} style={{flex:1,display:"flex",flexDirection:"column",alignItems:"center",
+        borderLeft:i>0?"1px solid var(--border)":"none",padding:"0 6px"}}>
+        <div style={{fontSize:18,fontWeight:650,fontFamily:"var(--font-display)",
+          fontVariantNumeric:"tabular-nums",color:s.color||"var(--text)",lineHeight:1.1}}>
+          {s.value}
+        </div>
+        <div style={{fontSize:10.5,color:"var(--text3)",marginTop:3,textAlign:"center"}}>{s.label}</div>
+      </div>
+    ))}
+  </div>
+);
+
+export const SignalCard = ({ tone="info", icon, title, children, actions }) => {
+  const tones = {
+    danger:  { color:"var(--rose)",    dim:"var(--rose-dim)"    },
+    warn:    { color:"var(--amber)",   dim:"var(--amber-dim)"   },
+    success: { color:"var(--emerald)", dim:"var(--emerald-dim)" },
+    info:    { color:"var(--sky)",     dim:"var(--sky-dim)"     },
+    accent:  { color:"var(--indigo)",  dim:"var(--indigo-dim)"  },
+  };
+  const t = tones[tone] || tones.info;
+  return (
+    <div style={{background:t.dim,borderLeft:`3px solid ${t.color}`,borderRadius:"var(--r)",
+      padding:"12px 14px"}}>
+      <div style={{display:"flex",alignItems:"center",gap:7,marginBottom:children?8:0}}>
+        {icon&&<span style={{flexShrink:0}}>{icon}</span>}
+        <span style={{fontSize:12.5,fontWeight:650,color:t.color,flex:1}}>{title}</span>
+        {actions&&<div style={{display:"flex",gap:6}}>{actions}</div>}
+      </div>
+      {children&&<div style={{fontSize:12,color:"var(--text2)",lineHeight:1.6}}>{children}</div>}
+    </div>
+  );
+};
+
+export const Tabs = ({ tabs, active, onSelect, alerts={} }) => (
+  <div style={{display:"flex",overflowX:"auto",borderBottom:"1.5px solid var(--border)",marginBottom:20}}>
+    {tabs.map(({key,label}) => (
+      <button key={key} onClick={()=>onSelect(key)}
+        style={{position:"relative",padding:"8px 16px",border:"none",background:"transparent",
+          cursor:"pointer",fontFamily:"var(--font-display)",fontSize:13,fontWeight:550,
+          whiteSpace:"nowrap",color:active===key?"var(--text)":"var(--text3)",
+          borderBottom:active===key?"2px solid var(--indigo)":"2px solid transparent",
+          transition:"color .15s,border-color .15s",marginBottom:"-1.5px"}}>
+        {label}
+        {alerts[key]&&active!==key&&(
+          <span style={{position:"absolute",top:4,right:4,width:6,height:6,
+            borderRadius:"50%",background:"var(--rose)",display:"block"}}/>
+        )}
+      </button>
+    ))}
+  </div>
+);
 
 export const ToastBar = ({ toasts }) => (
   <div style={{position:"fixed",bottom:24,left:"50%",transform:"translateX(-50%)",
