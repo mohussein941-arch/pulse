@@ -87,17 +87,17 @@ Every view that shows account metrics applies this rule without exception.
 │  [Avatar]  Acme Corp                    [Stage]     │
 │            E-Commerce · Enterprise      [Ring/38]   │  ← name: 24px, weight 500
 │                                                     │
-│  ARR          Health      Churn %                   │
-│  $84k         78          22%                       │  ← display (24) for first two,
-│                                                     │     body (13) label + 16px val
-│  NPS          CES         Usage %                   │
-│  72           4.2         85%                       │  ← all caption label + body value
+│   $84k           78                                 │
+│   ARR            Health        ← display (24px)     │
+│                                                     │
+│   Churn %   NPS    CES    Usage %   ← 12px labels   │
+│   22%       72     4.2    85%       ← 13px, --text  │
 │                                                     │
 │  Renews in 47d · Last contact 3d ago · 1 open ticket│  ← 12px, var(--text3)
 └─────────────────────────────────────────────────────┘
 ```
 
-In the current implementation all 6 metrics share `fontSize:16, color:var(--text)` — correct on the color rule, undifferentiated on size. Future passes should elevate Health + ARR to display size and reduce the secondaries to the label+value pattern shown above.
+Two big numbers (ARR + Health) sit on their own line at display size. The four secondaries follow as a compact single-row cluster at caption label + body value — visibly smaller, neutral ink, no color coding. In the current implementation all 6 metrics share `fontSize:16, color:var(--text)` — correct on color, undifferentiated on size. Future passes must apply this hierarchy.
 
 ---
 
@@ -179,30 +179,31 @@ In the current implementation all 6 metrics share `fontSize:16, color:var(--text
 
 ```
 ┌──────────────────────────────────────────────────────────────────────┐
-│  HEADER BAND (full width — account name, stage, Ring, next action)   │
-├────────────────────────────┬─────────────────────────────────────────┤
-│  SECONDARY RAIL            │  PRIMARY CONTENT COLUMN                 │
-│  300px fixed               │  flex:1, minWidth:0                     │
-│  (var(--detail-col-w))     │                                         │
-│                            │  Tabs                                   │
-│  Signal cards              │  ─────────────────────────────────────  │
-│  Stakeholders              │  Tab body (tasks, playbook, email, …)   │
-│  Metadata                  │                                         │
-│                            │                                         │
-└────────────────────────────┴─────────────────────────────────────────┘
+│  HEADER BAND — full width, spans both columns                        │
+│  [Avatar]  Account name · Industry · Plan    [Stage]  [Ring]        │
+│  $84k ARR   78 Health  │  Churn%  NPS  CES  Usage%  (small cluster) │
+│  Renews in 47d · Last contact 3d ago · 1 open ticket                │
+├──────────────────────────────────┬───────────────────────────────────┤
+│  PRIMARY CONTENT (~62%)          │  SECONDARY RAIL (~38%)            │
+│                                  │                                   │
+│  Tabs                            │  Signal cards                     │
+│  ──────────────────────────────  │  Stakeholders                     │
+│  Tab body                        │  Metadata                         │
+│  (tasks, playbook, email, …)     │                                   │
+│                                  │                                   │
+└──────────────────────────────────┴───────────────────────────────────┘
 ```
 
-**Recipe**: `display:flex, gap:28, alignItems:flex-start`
-- Secondary rail: `width:var(--detail-col-w), flexShrink:0, position:sticky, top:0, alignSelf:flex-start`
-- Primary column: `flex:1, minWidth:0`
+**Recipe**: outer wrapper `display:flex, flexDirection:column`; below the header band, `display:flex, gap:28, alignItems:flex-start`
+- **Header band**: `width:100%` — always full-width, rendered above the column split, never inside either column
+- **Primary column**: `flex:62, minWidth:0` (≈62% of usable width)
+- **Secondary rail**: `flex:38, minWidth:0, position:sticky, top:0, alignSelf:flex-start` (≈38% of usable width)
 
-At a 1000px content area the fixed 300px rail is ≈30%; at 768px it becomes unusably narrow — the rail must collapse to an accordion or sheet below 860px (future responsive pass).
+At typical viewport widths with the 232px sidebar consumed, the 38% rail lands at ~420–480px — wide enough for signal cards and stakeholder rows without cramping. Below 860px content width, the rail collapses to a horizontal accordion above the primary column (future responsive pass).
 
-**Header card** (inside the secondary rail, top):
-- `Card` with `pad={24}`
-- Name at display (24px) · Industry + plan at caption (12px) below
-- `Ring` score top-right of name row
-- Metric grid (`3×2`) at caption label + 16px value, all `var(--text)` ink
+**Header band** (full-width `Card` with `pad={24}`, `marginBottom:24`):
+- Name at display (24px), weight 500 · Industry + plan at caption (12px) below · `Ring` score top-right
+- Primaries (ARR + Health) at display size, secondaries (Churn %, NPS, CES, Usage %) as small quiet cluster — per the Section 2 hierarchy rule
 - Meta line (renewal · last contact · tickets) at 12px `var(--text3)` with conditional `var(--rose)` on overdue/stale values only
 
 ### Portfolio / List View
@@ -246,6 +247,6 @@ At a 1000px content area the fixed 300px rail is ≈30%; at 768px it becomes unu
 > Using `fontFamily:var(--font-mono), textTransform:uppercase` on section headers, metric labels, or nav items.
 > **Instead**: `SectionLabel` (Inter + uppercase) for section headers; mono is reserved for IDs and log timestamps only.
 
-**5. Cramming content into the fixed secondary rail**
-> Putting the tab work-area, full activity log, or email composer inside the 300px `--detail-col-w` column.
-> **Instead**: the secondary rail holds identity, signals, and metadata only. Long-form content always goes in the primary `flex:1` column behind a Tab.
+**5. Cramming content into the secondary rail**
+> Putting the tab work-area, full activity log, or email composer inside the ~38% secondary rail.
+> **Instead**: the secondary rail holds signals, stakeholders, and metadata only. Long-form content always goes in the ~62% primary column behind a Tab.
